@@ -22,13 +22,13 @@ class TestVerticalSlice(unittest.TestCase):
 
 ## Which language family does English belong to?
 - [ ] Romance
-- [x] Germanic
+- [X] Germanic
 - [ ] Slavic
 - [ ] Uralic
 
 ## English has grammatical gender comparable to German.
 - [ ] True
-- [x] False
+- [X] False
 
 ## The smallest contrastive sound unit is a {{phoneme}}.
 

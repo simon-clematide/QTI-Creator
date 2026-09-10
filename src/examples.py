@@ -5,7 +5,7 @@ A demonstration quiz covering all supported question types with automatic infere
 
 ## What is the capital of France?
 - [ ] Berlin
-- [x] Paris
+- [X] Paris
 - [ ] Rome
 - [ ] Madrid
 Feedback: Paris has been the capital since 508 AD.
@@ -19,7 +19,7 @@ Points: 2
 - [ ] 6
 
 ## The Earth completes one full orbit around the Sun in approximately 365.25 days.
-- [x] True
+- [X] True
 - [ ] False
 
 ## Irregular Verb Forms
@@ -45,13 +45,13 @@ SAMPLE_LINGUISTICS = """# Introduction to Linguistics Quiz
 
 ## Which language family does English belong to?
 - [ ] Romance
-- [x] Germanic
+- [X] Germanic
 - [ ] Slavic
 - [ ] Uralic
 
 ## English has grammatical gender comparable to German.
 - [ ] True
-- [x] False
+- [X] False
 
 ## The smallest contrastive sound unit in a language is a {{phoneme}}.
 
@@ -88,21 +88,21 @@ numbers.append(50)
 print(len(numbers))
 ```
 - [ ] `4`
-- [o] `5`
+- [X] `5`
 - [ ] `50`
 - [ ] `Error`
 
 ## Boolean Logic in Python
 What is the return value of `bool([])` in Python?
 - [ ] True
-- [x] False
+- [X] False
 
 ## Recursion
 In recursive algorithms, the condition that terminates the recursive calls is called the {{base case}}.
 
 ## Hash Table Complexity
 What is the average time complexity of looking up a key in a hash table (or Python `dict`)?
-- [o] $O(1)$
+- [X] $O(1)$
 - [ ] $O(n)$
 - [ ] $O(\log n)$
 - [ ] $O(n^2)$
@@ -115,7 +115,7 @@ A comprehensive test suite covering diverse mathematical typesetting: inline equ
 Evaluate the indefinite integral:
 $$\int x e^x \, dx$$
 - [ ] $(x + 1)e^x + C$
-- [o] $(x - 1)e^x + C$
+- [X] $(x - 1)e^x + C$
 - [ ] $x^2 e^x + C$
 - [ ] $\frac{1}{2} x^2 e^x + C$
 Feedback: Using integration by parts $\int u \, dv = uv - \int v \, du$ with $u = x$ and $dv = e^x dx$.
@@ -130,7 +130,7 @@ $$\det \begin{pmatrix} a & b \\ c & d \end{pmatrix} = ad - bc$$
 
 ## Euler's Identity
 The equation $e^{i\pi} + 1 = 0$ connects the fundamental constants $e$, $i$, $\pi$, $1$, and $0$.
-- [x] True
+- [X] True
 - [ ] False
 
 ## Limits and Derivatives

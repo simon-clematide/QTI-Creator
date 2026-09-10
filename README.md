@@ -28,8 +28,8 @@ Creating high-quality quizzes and exams in modern Learning Management Systems (L
 
 ### The Solution: "QuizMD"
 Educators, instructional designers, and LLMs write in **Markdown** every day. **QTI-Creator** bridges the gap:
-1. **Write ordinary Markdown** — Use natural headings, paragraphs, bullet lists, and checkboxes (`- [ ]` / `- [x]`).
-2. **Infer the obvious** — The parser detects question types automatically from structure (e.g. one checkmark means Single Choice; multiple checkmarks mean Multiple Choice).
+1. **Write ordinary Markdown** — Use natural headings, paragraphs, bullet lists, and checkboxes (`- [ ]`, `- [X]`, `- [x]`).
+2. **Infer the obvious** — The parser detects question types deterministically: uppercase `- [X]` infers Single Choice (exactly one answer allowed); lowercase `- [x]` infers Multiple Choice; `[+]`/`[-]` markers infer Kprim; `{{gap}}` infers Fill-in-the-Blank.
 3. **Download OpenOLAT-native QTI 2.1** — The generated package includes root-level manifests, delivery configurations, and metadata so OpenOLAT recognizes the questions as **native items** that open directly in OpenOLAT's visual question editor.
 
 ---
@@ -37,9 +37,9 @@ Educators, instructional designers, and LLMs write in **Markdown** every day. **
 ## 💡 Core Design Principles
 
 1. **Markdown is Markdown**:
-   Standard Markdown syntax retains its normal meaning. Use `#` for the quiz title, `##` for questions, `- [ ]` / `- [x]` for options, `**bold**`, `*italic*`, code blocks, blockquotes, and LaTeX math notation (`$...$`).
+   Standard Markdown syntax retains its normal meaning. Use `#` for the quiz title, `##` for questions, `- [ ]` / `- [X]` / `- [x]` for options, `**bold**`, `*italic*`, code blocks, blockquotes, and LaTeX math notation (`$...$`).
 2. **Infer the Obvious**:
-   Authors do not need to write `Type: SingleChoice`. One checked box automatically infers Single Choice; multiple checked boxes infer Multiple Choice; `[+]`/`[-]` markers infer Kprim; `{{gap}}` infers Fill-in-the-Blank; `= number` infers Numerical; a question with no answer specification infers an Essay question.
+   Authors do not need to write `Type: SingleChoice`. One checked box with `[X]` infers Single Choice; one or more checked boxes with `[x]` infer Multiple Choice; `[+]`/`[-]` markers infer Kprim; `{{gap}}` infers Fill-in-the-Blank; `= number` infers Numerical; a question with no answer specification infers an Essay question.
 3. **Sensible Defaults**:
    Questions default to 1 point, automatic QTI identifiers, and standard scoring. Metadata is optional and only required when overriding defaults (e.g. `Points: 3`).
 4. **OpenOLAT Native Compatibility**:
@@ -52,19 +52,18 @@ Educators, instructional designers, and LLMs write in **Markdown** every day. **
 ## 📋 Syntax Reference by Question Type
 
 ### 1. Single Choice (SC)
-Use standard Markdown task lists. Exactly one checked answer (`- [x]` or the radio button marker `- [o]` / `- (o)`) infers Single Choice:
+Use uppercase `[X]` to mark the correct single-choice answer. Exactly one `[X]` is required:
 
 ```markdown
 ## What is the capital of France?
 - [ ] Berlin
-- [o] Paris
+- [X] Paris
 - [ ] Rome
 - [ ] Madrid
 ```
-*(Both `- [o]` and `- [x]` or radio parentheses `- (o)` / `- ( )` are supported).*
 
 ### 2. Multiple Choice (MC)
-The syntax is identical to Single Choice. Checking more than one box automatically infers Multiple Choice:
+Use lowercase `[x]` to mark correct multiple-choice answers. One or more `[x]` answers are valid:
 
 ```markdown
 ## Which of the following are prime numbers?
@@ -81,7 +80,7 @@ Two choices matching "True" and "False" are recognized as a True/False question:
 
 ```markdown
 ## The Earth completes one orbit around the Sun in approximately 365.25 days.
-- [x] True
+- [X] True
 - [ ] False
 ```
 
@@ -145,7 +144,7 @@ def mystery(n):
         total += i
     return total
 ```
-- [o] `3`
+- [X] `3`
 - [ ] `6`
 - [ ] `0`
 ```
@@ -161,7 +160,7 @@ A comprehensive demonstration covering all question types.
 
 ## What is the capital of France?
 - [ ] Berlin
-- [x] Paris
+- [X] Paris
 - [ ] Rome
 - [ ] Madrid
 Feedback: Paris has been the capital since 508 AD.
@@ -175,7 +174,7 @@ Points: 2
 - [ ] 6
 
 ## The Earth completes one full orbit around the Sun in approximately 365.25 days.
-- [x] True
+- [X] True
 - [ ] False
 
 ## Irregular Verb Forms
@@ -203,13 +202,13 @@ Points: 2
 
 ## Which language family does English belong to?
 - [ ] Romance
-- [x] Germanic
+- [X] Germanic
 - [ ] Slavic
 - [ ] Uralic
 
 ## English has grammatical gender comparable to German.
 - [ ] True
-- [x] False
+- [X] False
 
 ## Contrastive Sound Units
 The smallest contrastive sound unit in a language that can distinguish meaning is a {{phoneme}}.
@@ -235,7 +234,7 @@ Points: 2
 ## Universal Gravitation
 Which physicist formulated the Universal Law of Gravitation?
 - [ ] Albert Einstein
-- [x] Isaac Newton
+- [X] Isaac Newton
 - [ ] Niels Bohr
 - [ ] Galileo Galilei
 

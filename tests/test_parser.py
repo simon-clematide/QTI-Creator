@@ -19,7 +19,7 @@ class TestQuizMDParser(unittest.TestCase):
         text = """# Capitals Quiz
 ## What is the capital of France?
 - [ ] Berlin
-- [x] Paris
+- [X] Paris
 - [ ] Rome
 """
         quiz, diags = parse_quizmd(text)
@@ -32,37 +32,43 @@ class TestQuizMDParser(unittest.TestCase):
         self.assertEqual(len(q.choices), 3)
         self.assertEqual([c.text for c in q.choices if c.is_correct], ["Paris"])
 
-    def test_single_choice_with_o_bracket(self):
-        text = """## What is the capital of France?
-- [ ] Berlin
-- [o] Paris
-- [ ] Rome
+    def test_single_choice_multiple_uppercase_X_error(self):
+        text = """## Multiple Single Choice answers:
+- [X] Option 1
+- [X] Option 2
+- [ ] Option 3
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Single-choice question has 2 [X] answers; exactly 1 is required." in d.message for d in diags))
+
+    def test_mixed_markers_error(self):
+        text = """## Mixed markers question:
+- [X] Option 1
+- [x] Option 2
+- [ ] Option 3
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Mixed markers: cannot combine single-choice [X] and multiple-choice [x]" in d.message for d in diags))
+
+    def test_choice_and_kprim_conflict_error(self):
+        text = """## Conflicting choice and kprim:
+- [X] Option 1
+- [+] Option 2
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot combine choice markers [X]/[x] with Kprim markers [+]/[-]" in d.message for d in diags))
+
+    def test_multiple_choice_single_lowercase_x(self):
+        text = """## Question with single lowercase x:
+- [ ] Option 1
+- [x] Option 2
+- [ ] Option 3
 """
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        self.assertIsInstance(q, SingleChoiceQuestion)
-        self.assertEqual([c.text for c in q.choices if c.is_correct], ["Paris"])
-
-    def test_single_choice_with_o_parentheses(self):
-        text = """## What is the capital of Germany?
-- (o) Berlin
-- ( ) Paris
-- ( ) Rome
-"""
-        quiz, diags = parse_quizmd(text)
-        self.assertEqual(len(diags), 0, [str(d) for d in diags])
-        q = quiz.questions[0]
-        self.assertIsInstance(q, SingleChoiceQuestion)
-        self.assertEqual([c.text for c in q.choices if c.is_correct], ["Berlin"])
-
-    def test_single_choice_with_o_multiple_error(self):
-        text = """## Radio button with multiple checked:
-- [o] Option 1
-- [o] Option 2
-"""
-        quiz, diags = parse_quizmd(text)
-        self.assertTrue(any("radio button [o]" in d.message for d in diags))
+        self.assertIsInstance(q, MultipleChoiceQuestion)
+        self.assertEqual([c.text for c in q.choices if c.is_correct], ["Option 2"])
 
 
     def test_multiple_choice_inference(self):
@@ -81,7 +87,7 @@ class TestQuizMDParser(unittest.TestCase):
     def test_true_false_inference(self):
         text = """## Earth is flat.
 - [ ] True
-- [x] False
+- [X] False
 """
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0)
@@ -177,7 +183,7 @@ Feedback: Important question.
 - [ ] Option 2
 """
         quiz, diags = parse_quizmd(text)
-        self.assertTrue(any("No correct answer is marked" in d.message for d in diags))
+        self.assertTrue(any("No correct answer is marked with [X] or [x]." in d.message for d in diags))
 
     def test_fenced_code_block_in_question(self):
         text = '''## What does this function return?
@@ -190,7 +196,7 @@ def calc(x):
     return val + 1
 ```
 What is the result of `calc(5)`?
-- [o] `11`
+- [X] `11`
 - [ ] `10`
 - [ ] `5`
 '''
@@ -223,7 +229,7 @@ def greet():
 ```
 
 - [ ] A
-- [o] B"""
+- [X] B"""
         xhtml = markdown_to_qti_xhtml(prompt)
         self.assertIn("<pre><code>def greet():\n    return &quot;hi&quot;</code></pre>", xhtml)
 

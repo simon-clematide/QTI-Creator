@@ -92,8 +92,8 @@ def markdown_to_qti_xhtml(text: str) -> str:
             output_blocks.append(f"<blockquote>{quote_body}</blockquote>")
             continue
 
-        # Unordered list: - or * (excluding task lists, radio markers, and kprim items)
-        choice_prefix = r"^[-*]\s+(?!\[[ xX*+-oO]\]|\([ xX*+-oO]\))"
+        # Unordered list: - or * (excluding task lists and kprim items)
+        choice_prefix = r"^[-*]\s+(?!\[[ xX+-]\])"
         if re.match(choice_prefix, stripped):
             items = []
             while i < len(lines) and re.match(choice_prefix, lines[i].strip()):

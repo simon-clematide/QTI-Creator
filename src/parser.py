@@ -43,7 +43,7 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
 RE_META = re.compile(r"^(points|type|feedback|identifier):\s*(.+)$", re.IGNORECASE)
-RE_TASK_LIST = re.compile(r"^-\s*(?:\[([ xX*oO])\]|\(([ xX*oO])\))\s*(.*)$")
+RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
 RE_KPRIM_HEADER = re.compile(r"^kprim:\s*$", re.IGNORECASE)
 RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
 RE_NUMERICAL = re.compile(
@@ -61,7 +61,7 @@ class RawQuestionBlock:
         self.raw_lines: List[Tuple[int, str]] = []
         self.metadata: Dict[str, Any] = {}
         self.prompt_lines: List[str] = []
-        self.choices: List[Tuple[bool, str, int, bool]] = []  # (is_correct, text, line_no, is_radio)
+        self.choices: List[Tuple[bool, str, str, int]] = []  # (is_correct, mark, text, line_no)
         self.kprim_items: List[Tuple[bool, str, int]] = []  # (is_true, text, line_no)
         self.numerical: Optional[Tuple[float, float, int]] = None  # (val, tol, line_no)
         self.is_kprim_mode = False
@@ -179,14 +179,13 @@ def _classify_block_lines(block: RawQuestionBlock) -> None:
             block.kprim_items.append((is_true, stmt_text, line_no))
             continue
 
-        # Check Task list / radio item: - [ ], - [x], - [o], - ( ), - (x), - (o)
+        # Check Task list item: - [ ], - [x], - [X]
         task_match = RE_TASK_LIST.match(stripped)
         if task_match:
-            mark = task_match.group(1) if task_match.group(1) is not None else task_match.group(2)
-            is_correct = mark.lower() in ("x", "*", "o")
-            is_radio = mark.lower() == "o" or stripped.startswith("- (")
-            choice_text = task_match.group(3).strip()
-            block.choices.append((is_correct, choice_text, line_no, is_radio))
+            mark = task_match.group(1)
+            is_correct = mark in ("x", "X")
+            choice_text = task_match.group(2).strip()
+            block.choices.append((is_correct, mark, choice_text, line_no))
             continue
 
         # Check Numerical answer line: = 42 +- 0.5
@@ -233,18 +232,30 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "line_number": block.start_line,
     }
 
+    # Prevent conflicting choice markers and Kprim markers
+    if block.choices and (block.kprim_items or block.is_kprim_mode):
+        raise QuizValidationError(
+            "Cannot combine choice markers [X]/[x] with Kprim markers [+]/[-] in the same question.",
+            [Diagnostic(
+                "Cannot combine choice markers [X]/[x] with Kprim markers [+]/[-] in the same question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
     # Deterministic Inference Sequence
 
     # 1. Explicit Type Override
     if explicit_type:
         if explicit_type in ("singlechoice", "sc"):
-            choices = [Choice(text=c[1], is_correct=c[0]) for c in block.choices]
+            choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
             return SingleChoiceQuestion(**common_kwargs, choices=choices)
         elif explicit_type in ("multiplechoice", "mc"):
-            choices = [Choice(text=c[1], is_correct=c[0]) for c in block.choices]
+            choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
             return MultipleChoiceQuestion(**common_kwargs, choices=choices)
         elif explicit_type in ("truefalse", "tf"):
-            choices = [Choice(text=c[1], is_correct=c[0]) for c in block.choices]
+            choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
             return TrueFalseQuestion(**common_kwargs, choices=choices)
         elif explicit_type in ("essay", "freetext", "open"):
             return EssayQuestion(**common_kwargs)
@@ -274,9 +285,45 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         val, tol = block.numerical[0], block.numerical[1]
         return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)
 
-    # 5. Inferred: Task-list / radio choices (Single Choice, Multiple Choice, True/False)
+    # 5. Inferred: Task-list choices (Single Choice [X], Multiple Choice [x], True/False)
     if block.choices:
-        choices = [Choice(text=c[1], is_correct=c[0]) for c in block.choices]
+        count_X = sum(1 for _, mark, _, _ in block.choices if mark == "X")
+        count_x = sum(1 for _, mark, _, _ in block.choices if mark == "x")
+
+        if count_X > 0 and count_x > 0:
+            raise QuizValidationError(
+                "Mixed markers: cannot combine single-choice [X] and multiple-choice [x] in the same question.",
+                [Diagnostic(
+                    "Mixed markers: cannot combine single-choice [X] and multiple-choice [x] in the same question.",
+                    Severity.ERROR,
+                    block.start_line,
+                    q_idx,
+                )],
+            )
+
+        if count_X > 1:
+            raise QuizValidationError(
+                f"Single-choice question has {count_X} [X] answers; exactly 1 is required.",
+                [Diagnostic(
+                    f"Single-choice question has {count_X} [X] answers; exactly 1 is required.",
+                    Severity.ERROR,
+                    block.start_line,
+                    q_idx,
+                )],
+            )
+
+        if count_X == 0 and count_x == 0:
+            raise QuizValidationError(
+                "No correct answer is marked with [X] or [x].",
+                [Diagnostic(
+                    "No correct answer is marked with [X] or [x].",
+                    Severity.ERROR,
+                    block.start_line,
+                    q_idx,
+                )],
+            )
+
+        choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
 
         # Check if True/False: exactly 2 items with text 'True' and 'False'
         if len(choices) == 2:
@@ -284,23 +331,10 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             if texts == {"true", "false"}:
                 return TrueFalseQuestion(**common_kwargs, choices=choices)
 
-        correct_count = sum(1 for c in choices if c.is_correct)
-        has_radio = any(c[3] for c in block.choices)
-
-        if correct_count == 1:
+        if count_X == 1:
             return SingleChoiceQuestion(**common_kwargs, choices=choices)
-        elif correct_count > 1 and not has_radio:
+        elif count_x >= 1:
             return MultipleChoiceQuestion(**common_kwargs, choices=choices)
-        elif correct_count > 1 and has_radio:
-            raise QuizValidationError(
-                f"Single Choice (radio button [o]) allows only 1 checked answer, found {correct_count}.",
-                [Diagnostic(f"Single Choice (radio button [o]) allows only 1 checked answer, found {correct_count}.", Severity.ERROR, block.start_line, q_idx)],
-            )
-        else:
-            raise QuizValidationError(
-                "No correct answer is marked with [x], [o], or [*].",
-                [Diagnostic("No correct answer is marked with [x], [o], or [*].", Severity.ERROR, block.start_line, q_idx)],
-            )
 
     # 6. Inferred: Essay / Free Text (question prompt with no answer tokens)
     return EssayQuestion(**common_kwargs)

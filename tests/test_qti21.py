@@ -51,7 +51,7 @@ What does this function return?
 def square(n):
     return n * n
 ```
-- [o] `16`
+- [X] `16`
 - [ ] `8`
 '''
         quiz, diags = parse_quizmd(text)

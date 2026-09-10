@@ -144,16 +144,16 @@ Some optional introductory text.
 ### 4. Question Types
 
 #### 4.1 Single Choice
-Use ordinary Markdown task lists or radio button markers (`[o]` / `[x]` / `(o)`):
+Use ordinary Markdown task lists with uppercase `[X]`:
 
 ```markdown
 ## What is the capital of France?
 - [ ] Berlin
-- [o] Paris
+- [X] Paris
 - [ ] Rome
 - [ ] Madrid
 ```
-* **Inference:** Exactly one checked alternative (`[o]`, `[x]`, `(o)`) $\rightarrow$ **Single Choice**.
+* **Inference:** Exactly one checked alternative marked with `[X]` $\rightarrow$ **Single Choice**.
 * **Default points:** 1.
 
 #### 4.2 Multiple Choice

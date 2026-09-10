@@ -179,9 +179,9 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
                 | Question Type | Syntax Pattern | Inference Rule |
                 | :--- | :--- | :--- |
-                | **Single Choice** | `- [ ] Option`<br>`- [o] Correct Option` (or `[x]`) | Exactly 1 checked (`[o]` or `[x]`) |
-                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | More than 1 checked box |
-                | **True / False** | `- [x] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
+                | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` |
+                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` |
+                | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
                 | **Fill in the Blank** | `The capital of France is {{Paris}}.` | Prompt contains `{{gap}}` |
                 | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` |
                 | **Essay / Free Text** | Question prompt with no answers | No answer tokens |

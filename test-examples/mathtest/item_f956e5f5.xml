@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assessmentItem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
+                identifier="item_f956e5f5"
+                title="Gravitational Acceleration"
+                adaptive="false"
+                timeDependent="false"
+                toolName="OpenOLAT"
+                toolVersion="8.4.0"
+                xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqti_v2p1 http://www.imsglobal.org/xsd/imsqti_v2p1.xsd">
+  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="float">
+    <correctResponse>
+      <value>9.81</value>
+    </correctResponse>
+    <mapping defaultValue="0.0">
+      <mapEntry mapKey="9.81" mappedValue="1.0"/>
+    </mapping>
+  </responseDeclaration>
+  <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float">
+    <defaultValue>
+      <value>0.0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="MAXSCORE" cardinality="single" baseType="float">
+    <defaultValue>
+      <value>1.0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="FEEDBACK" cardinality="single" baseType="identifier"/>
+  <itemBody>
+    <p>What is the acceleration due to gravity on Earth&#x27;s surface in m/s²?</p>
+    <p>
+      <textEntryInteraction responseIdentifier="RESPONSE" expectedLength="10"/>
+    </p>
+  </itemBody>
+  <responseProcessing>
+    <responseCondition>
+      <responseIf>
+        <and>
+          <gte>
+            <variable identifier="RESPONSE"/>
+            <baseValue baseType="float">9.76</baseValue>
+          </gte>
+          <lte>
+            <variable identifier="RESPONSE"/>
+            <baseValue baseType="float">9.860000000000001</baseValue>
+          </lte>
+        </and>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">1.0</baseValue>
+        </setOutcomeValue>
+      </responseIf>
+      <responseElse>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">0.0</baseValue>
+        </setOutcomeValue>
+      </responseElse>
+    </responseCondition>
+  </responseProcessing>
+</assessmentItem>

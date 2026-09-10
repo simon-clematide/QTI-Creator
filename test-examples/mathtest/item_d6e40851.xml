@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assessmentItem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
+                identifier="item_d6e40851"
+                title="Characteristics of Mammals"
+                adaptive="false"
+                timeDependent="false"
+                toolName="OpenOLAT"
+                toolVersion="8.4.0"
+                xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqti_v2p1 http://www.imsglobal.org/xsd/imsqti_v2p1.xsd">
+  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="directedPair">
+    <correctResponse>
+      <value>kprim_0 correct</value>
+      <value>kprim_1 correct</value>
+      <value>kprim_2 wrong</value>
+      <value>kprim_3 wrong</value>
+    </correctResponse>
+    <mapping defaultValue="0.0">
+      <mapEntry mapKey="kprim_0 correct" mappedValue="1.0"/>
+      <mapEntry mapKey="kprim_1 correct" mappedValue="1.0"/>
+      <mapEntry mapKey="kprim_2 wrong" mappedValue="1.0"/>
+      <mapEntry mapKey="kprim_3 wrong" mappedValue="1.0"/>
+    </mapping>
+  </responseDeclaration>
+  <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float">
+    <defaultValue>
+      <value>0.0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="MAXSCORE" cardinality="single" baseType="float">
+    <defaultValue>
+      <value>2.0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="FEEDBACK" cardinality="single" baseType="identifier"/>
+  <itemBody>
+    <p>Characteristics of Mammals</p>
+    <matchInteraction responseIdentifier="RESPONSE" shuffle="false" maxAssociations="4">
+      <simpleMatchSet>
+        <simpleAssociableChoice identifier="kprim_0" matchMax="1"><p>They possess hair or fur.</p></simpleAssociableChoice>
+        <simpleAssociableChoice identifier="kprim_1" matchMax="1"><p>Females produce milk to nourish their young.</p></simpleAssociableChoice>
+        <simpleAssociableChoice identifier="kprim_2" matchMax="1"><p>All mammals give birth to live young without exception.</p></simpleAssociableChoice>
+        <simpleAssociableChoice identifier="kprim_3" matchMax="1"><p>Mammals are ectothermic organisms.</p></simpleAssociableChoice>
+      </simpleMatchSet>
+      <simpleMatchSet>
+        <simpleAssociableChoice identifier="correct" matchMax="4">+</simpleAssociableChoice>
+        <simpleAssociableChoice identifier="wrong" matchMax="4">-</simpleAssociableChoice>
+      </simpleMatchSet>
+    </matchInteraction>
+  </itemBody>
+  <responseProcessing>
+    <responseCondition>
+      <responseIf>
+        <gte>
+          <mapResponse identifier="RESPONSE"/>
+          <baseValue baseType="float">4.0</baseValue>
+        </gte>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">2.0</baseValue>
+        </setOutcomeValue>
+      </responseIf>
+      <responseElseIf>
+        <gte>
+          <mapResponse identifier="RESPONSE"/>
+          <baseValue baseType="float">3.0</baseValue>
+        </gte>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">1.0</baseValue>
+        </setOutcomeValue>
+      </responseElseIf>
+      <responseElse>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">0.0</baseValue>
+        </setOutcomeValue>
+      </responseElse>
+    </responseCondition>
+  </responseProcessing>
+</assessmentItem>

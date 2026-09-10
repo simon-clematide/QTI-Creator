@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" xmlns:imsmd="http://www.imsglobal.org/xsd/imsmd_v1p2" xmlns:imsqti="http://www.imsglobal.org/xsd/imsqti_metadata_v2p1" xmlns:ns4="http://www.openolat.org/xsd/oomd_v1p1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" identifier="MANIFEST_quiz_71841589" xsi:schemaLocation="http://www.imsglobal.org/xsd/imscp_v1p1 http://www.imsglobal.org/xsd/imscp_v1p2.xsd http://www.imsglobal.org/xsd/imsmd_v1p2 http://www.imsglobal.org/xsd/imsmd_v1p2p4.xsd http://www.imsglobal.org/xsd/imsqti_metadata_v2p1 http://www.imsglobal.org/xsd/qti/qtiv2p1/imsqti_metadata_v2p1.xsd">
+    <metadata>
+        <schema>QTIv2.1</schema>
+        <schemaversion>2.1</schemaversion>
+    </metadata>
+    <organizations/>
+    <resources>
+        <resource identifier="RES_quiz_71841589" type="imsqti_test_xmlv2p1" href="Test.xml">
+            <file href="Test.xml"/>
+            <dependency identifierref="RES_item_81b5425b"/>
+            <dependency identifierref="RES_item_b1f15da4"/>
+            <dependency identifierref="RES_item_59962a8c"/>
+            <dependency identifierref="RES_item_b1fa4953"/>
+            <dependency identifierref="RES_item_f956e5f5"/>
+            <dependency identifierref="RES_item_acec8ab9"/>
+            <dependency identifierref="RES_item_d6e40851"/>
+        </resource>
+        <resource identifier="RES_item_81b5425b" type="imsqti_item_xmlv2p1" href="item_81b5425b.xml">
+            <metadata>
+                <imsmd:lom>
+                    <imsmd:technical>
+                        <imsmd:format>text/x-imsqti-item-xml</imsmd:format>
+                    </imsmd:technical>
+                    <imsmd:educational/>
+                </imsmd:lom>
+                <imsqti:qtiMetadata>
+                    <imsqti:interactionType>choiceInteraction</imsqti:interactionType>
+                </imsqti:qtiMetadata>
+                <ns4:ooMetadata>
+                    <ns4:questionType>sc</ns4:questionType>
+                </ns4:ooMetadata>
+            </metadata>
+            <file href="item_81b5425b.xml"/>
+        </resource>
+        <resource identifier="RES_item_b1f15da4" type="imsqti_item_xmlv2p1" href="item_b1f15da4.xml">
+            <metadata>
+                <imsmd:lom>
+                    <imsmd:technical>
+                        <imsmd:format>text/x-imsqti-item-xml</imsmd:format>
+                    </imsmd:technical>
+                    <imsmd:educational/>
+                </imsmd:lom>
+                <imsqti:qtiMetadata>
+                    <imsqti:interactionType>choiceInteraction</imsqti:interactionType>
+                </imsqti:qtiMetadata>
+                <ns4:ooMetadata>
+                    <ns4:questionType>mc</ns4:questionType>
+                </ns4:ooMetadata>
+            </metadata>
+            <file href="item_b1f15da4.xml"/>
+        </resource>
+        <resource identifier="RES_item_59962a8c" type="imsqti_item_xmlv2p1" href="item_59962a8c.xml">
+            <file href="item_59962a8c.xml"/>
+        </resource>
+        <resource identifier="RES_item_b1fa4953" type="imsqti_item_xmlv2p1" href="item_b1fa4953.xml">
+            <file href="item_b1fa4953.xml"/>
+        </resource>
+        <resource identifier="RES_item_f956e5f5" type="imsqti_item_xmlv2p1" href="item_f956e5f5.xml">
+            <file href="item_f956e5f5.xml"/>
+        </resource>
+        <resource identifier="RES_item_acec8ab9" type="imsqti_item_xmlv2p1" href="item_acec8ab9.xml">
+            <file href="item_acec8ab9.xml"/>
+        </resource>
+        <resource identifier="RES_item_d6e40851" type="imsqti_item_xmlv2p1" href="item_d6e40851.xml">
+            <file href="item_d6e40851.xml"/>
+        </resource>
+    </resources>
+</manifest>

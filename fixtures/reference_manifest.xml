@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imscp_v1p1"
+          xmlns:imsmd="http://www.imsglobal.org/xsd/imsmd_v1p2"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          identifier="MANIFEST_REFERENCE">
+  <metadata>
+    <schema>QTIv2.1</schema>
+    <schemaversion>2.1</schemaversion>
+  </metadata>
+  <organizations/>
+  <resources>
+    <resource identifier="res_test" type="imsqti_test_xmlv2p1" href="Test.xml">
+      <file href="Test.xml"/>
+      <dependency identifierref="res_item_1"/>
+    </resource>
+    <resource identifier="res_item_1" type="imsqti_item_xmlv2p1" href="item_1.xml">
+      <file href="item_1.xml"/>
+    </resource>
+  </resources>
+</manifest>

@@ -287,8 +287,8 @@ Points: 4
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/qti-creator.git
-cd qti-creator
+git clone https://github.com/simon-clematide/QTI-Creator.git
+cd QTI-Creator
 
 # Create virtual environment and install dependencies
 python3 -m venv .venv

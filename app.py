@@ -267,33 +267,73 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ```
                 ---
 
+                ---
+
                 ### Multiple Choice Scoring Options
-                By default, Multiple Choice questions use OpenOLAT's native **partial credit** (`Scoring: partial`). You can configure alternative scoring methods globally or per question:
+                By default, Multiple Choice questions use OpenOLAT's native **partial credit** (`Scoring: partial`). You can configure alternative scoring methods globally in the quiz header/frontmatter or per question:
 
                 - **Partial credit (default)**: `Scoring: partial`
-                  Points are awarded proportionally for correct choices and deducted for incorrect choices (floored at 0).
+                  OpenOLAT's native proportional model:
+                  - Each selected correct alternative adds $+\text{points} / N_{\text{correct}}$.
+                  - Each selected distractor subtracts $-\text{points} / N_{\text{incorrect}}$.
+                  - The question score is clamped between $0.0$ and $\text{Points}$ (never negative).
+                  - If all options are correct, each selected option earns its equal share ($1/N$).
                 - **All or nothing**: `Scoring: all-correct`
-                  Full points only if all correct answers and no incorrect answers are selected; otherwise 0 points.
+                  Full points only if all correct answers and no incorrect answers are selected; otherwise 0.0 points.
                 - **Kprim evaluation**: If a question has exactly 4 statements to evaluate as true/false, use Kprim format (`- [+]` and `- [-]`) to get standard 4/4 = full, 3/4 = half, ≤2/4 = 0 scoring.
+
+                ---
+
+                ### Question Types & Formatting Guide
+
+                #### 1. Single Choice vs. Multiple Choice Markers
+                - **Single Choice**: Exactly one uppercase `[X]`. More than 1 `[X]` produces a validation error.
+                - **Multiple Choice**: Lowercase `[x]`. Any question with `[x]` is Multiple Choice (even if only 1 option is checked).
+                - *Do not mix `[X]` and `[x]` in the same question.*
+
+                #### 2. Fill in the Blank with Alternatives
+                - Wrap target blanks in `{{...}}`.
+                - Provide acceptable synonyms or alternate spellings with pipe `|`: `{{gray | grey}}`.
+                - The first value is canonical; all alternatives receive equal full credit.
+
+                #### 3. Order / Sequencing Questions
+                - Write an ordered task list with empty boxes: `1. [ ] Step A`, `1. [ ] Step B`, `1. [ ] Step C` (minimum 2 items).
+                - **The order in Markdown is the correct solution.**
+                - Learner-facing tiles are automatically scrambled (`shuffle="true"`).
+                - *Regular numbered lists (`1. Foo`, `2. Bar`) without `[ ]` remain standard Markdown text.*
+
+                #### 4. Numerical Questions
+                - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.
+
+                #### 5. Kprim (4-Statement Matrix)
+                - Exactly 4 statements marked with `- [+]` (true) or `- [-]` (false).
+                - Scored natively in OpenOLAT: 4/4 correct = full points, 3/4 correct = half points, ≤2/4 = 0 points.
+
+                #### 6. Formulas & Code Blocks
+                - **Inline Math**: `$E = mc^2$` (rendered natively via MathJax in OpenOLAT).
+                - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
+                - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
 
                 ---
 
                 ### Question Metadata & Local Overrides
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
-                - `Points: 3` (default: 1)
+                - `Points: <number>` (default: 1)
                 - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
-                - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
-                - `Shuffle: false` (disables QuizMD's default answer shuffling for this question)
-                - `Topic: Genetics` (overrides quiz-level Topic in OpenOLAT)
-                - `Keywords: rna, translation` (overrides quiz-level Keywords in OpenOLAT)
-                - `Additional_Info: Custom note` (overrides OpenOLAT Zusatzinformationen)
-                - `Language: en` (overrides question language)
-                - `Type: multiple-choice` (optional type override)
-                - `Identifier: custom_id` (optional, default: auto-generated)
+                - `Feedback: <text>` (explanatory feedback shown to learners after submission; supports Markdown & math)
+                - `Shuffle: yes / no` (controls answer scrambling; default: `yes`)
+                - `Topic: <text>` (overrides quiz-level Topic in OpenOLAT)
+                - `Keywords: <kw1, kw2>` (overrides quiz-level Keywords in OpenOLAT)
+                - `Additional_Info: <text>` (overrides OpenOLAT Zusatzinformationen)
+                - `Language: <iso-code>` (e.g. `en`, `de`, `fr`)
+                - `Type: <type-name>` (optional explicit question type override)
+                - `Identifier: <custom_id>` (optional, default: auto-generated)
 
                 ```markdown
                 ## Order the biological taxonomy ranks
                 Points: 2
+                Topic: Taxonomy
+                Keywords: biology, classification
                 1. [ ] Domain
                 1. [ ] Kingdom
                 1. [ ] Phylum

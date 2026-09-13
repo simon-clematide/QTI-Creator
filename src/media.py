@@ -40,9 +40,11 @@ MAGIC_NUMBERS: Dict[bytes, Tuple[str, str]] = {
     b"GIF89a": ("image/gif", ".gif"),
 }
 
-# Image markdown pattern: ![alt](url)
+# Image markdown pattern: ![alt](url =WxH)
 # Must not match code spans or ordinary links [text](url)
-RE_IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+RE_IMAGE = re.compile(
+    r"!\[([^\]]*)\]\(\s*(\S+?)(?:\s+=((?:\d+(?:%|px)?x\d*(?:%|px)?|\d*x\d+(?:%|px)?|\d+(?:%|px)?)))?\s*\)"
+)
 RE_INLINE_CODE = re.compile(r"`[^`]+`")
 
 

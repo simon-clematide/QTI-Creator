@@ -385,6 +385,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 Embed images anywhere in question prompts, choices, or feedback using standard Markdown:
                 - **Remote URL**: `![Diagram](https://example.org/diagram.png)`
                 - **Relative Path**: `![Tree](tree.png)` or `![Chart](images/chart.png)`
+                - **Image Sizing (HackMD Syntax)**:
+                  - Fixed width: `![Diagram](diagram.png =300x)`
+                  - Proportional width: `![Chart](chart.png =30%x)`
+                  - Width and height: `![Photo](photo.png =400x250)`
+                  - *(Note: A space before `=` is required; aspect ratio is preserved when omitting height or width).*
 
                 **Packaging Behavior:**
                 - By default (*Include media* OFF), image references remain external URLs / relative links in the QTI package.

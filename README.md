@@ -293,11 +293,17 @@ Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $
 Embed images anywhere in questions, choices, or feedback using standard Markdown:
 ```markdown
 ## Plant Biology
-![Leaf Anatomy](https://example.org/leaf.png)
+![Leaf Anatomy](https://example.org/leaf.png =300x)
 What tissue facilitates photosynthesis?
 - [X] Mesophyll
 - [ ] Epidermis
 ```
+
+- **Image Sizing (HackMD Syntax)**:
+  - Fixed width: `![Diagram](diagram.png =300x)`
+  - Proportional width: `![Chart](chart.png =30%x)`
+  - Explicit width & height: `![Photo](photo.png =400x250)`
+  - *(Requires a space before `=`; maintains image proportions when specifying width-only).*
 
 **Packaging Modes:**
 - **Default (Include media OFF)**: Media references remain external URLs or relative links in the generated QTI. Passive preflight inventories references and checks URL schemes with zero network requests or ZIP unpacking.

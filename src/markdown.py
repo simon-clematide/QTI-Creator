@@ -178,21 +178,52 @@ def _format_inlines(text: str, asset_map: Optional[Dict[str, str]] = None) -> st
 
     text = re.sub(r"`(.+?)`", save_code, text)
 
-    # 4. Protect images: ![alt](src)
+    # 4. Protect images: ![alt](src =WxH)
     def save_image(match):
         nonlocal counter
         key = f"XXIMG{counter}XX"
         counter += 1
-        alt = match.group(1)
+        alt = match.group(1).strip()
         src = match.group(2).strip()
+        size_spec = match.group(3)
+
         # If asset_map is provided and maps this src to a packaged relative path, rewrite it
         target_src = asset_map.get(src, src) if asset_map else src
         escaped_alt = html.escape(alt)
         escaped_src = html.escape(target_src)
-        placeholders[key] = f'<img src="{escaped_src}" alt="{escaped_alt}" />'
+
+        # Parse HackMD size spec: e.g. 300x, 30%x, 500x300, x200, 50%
+        extra_attrs = []
+        style_parts = []
+
+        if size_spec:
+            style_parts.append("max-width: 100%")
+            if "x" in size_spec:
+                w_str, h_str = size_spec.split("x", 1)
+                if w_str:
+                    w_val = w_str if (w_str.endswith("%") or w_str.endswith("px")) else f"{w_str}px"
+                    extra_attrs.append(f'width="{html.escape(w_val)}"')
+                if h_str:
+                    h_val = h_str if (h_str.endswith("%") or h_str.endswith("px")) else f"{h_str}px"
+                    extra_attrs.append(f'height="{html.escape(h_val)}"')
+                else:
+                    style_parts.append("height: auto")
+            else:
+                w_val = size_spec if (size_spec.endswith("%") or size_spec.endswith("px")) else f"{size_spec}px"
+                extra_attrs.append(f'width="{html.escape(w_val)}"')
+                style_parts.append("height: auto")
+
+        extra_attrs_str = (" " + " ".join(extra_attrs)) if extra_attrs else ""
+        style_str = f' style="{"; ".join(style_parts)};"' if style_parts else ""
+
+        placeholders[key] = f'<img src="{escaped_src}" alt="{escaped_alt}"{extra_attrs_str}{style_str} />'
         return key
 
-    text = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", save_image, text)
+    text = re.sub(
+        r"!\[([^\]]*)\]\(\s*(\S+?)(?:\s+=((?:\d+(?:%|px)?x\d*(?:%|px)?|\d*x\d+(?:%|px)?|\d+(?:%|px)?)))?\s*\)",
+        save_image,
+        text,
+    )
 
     # 5. Protect standard links: [text](href) -> <a href="...">text</a>
     def save_link(match):

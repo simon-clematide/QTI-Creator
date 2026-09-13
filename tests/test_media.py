@@ -44,6 +44,33 @@ class TestMediaSupport(unittest.TestCase):
         self.assertIn('<img src="https://example.org/tree.png" alt="Tree Diagram" />', html)
         self.assertIn('<a href="https://example.org/tree.png">Download</a>', html)
 
+    def test_hackmd_image_sizing(self):
+        """Images with HackMD size specifications (=300x, =30%x, =500x200) render with sizing attributes."""
+        # Fixed width
+        md_fixed = "![Diagram](diagram.png =300x)"
+        html_fixed = markdown_to_qti_xhtml(md_fixed)
+        self.assertIn('width="300px"', html_fixed)
+        self.assertIn('alt="Diagram"', html_fixed)
+        self.assertIn('max-width: 100%', html_fixed)
+
+        # Proportional width
+        md_prop = "![Chart](chart.png =30%x)"
+        html_prop = markdown_to_qti_xhtml(md_prop)
+        self.assertIn('width="30%"', html_prop)
+        self.assertIn('alt="Chart"', html_prop)
+
+        # Dimension width and height
+        md_dim = "![Photo](photo.png =400x250)"
+        html_dim = markdown_to_qti_xhtml(md_dim)
+        self.assertIn('width="400px"', html_dim)
+        self.assertIn('height="250px"', html_dim)
+
+        # Media extraction parses the source URL cleanly without =size
+        refs = extract_media_references(md_fixed)
+        self.assertEqual(len(refs), 1)
+        self.assertEqual(refs[0].source, "diagram.png")
+        self.assertEqual(refs[0].alt_text, "Diagram")
+
     def test_code_block_and_inline_code_media_protection(self):
         """Markdown images inside inline code or fenced code blocks must NOT be recognized as media."""
         md = """## Code Test

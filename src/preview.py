@@ -17,11 +17,16 @@ from src.model import (
 )
 
 
+from typing import Dict, Optional
 from src.markdown import markdown_to_qti_xhtml
 
 
-def render_quiz_preview_html(quiz: Quiz) -> str:
-    """Generate clean collapsible HTML cards to visually preview parsed questions."""
+def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Generate clean collapsible HTML cards to visually preview parsed questions.
+
+    If asset_map is provided (mapping relative image source -> data URI or resolved path),
+    images in prompts, choices, hints, and feedback are rewritten to display them in preview.
+    """
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
 
@@ -30,18 +35,18 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
         type_name = _get_type_label(q)
         badge_color = _get_badge_color(q)
 
-        prompt_html = markdown_to_qti_xhtml(q.prompt)
-        body_html = _render_question_body(q)
+        prompt_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+        body_html = _render_question_body(q, asset_map=asset_map)
         hint_html = (
             f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
             f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
-            f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint)}</div></details>"
+            f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map)}</div></details>"
             if q.hint
             else ""
         )
         feedback_html = (
             f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
-            f"<strong>Feedback:</strong> {html.escape(q.feedback)}</div>"
+            f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map)}</div>"
             if q.feedback
             else ""
         )
@@ -161,7 +166,7 @@ def _get_badge_color(q: Question) -> str:
     return "#64748b"
 
 
-def _render_question_body(q: Question) -> str:
+def _render_question_body(q: Question, asset_map: Optional[Dict[str, str]] = None) -> str:
     if isinstance(q, (SingleChoiceQuestion, MultipleChoiceQuestion, TrueFalseQuestion)):
         is_single = isinstance(q, (SingleChoiceQuestion, TrueFalseQuestion))
         bullet = "○" if is_single else "□"
@@ -171,13 +176,11 @@ def _render_question_body(q: Question) -> str:
             icon = checked_bullet if c.is_correct else bullet
             style = "color: #16a34a; font-weight: 600;" if c.is_correct else "color: #475569;"
             tag = " (Correct)" if c.is_correct else ""
-            choice_text_esc = html.escape(c.text)
-            choice_text_formatted = re.sub(
-                r"`([^`]+)`",
-                r'<code style="background: #f1f5f9; padding: 2px 4px; border-radius: 3px;">\1</code>',
-                choice_text_esc,
-            )
-            items.append(f"<li style='margin-bottom: 6px; list-style: none; {style}'>{icon} {choice_text_formatted}{tag}</li>")
+            choice_html = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
+            # Remove enclosing <p>...</p> tags if present to keep inline list layout
+            if choice_html.startswith("<p>") and choice_html.endswith("</p>"):
+                choice_html = choice_html[3:-4]
+            items.append(f"<li style='margin-bottom: 6px; list-style: none; {style}'>{icon} {choice_html}{tag}</li>")
         return f"<ul style='padding-left: 4px; margin: 0;'>{''.join(items)}</ul>"
 
     elif isinstance(q, FillBlankQuestion):
@@ -198,11 +201,19 @@ def _render_question_body(q: Question) -> str:
         rows = []
         for stmt in q.statements:
             symbol = "<span style='color: #16a34a; font-weight: bold;'>[+] True</span>" if stmt.is_correct else "<span style='color: #dc2626; font-weight: bold;'>[-] False</span>"
-            rows.append(f"<tr><td style='padding: 6px 12px; border: 1px solid #e2e8f0;'>{html.escape(stmt.text)}</td><td style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: center;'>{symbol}</td></tr>")
+            stmt_html = markdown_to_qti_xhtml(stmt.text, asset_map=asset_map)
+            if stmt_html.startswith("<p>") and stmt_html.endswith("</p>"):
+                stmt_html = stmt_html[3:-4]
+            rows.append(f"<tr><td style='padding: 6px 12px; border: 1px solid #e2e8f0;'>{stmt_html}</td><td style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: center;'>{symbol}</td></tr>")
         return f"<table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'><tr style='background: #f8fafc;'><th style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: left;'>Statement</th><th style='padding: 6px 12px; border: 1px solid #e2e8f0; width: 100px;'>Key</th></tr>{''.join(rows)}</table>"
 
     elif isinstance(q, OrderQuestion):
-        items = [f"<li>{html.escape(it.text)}</li>" for it in q.items]
+        items = []
+        for it in q.items:
+            it_html = markdown_to_qti_xhtml(it.text, asset_map=asset_map)
+            if it_html.startswith("<p>") and it_html.endswith("</p>"):
+                it_html = it_html[3:-4]
+            items.append(f"<li>{it_html}</li>")
         return f"<ol class='order-answer'>{''.join(items)}</ol>"
 
     return ""

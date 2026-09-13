@@ -16,20 +16,35 @@ from src.preview import render_quiz_preview_html
 from src.validation import Severity
 
 
-def update_preview_and_validate(text: str, include_media: bool = False):
-    """Parse the text, perform passive media preflight, render preview, and format status."""
+def update_preview_and_validate(text: str, show_relative_images: bool = False, media_zip_file = None):
+    """Parse the text, resolve images if requested, render preview, and format status."""
     if not text or not text.strip():
         return (
             "<p style='color: #64748b; font-style: italic;'>Enter questions or load an example to begin.</p>",
             "ℹ️ No content provided.",
-            None,
         )
 
     quiz, diagnostics = parse_quizmd(text)
-    preview_html = render_quiz_preview_html(quiz)
 
-    # Passive media preflight (zero network requests, provides inventory & scheme warnings)
-    media_res = preflight_media(quiz, include_media=False)
+    # If show_relative_images is requested and media_zip_file is uploaded, extract relative images for preview
+    asset_map = None
+    media_zip_bytes = None
+    if media_zip_file is not None:
+        try:
+            with open(media_zip_file.name, "rb") as f:
+                media_zip_bytes = f.read()
+        except Exception:
+            pass
+
+    # Perform media preflight:
+    # If show_relative_images is True and we have a media zip, preflight resolves relative assets into memory
+    if show_relative_images and media_zip_bytes:
+        media_res = preflight_media(quiz, include_media=True, media_zip_bytes=media_zip_bytes)
+        asset_map = {src: asset.data_uri for src, asset in media_res.resolved_assets.items()}
+    else:
+        media_res = preflight_media(quiz, include_media=False)
+
+    preview_html = render_quiz_preview_html(quiz, asset_map=asset_map)
     diagnostics.extend(media_res.diagnostics)
 
     errors = [d for d in diagnostics if d.severity == Severity.ERROR]
@@ -162,6 +177,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                             label="Include media in QTI package",
                             info="Download remote images and include uploaded relative images to make the QTI package self-contained.",
                         )
+                        show_relative_images_cb = gr.Checkbox(
+                            value=False,
+                            label="Show relative images in preview",
+                            info="Extract and display images referenced by relative paths from the uploaded Media ZIP.",
+                        )
                         media_zip_upload = gr.File(
                             label="Media ZIP (Required when including images referenced by relative paths)",
                             file_types=[".zip"],
@@ -199,9 +219,23 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
             btn_preview.click(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, include_media_cb],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
                 outputs=[preview_display, status_box],
                 api_name="preview",
+            )
+
+            show_relative_images_cb.change(
+                fn=update_preview_and_validate,
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                outputs=[preview_display, status_box],
+                api_name=False,
+            )
+
+            media_zip_upload.change(
+                fn=update_preview_and_validate,
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                outputs=[preview_display, status_box],
+                api_name=False,
             )
 
             btn_convert.click(
@@ -214,7 +248,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
             # Initial preview load
             demo.load(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, include_media_cb],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
                 outputs=[preview_display, status_box],
                 api_name=False,
             )

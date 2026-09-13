@@ -5,6 +5,7 @@ Preflight owns resolution; Markdown rendering only rewrites references;
 packager only packages already-resolved assets.
 """
 
+import base64
 from dataclasses import dataclass, field
 import hashlib
 import html
@@ -64,6 +65,12 @@ class ResolvedAsset:
     data: bytes
     size_bytes: int
     content_hash: str
+
+    @property
+    def data_uri(self) -> str:
+        """Return base64 Data URL for embedding directly in HTML previews."""
+        b64 = base64.b64encode(self.data).decode("ascii")
+        return f"data:{self.content_type};base64,{b64}"
 
 
 @dataclass

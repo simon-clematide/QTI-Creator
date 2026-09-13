@@ -31,11 +31,18 @@ class TestPreview(unittest.TestCase):
         self.assertIn("Multiple Choice", html_out)
         self.assertIn("1.0 pt", html_out)
 
-    def test_preview_empty_quiz(self):
-        text = "# Empty Quiz\n"
-        quiz, _ = parse_quizmd(text)
-        html_out = render_quiz_preview_html(quiz)
-        self.assertIn("No questions detected yet", html_out)
+    def test_preview_with_asset_map(self):
+        text = """## Tree Anatomy
+![Oak Tree](images/tree.png)
+- [X] Root
+- [ ] Leaf
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        asset_map = {"images/tree.png": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="}
+        html_out = render_quiz_preview_html(quiz, asset_map=asset_map)
+        self.assertIn('src="data:image/png;base64,', html_out)
+        self.assertIn('alt="Oak Tree"', html_out)
 
 
 if __name__ == "__main__":

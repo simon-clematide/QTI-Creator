@@ -11,381 +11,181 @@ license: mit
 
 # 📝 QTI-Creator: Markdown to OpenOLAT QTI 2.1
 
-A lightweight, author-friendly tool for writing quizzes in natural **Markdown** and converting them instantly into standardized **IMS QTI 2.1 Content Packages (`.zip`)** that are directly importable, executable, and **editable in OpenOLAT**.
+A lightweight tool for writing quizzes in natural **Markdown** and converting them into standardized **IMS QTI 2.1 Content Packages (`.zip`)** ready for direct import into **OpenOLAT**.
 
 ---
 
-## 🎯 Motivation
+## ⚡ Quick Start: Zero Configuration
 
-### The Problem
-Creating high-quality quizzes and exams in modern Learning Management Systems (LMS) like **OpenOLAT** is often a frustrating experience:
-- **Click-Heavy Web Forms**: Creating questions one-by-one inside web forms requires dozens of clicks, modal popups, and tab navigations for every single question.
-- **XML Complexity**: Under the hood, OpenOLAT assessments rely on the **IMS QTI 2.1** standard. While QTI 2.1 is powerful and robust, writing or editing multi-file XML manifests and assessment items manually is virtually impossible for educators.
-- **Existing Text Formats Fall Short**:
-  - **Aiken Format**: Wonderfully simple, but strictly limited to Single Choice questions. It cannot express Multiple Choice, Fill-in-the-Blank, Numerical, Essay, or Kprim.
-  - **GIFT Format**: Powerful, but its cryptic bracket syntax (`{~=}`) is difficult to read and error-prone when writing math formulas or formatted prose.
-  - **Text2QTI**: Designed specifically for Canvas LMS using legacy QTI 1.2, which modern OpenOLAT (v15+) no longer supports.
-
-### The Solution: "QuizMD"
-Educators, instructional designers, and LLMs write in **Markdown** every day. **QTI-Creator** bridges the gap:
-1. **Write ordinary Markdown** — Use natural headings, paragraphs, bullet lists, and checkboxes (`- [ ]`, `- [X]`, `- [x]`).
-2. **Infer the obvious** — The parser detects question types deterministically: uppercase `- [X]` infers Single Choice (exactly one answer allowed); lowercase `- [x]` infers Multiple Choice; `[+]`/`[-]` markers infer Kprim; `{{gap}}` infers Fill-in-the-Blank.
-3. **Download OpenOLAT-native QTI 2.1** — The generated package includes root-level manifests, delivery configurations, and metadata so OpenOLAT recognizes the questions as **native items** that open directly in OpenOLAT's visual question editor.
-
----
-
-## 💡 Core Design Principles
-
-1. **Markdown is Markdown**:
-   Standard Markdown syntax retains its normal meaning. Use `#` for the quiz title, `##` for questions, `- [ ]` / `- [X]` / `- [x]` for options, `**bold**`, `*italic*`, code blocks, blockquotes, and LaTeX math notation (`$...$`).
-2. **Infer the Obvious**:
-   Authors do not need to write `Type: SingleChoice`. One checked box with `[X]` infers Single Choice; one or more checked boxes with `[x]` infer Multiple Choice; `[+]`/`[-]` markers infer Kprim; `{{gap}}` infers Fill-in-the-Blank; `= number` infers Numerical; a question with no answer specification infers an Essay question.
-3. **Sensible Defaults**:
-   Questions default to 1 point, automatic QTI identifiers, and standard scoring. Metadata is optional and only required when overriding defaults (e.g. `Points: 3`).
-4. **OpenOLAT Native Compatibility**:
-   - Manifest `imsmanifest.xml` is placed strictly at the root level of the ZIP archive.
-   - Includes OpenOLAT's native `QTI21PackageConfig.xml` package delivery configuration.
-   - Adds `toolName="OpenOLAT"` and `toolVersion="8.4.0"` metadata to each assessment item, allowing seamless editing in OpenOLAT's question editor without foreign-format warnings.
-
----
-
-## 📋 Syntax Reference by Question Type
-
-### 1. Single Choice (SC)
-Use uppercase `[X]` to mark the correct single-choice answer. Exactly one `[X]` is required:
+Writing a quiz requires almost no syntax overhead. Question types are inferred automatically:
 
 ```markdown
+# My First Quiz
+
 ## What is the capital of France?
-- [ ] Berlin
 - [X] Paris
+- [ ] Berlin
 - [ ] Rome
-- [ ] Madrid
+
+## Which are official languages of Switzerland?
+- [x] German
+- [x] French
+- [x] Italian
+- [ ] English
+
+## Zurich is the capital of Switzerland.
+- [ ] True
+- [X] False
+
+## Irregular Verbs
+The past tense of *go* is {{went}}.
+
+## Order these processing stages.
+1. [ ] Tokenization
+1. [ ] Parsing
+1. [ ] Evaluation
 ```
 
-### 2. Multiple Choice (MC)
-Use lowercase `[x]` to mark correct multiple-choice answers. One or more `[x]` answers are valid:
+### Core Syntax at a Glance
+
+| Question Type | How to Write It | Inference Rule |
+| :--- | :--- | :--- |
+| **Single Choice** | `- [X] Correct Option`<br>`- [ ] Wrong Option` | Exactly 1 marked with uppercase `[X]` |
+| **Multiple Choice** | `- [x] Correct Option 1`<br>`- [x] Correct Option 2`<br>`- [ ] Distractor` | One or more marked with lowercase `[x]` |
+| **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
+| **Fill in the Blank** | `The capital is {{Paris}}.` | Wrap target word in `{{gap}}` |
+| **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Numbered task list with empty `[ ]` (min 2 items) |
+| **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tolerance)` |
+| **Essay / Free Text** | Prompt without answer markers | Open text area for student response |
+| **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | Exactly 4 statements marked `[+]` or `[-]` |
+
+---
+
+## 📥 How to Import into OpenOLAT (3 Steps)
+
+1. **Export from QTI-Creator**: Write your quiz in the editor and click **"Generate OpenOLAT QTI Package"** to download the `.zip` archive.
+2. **Upload to Question Bank**: In OpenOLAT, open **Question Bank** $\rightarrow$ click **Import** $\rightarrow$ choose **"ZIP-file from local computer"** and upload the file. All questions will appear in your pool.
+3. **Use in a Course**: Add a **Test** element to your OpenOLAT course, choose **"Select or create test"**, and pick your imported questions.
+
+---
+
+## 📖 In-Depth Syntax Reference & Advanced Features
+
+### 1. Choice Questions: Strict Case-Sensitive Markers
+QTI-Creator enforces clear marker families:
+- **Single Choice**: Exactly one `[X]` (uppercase). If more than 1 `[X]` is used, the parser returns a diagnostic error.
+- **Multiple Choice**: Lowercase `[x]`. Any question with `[x]` is Multiple Choice (even if only 1 option is checked).
+- **Prohibited**: Mixing `[X]` and `[x]` in the same question is forbidden to prevent ambiguity. Legacy `[o]`, `(o)`, or `(*)` are not supported.
+
+### 2. Multiple Choice Scoring (Automatic Kprim Proportion)
+In OpenOLAT, multiple-choice questions are automatically evaluated with **Kprim-style proportion scoring**:
+- Selecting a correct option awards `+1.0`.
+- Selecting an incorrect option deducts `-1.0` (eliminating the "select-all" guessing cheat).
+- **100% (full points)**: All choices evaluated correctly (all correct items selected, no distractors selected).
+- **50% (half points)**: Exactly 1 mistake made (either 1 missed correct answer OR 1 distractor selected).
+- **0%**: 2 or more mistakes made (with score floored at `0.0`).
+
+### 3. Fill-in-the-Blank with Gap Alternatives
+Accept multiple valid spellings or synonyms using the pipe `|` separator:
 
 ```markdown
-## Which of the following are prime numbers?
+## Color Spelling
+The American spelling of the colour between black and white is {{gray | grey}}.
+```
+- The first value (`gray`) is the canonical primary answer.
+- All subsequent values (`grey`) are accepted alternatives.
+- In OpenOLAT, every alternative receives the same full credit for that blank.
+- Whitespace around `|` is automatically trimmed.
+
+### 4. Order / Sequencing Questions (`N. [ ]`)
+Order questions require students to drag and drop items into the correct target sequence.
+
+```markdown
+## Stages of a Machine Learning Pipeline
 Points: 2
-- [x] 2
-- [x] 3
-- [ ] 4
-- [x] 5
-- [ ] 6
+1. [ ] Data collection
+1. [ ] Feature engineering
+1. [ ] Model training
+1. [ ] Model evaluation
 ```
-*Scoring in OpenOLAT (Kprim-style evaluation):*
-- **100% (full points)**: All choices evaluated correctly (all correct items selected, no incorrect items selected).
-- **50% (half points)**: Exactly 1 mistake made (e.g. 1 missed correct choice OR 1 extra incorrect choice checked).
-- **0%**: 2 or more mistakes made (with floor at 0 points).
 
-### 3. True / False (TF)
-Two choices matching "True" and "False" are recognized as a True/False question:
+**Rules:**
+- **Inference**: An ordered Markdown list consisting of empty task-list items (`N. [ ] ...`) is recognized as an Order question.
+- **Ordinary Numbered Lists Are Preserved**: Regular lists (`1. Foo\n2. Bar`) without task boxes `[ ]` remain standard Markdown text and are NOT converted into Order questions.
+- **Source Order is the Solution**: The order written in Markdown is the target correct answer.
+- **Generous Numbering**: The actual numbers carry no assessment semantics—repeated numbers (`1. [ ] ... 1. [ ] ...`) or arbitrary numbers (`7. [ ] ... 2. [ ] ...`) are fully valid.
+- **Empty Checkboxes Required**: If a numbered task item contains `[X]` or `[x]`, it is rejected with a diagnostic error.
+- **Automatic Shuffling**: In the generated QTI package, the question interaction is set to `shuffle="true"` so students are presented with scrambled tiles.
 
+### 5. Shuffling / Randomization
+Enable answer scrambling across Single Choice, Multiple Choice, Kprim, and Order interactions:
+
+**At the Quiz Level (Inherited by all questions):**
 ```markdown
-## The Earth completes one orbit around the Sun in approximately 365.25 days.
-- [X] True
-- [ ] False
+# My Quiz
+Shuffle: yes
 ```
+Accepted boolean forms: `true` / `yes` / `1` / `on` and `false` / `no` / `0` / `off`.
 
-### 4. Fill-in-the-Blank (Text Entry Gap)
-Wrap the expected word or phrase in double curly braces `{{...}}`. Multiple gaps are supported:
-
+**Question-Level Override:**
 ```markdown
-## Irregular English Verbs
-The past tense of *go* is {{went}} and the past participle is {{gone}}.
+## Which of the following is true?
+Shuffle: false
+- [ ] Option A
+- [ ] Option B
+- [X] All of the above
 ```
 
-### 5. Numerical with Optional Tolerance
-Use an answer line starting with `=`. Tolerances can be specified with `±`, `+-`, or `+/-`:
+### 6. Preamble Metadata & Frontmatter Space
+Quiz-level metadata acts as defaults that inherit down to every individual question in OpenOLAT:
 
-```markdown
-## Gravitational Acceleration
-What is the acceleration due to gravity on Earth's surface in m/s²?
-= 9.81 ± 0.05
-```
-
-### 6. Essay / Free Text
-A question prompt without answer markers is automatically treated as an open-ended essay question:
-
-```markdown
-## Explain the process of cellular respiration.
-Briefly distinguish between aerobic and anaerobic respiration and state the primary ATP yield for each.
-Points: 5
-```
-
-### 7. Kprim (Swiss 4-Statement True/False Matrix)
-Kprim is a signature format in Swiss and German universities and a native feature of OpenOLAT. Use `[+]` for true statements and `[-]` for false statements. Exactly four statements are required:
-
-```markdown
-## Characteristics of Mammals
-Points: 2
-- [+] They possess hair or fur.
-- [+] Females produce milk to nourish their young.
-- [-] All mammals give birth to live young without exception.
-- [-] Mammals are ectothermic organisms.
-```
-*Scoring in OpenOLAT:* 4/4 correct = full points (2 pt); 3/4 correct = half points (1 pt); $\le$ 2/4 correct = 0 points.
-
-### 8. Quiz Metadata, Versioning & OpenOLAT Attributes
-You can specify the quiz version, language, topic, keywords, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B).
-
-Quiz-level metadata automatically inherits down to every question as defaults unless locally overridden.
-
-#### Protected Keywords at the Beginning of a Quiz
-In the preamble section before the first `## Question`, the following keywords are reserved:
-- **`Version:`** — Sets the quiz version (e.g. `Version: 1.2.0`). Default: `1.0.0`. Automatically mapped to OpenOLAT *Zusatzinformationen* (Additional Information) on questions if not overridden.
-- **`Language:`** — Sets the ISO language code (e.g. `Language: en`, `Language: de`). Default: `en`.
-- **`Topic:`** — Sets the default topic/theme (e.g. `Topic: Molecular Biology`). Mapped to OpenOLAT `<ns4:topic>`.
-- **`Keywords:`** or **`Tags:`** — Comma-separated or YAML list of keywords (e.g. `Keywords: cell, genetics, biology`). Mapped to OpenOLAT `<imsmd:keyword>` tags.
-- **`Additional_Info:`** — Explicit text for OpenOLAT *Zusatzinformationen* (`<ns4:additionalInformations>`).
-- **`Title:`** — Alternative way to declare the quiz title (standard is `# Title`).
-- **`Description:`** — Explicit single-line description (regular preamble paragraphs are also collected as description).
-- **`# Title`** — Standard Markdown Level 1 heading for the quiz title.
-
-**Way A: Top-Level Header Metadata**
-```markdown
-# Cellular Biology Quiz
-Version: 1.2.0
-Language: en
-Topic: Cell Biology
-Keywords: cell, organelle, biology
-
-This is an introductory test covering cell structures.
-```
-
-**Way B: YAML Frontmatter**
 ```markdown
 ---
 title: Cellular Biology Quiz
 version: 1.2.0
 language: en
+shuffle: yes
 topic: Cell Biology
 keywords: [cell, organelle, biology]
 ---
-
-This is an introductory test covering cell structures.
 ```
-*(If both frontmatter and header metadata are specified, they must be consistent; contradictory values will produce a warning diagnostic).*
+*(Or via top-level headers `Version: 1.2.0`, `Language: en`, `Topic: Cell Biology`, `Keywords: cell, organelle, biology`).*
 
-### 9. Question-Level Metadata, Local Overrides & Post-Submission Feedback
-Question metadata lines are optional and case-insensitive. They can be placed **before or after** the choices:
-- `Points: <number>` — Sets the question point value (default: `1`).
-- `Feedback: <text>` — Adds post-submission modal feedback shown to learners in OpenOLAT after the test is completed. Full Markdown and LaTeX math (`$...$`) are supported in feedback text.
-- `Topic: <topic>` — Overrides the quiz default topic for this question in OpenOLAT.
-- `Keywords: <kw1, kw2>` — Overrides quiz keywords for this question in OpenOLAT.
-- `Additional_Info: <text>` — Custom text for OpenOLAT *Zusatzinformationen*.
-- `Language: <lang>` — Overrides language code for this question.
-- `Type: <type>` — Explicit override if you wish to bypass inference (e.g. `Type: multiple-choice`).
-- `Identifier: <id>` — Custom QTI item identifier (default: auto-generated `item_xxxxxxxx`).
+- **`Version:`** Encoded into `<manifest version="...">` and inherited to question `<ns4:additionalInformations>Version: ...</ns4:additionalInformations>`.
+- **`Topic:`** Mapped to OpenOLAT's native `<ns4:topic>`.
+- **`Keywords:`** / **`Tags:`** Mapped to `<imsmd:keyword><imsmd:langstring ...>`.
+- **`Language:`** Sets the ISO language code for LOM and QTI items.
 
-#### Example: Feedback after choices (recommended)
+### 7. Question-Level Metadata & Post-Submission Feedback
+Metadata lines can appear **before or after** choices:
+- `Points: <number>` (default: 1)
+- `Feedback: <text>`: Post-submission feedback displayed to learners in OpenOLAT. Supports Markdown and LaTeX math (`$...$`).
+- `Shuffle: <bool>`: Overrides quiz shuffling.
+- `Topic: <text>`: Overrides question topic in OpenOLAT.
+- `Keywords: <kw1, kw2>`: Overrides question keywords.
+- `Additional_Info: <text>`: Overrides OpenOLAT *Zusatzinformationen*.
+
 ```markdown
 ## What is the capital of France?
-Topic: Geography
-Keywords: europe, france, capitals
+Topic: European Capitals
+Keywords: france, geography
 - [ ] Berlin
 - [X] Paris
 - [ ] Rome
 Feedback: Paris has been the capital since 508 AD.
 ```
 
-#### Example: Metadata before choices with LaTeX math
-```markdown
-## Calculus: Integration by Parts
-Points: 2
-Topic: Calculus
-Keywords: math, calculus, integration
-Feedback: Use $\int u \, dv = uv - \int v \, du$ with $u = x$ and $dv = e^x dx$.
-- [ ] $(x + 1)e^x + C$
-- [X] $(x - 1)e^x + C$
-```
-
-### 10. Code Snippets (Inline & Multiline Fenced Blocks)
-Both inline code and multiline fenced code blocks are supported in prompts and choices:
-- **Inline code**: Wrap code in single backticks: `` `print("hello")` `` or `` `int main()` ``.
-- **Multiline code blocks**: Use standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks (including assignment operators `=`, task items `- [ ]`, or comments) are protected and will never be misclassified as quiz markers.
-
-```markdown
-## Python Function Output
-What does this function return when called with `mystery(3)`?
-```python
-def mystery(n):
-    total = 0
-    for i in range(n):
-        total += i
-    return total
-```
-- [X] `3`
-- [ ] `6`
-- [ ] `0`
-```
+### 8. Mathematical Formulas & Code Blocks
+- **Inline LaTeX**: Wrap in `$ ... $`, e.g. `$E = mc^2$`. OpenOLAT renders this natively with MathJax.
+- **Display Math**: Wrap in `$$ ... $$` on its own line.
+- **Inline Code**: Use backticks: `` `x = 42` ``.
+- **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
 ---
 
-## 🚀 Complete Quiz Examples
+## 🧪 Testing & Validation
 
-### Example 1: General Knowledge & Science Quiz (Header Metadata)
-```markdown
-# General Knowledge & Science Quiz
-Version: 1.0.0
-Language: en
-
-A comprehensive demonstration covering all question types.
-
-## What is the capital of France?
-- [ ] Berlin
-- [X] Paris
-- [ ] Rome
-- [ ] Madrid
-Feedback: Paris has been the capital since 508 AD.
-
-## Which of the following numbers are prime?
-Points: 2
-- [x] 2
-- [x] 3
-- [ ] 4
-- [x] 5
-- [ ] 6
-
-## The Earth completes one full orbit around the Sun in approximately 365.25 days.
-- [X] True
-- [ ] False
-
-## Irregular Verb Forms
-The past tense of *go* is {{went}} and the past participle is {{gone}}.
-
-## Gravitational Acceleration
-What is the acceleration due to gravity on Earth's surface in m/s²?
-= 9.81 ± 0.05
-
-## Cellular Respiration
-Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
-Points: 3
-
-## Characteristics of Mammals
-Points: 2
-- [+] They possess hair or fur.
-- [+] Females produce milk to nourish their young.
-- [-] All mammals give birth to live young without exception.
-- [-] Mammals are ectothermic organisms.
-```
-
-### Example 2: Linguistics & Language Quiz (YAML Frontmatter)
-```markdown
----
-title: Introduction to Linguistics Quiz
-version: 1.1.0
-language: en
----
-
-## Which language family does English belong to?
-- [ ] Romance
-- [X] Germanic
-- [ ] Slavic
-- [ ] Uralic
-
-## English has grammatical gender comparable to German.
-- [ ] True
-- [X] False
-
-## Contrastive Sound Units
-The smallest contrastive sound unit in a language that can distinguish meaning is a {{phoneme}}.
-
-## Phonological Minimal Pairs
-Briefly explain what a minimal pair is and provide at least one clear example in English.
-Points: 2
-
-## Indo-European Branches
-Select all language families that belong to the Indo-European family:
-Points: 2
-- [x] Celtic
-- [x] Indo-Iranian
-- [ ] Sino-Tibetan
-- [x] Hellenic (Greek)
-- [ ] Afroasiatic
-```
-
-### Example 3: STEM, Physics & Mathematics Quiz
-```markdown
-# Physics & Mathematics Foundations
-Version: 2.0.0
-Language: en
-
-## Universal Gravitation
-Which physicist formulated the Universal Law of Gravitation?
-- [ ] Albert Einstein
-- [X] Isaac Newton
-- [ ] Niels Bohr
-- [ ] Galileo Galilei
-
-## Subatomic Particles
-Which particles are located in the nucleus of an atom?
-Points: 2
-- [x] Protons
-- [x] Neutrons
-- [ ] Electrons
-- [ ] Photons
-
-## Speed of Light
-What is the speed of light in vacuum $c$ (in units of $10^8 \text{ m/s}$)?
-= 2.998 ± 0.01
-
-## Newton's Third Law
-For every action, there is an {{equal}} and {{opposite}} reaction.
-
-## Thermodynamic Entropy
-State the Second Law of Thermodynamics and briefly explain how it relates to the concept of entropy in isolated systems.
-Points: 4
-
-## Properties of Vectors in $\mathbb{R}^3$
-- [+] The dot product of two orthogonal vectors is always zero.
-- [+] The cross product $\vec{a} \times \vec{b}$ is perpendicular to both $\vec{a}$ and $\vec{b}$.
-- [-] The cross product of two parallel vectors has magnitude equal to the product of their lengths.
-- [-] Vector addition is non-commutative.
-```
-
----
-
-## 📥 How to Import into OpenOLAT
-
-1. **Export from QTI-Creator**:
-   - Write your quiz in the editor (or paste your Markdown).
-   - Click **"Generate OpenOLAT QTI Package"** to download the `.zip` archive.
-2. **Import into OpenOLAT Question Bank**:
-   - Log into OpenOLAT.
-   - Navigate to **Question Bank** in the top navigation.
-   - Click **Import** $\rightarrow$ **ZIP-file from local computer**.
-   - Select your downloaded `.zip` file and click **Upload**.
-   - OpenOLAT will parse the package and immediately import all items into your question pool.
-3. **Edit or Use in a Course**:
-   - Because QTI-Creator outputs native OpenOLAT metadata, you can click on any question to open it directly in OpenOLAT's visual question editor.
-   - Add the imported questions to a **Test** node inside your OpenOLAT course.
-
----
-
-## 🛠️ Running Locally
-
-```bash
-# Clone the repository
-git clone https://github.com/simon-clematide/QTI-Creator.git
-cd QTI-Creator
-
-# Create virtual environment and install dependencies
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run the Gradio app
-python3 app.py
-```
-The web interface will be available at `http://localhost:7860`.
-
----
-
-## 🧪 Testing
-
-QTI-Creator includes a full test suite verifying model invariants, parser inference rules, QTI 2.1 XML schema compliance, and OpenOLAT packaging integrity:
+Run the automated test suite covering all parser rules, model invariants, and QTI XML generators:
 
 ```bash
 python3 -m unittest discover tests/
@@ -395,76 +195,20 @@ python3 -m unittest discover tests/
 
 ## 🔌 Programmatic API Access (Gradio API)
 
-Because QTI-Creator is built with Gradio, it automatically exposes a REST and WebSocket API. You can integrate quiz conversion directly into CI/CD pipelines, LMS automation scripts, or external authoring tools without using the web UI.
+Integrate QTI-Creator directly into automated workflows:
 
-An interactive API explorer is always accessible directly at the bottom of the running app via the **"Use via API"** link.
-
-### 1. Python Client (`gradio_client`)
-
-Install the official Gradio client:
-```bash
-pip install gradio_client
-```
-
-Convert Markdown into an OpenOLAT QTI 2.1 `.zip` package:
 ```python
 from gradio_client import Client
 
-# Connect to the Hugging Face Space (or local instance: Client("http://localhost:7860"))
 client = Client("simon-clmtd/qti-creator")
-
-markdown_quiz = """# General Knowledge Quiz
-Version: 1.0.0
-
-## What is the capital of Switzerland?
-- [ ] Zurich
-- [X] Bern
-- [ ] Geneva
-"""
-
-# Call the /convert endpoint
-zip_file_path, status_message = client.predict(
-    quiz_text=markdown_quiz,
+zip_path, status = client.predict(
+    quiz_text="# Quick Quiz\n## What is 2 + 2?\n- [X] 4\n- [ ] 5",
     api_name="/convert"
 )
-
-print("Status:", status_message)
-print("Downloaded QTI 2.1 package saved at:", zip_file_path)
+print("Saved QTI package to:", zip_path)
 ```
 
-You can also call the `/preview` endpoint to validate Markdown without downloading:
-```python
-html_preview, diagnostics = client.predict(
-    quiz_text=markdown_quiz,
-    api_name="/preview"
-)
-print("Diagnostics:", diagnostics)
-```
+---
 
-### 2. JavaScript / TypeScript Client (`@gradio/client`)
-
-Install via npm:
-```bash
-npm install @gradio/client
-```
-
-```javascript
-import { Client } from "@gradio/client";
-
-const app = await Client.connect("simon-clmtd/qti-creator");
-
-const result = await app.predict("/convert", [
-  `# History Quiz\n## What year did WW2 end?\n- [X] 1945\n- [ ] 1939`
-]);
-
-console.log("Result:", result.data);
-```
-
-### 3. cURL / REST API
-
-You can also trigger conversions via standard HTTP requests:
-```bash
-curl -X POST https://simon-clmtd-qti-creator.hf.space/call/convert \
-  -H "Content-Type: application/json" \
-  -d '{"data": ["# Math Quiz\n## 2 + 2 = ?\n- [X] 4\n- [ ] 5"]}'
-```
+## 📄 License
+MIT License. Open source and free for academic and commercial use.

@@ -13,6 +13,7 @@ from src.model import (
     KprimQuestion,
     MultipleChoiceQuestion,
     NumericalQuestion,
+    OrderQuestion,
     Question,
     Quiz,
     SingleChoiceQuestion,
@@ -30,6 +31,8 @@ def _get_qti_interaction_type(q: Question) -> str:
         return "textEntryInteraction"
     elif isinstance(q, EssayQuestion):
         return "extendedTextInteraction"
+    elif isinstance(q, OrderQuestion):
+        return "orderInteraction"
     return "choiceInteraction"
 
 
@@ -49,6 +52,8 @@ def _get_openolat_question_type(q: Question) -> str:
         return "numerical"
     elif isinstance(q, EssayQuestion):
         return "essay"
+    elif isinstance(q, OrderQuestion):
+        return "order"
     return "sc"
 
 

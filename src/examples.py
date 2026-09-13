@@ -3,6 +3,7 @@
 SAMPLE_ALL_TYPES = """# General Knowledge & Science Quiz
 Version: 1.0.0
 Language: en
+Shuffle: yes
 
 A demonstration quiz covering all supported question types with automatic inference.
 
@@ -27,10 +28,18 @@ Points: 2
 
 ## Irregular Verb Forms
 The past tense of *go* is {{went}} and the past participle is {{gone}}.
+The American spelling of the colour between black and white is {{gray | grey}}.
 
 ## Gravitational Acceleration
 What is the acceleration due to gravity on Earth's surface in m/s²?
 = 9.81 ± 0.05
+
+## Order the stages of a machine learning workflow.
+Points: 2
+1. [ ] Data collection
+1. [ ] Feature engineering
+1. [ ] Model training
+1. [ ] Evaluation
 
 ## Cellular Respiration
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.

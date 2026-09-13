@@ -56,6 +56,7 @@ class Question:
     keywords: List[str] = field(default_factory=list)
     additional_info: Optional[str] = None
     language: Optional[str] = None
+    shuffle: Optional[bool] = None
 
     def __post_init__(self):
         if not self.title:
@@ -191,6 +192,28 @@ class KprimQuestion(Question):
 
 
 @dataclass
+class OrderItem:
+    """An item to be ordered in an Order/Sequencing question."""
+    text: str
+    identifier: str = field(default_factory=lambda: generate_id("order_item"))
+
+
+@dataclass
+class OrderQuestion(Question):
+    """Order / Sequencing: Target sequence defined by source order."""
+    items: List[OrderItem] = field(default_factory=list)
+
+    def validate(self) -> None:
+        super().validate()
+        min_items = DEFAULTS["order_min_items"]
+        if len(self.items) < min_items:
+            raise QuizValidationError(
+                f"Order question requires at least {min_items} items, found {len(self.items)}.",
+                [Diagnostic(f"Order question requires at least {min_items} items, found {len(self.items)}.", Severity.ERROR, self.line_number)],
+            )
+
+
+@dataclass
 class Quiz:
     """Top-level Quiz container."""
     title: str = field(default_factory=lambda: DEFAULTS["quiz_title"])
@@ -202,6 +225,7 @@ class Quiz:
     topic: Optional[str] = None
     keywords: List[str] = field(default_factory=list)
     additional_info: Optional[str] = None
+    shuffle: bool = False
 
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""

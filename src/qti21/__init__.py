@@ -7,6 +7,7 @@ from src.model import (
     KprimQuestion,
     MultipleChoiceQuestion,
     NumericalQuestion,
+    OrderQuestion,
     Question,
     SingleChoiceQuestion,
     TrueFalseQuestion,
@@ -20,6 +21,7 @@ def generate_item_xml(question: Question) -> str:
     from src.qti21.text_entry import generate_fill_blank_xml
     from src.qti21.numerical import generate_numerical_xml
     from src.qti21.kprim import generate_kprim_xml
+    from src.qti21.order import generate_order_xml
 
     if isinstance(question, SingleChoiceQuestion):
         return generate_single_choice_xml(question)
@@ -35,5 +37,7 @@ def generate_item_xml(question: Question) -> str:
         return generate_numerical_xml(question)
     elif isinstance(question, KprimQuestion):
         return generate_kprim_xml(question)
+    elif isinstance(question, OrderQuestion):
+        return generate_order_xml(question)
     else:
         raise NotImplementedError(f"No QTI 2.1 generator for {type(question).__name__}")

@@ -187,21 +187,23 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` |
                 | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` (scored as Kprim: all correct = 100%, 1 mistake = 50%, $\ge$ 2 mistakes = 0%) |
                 | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
-                | **Fill in the Blank** | `The capital of France is {{Paris}}.` | Prompt contains `{{gap}}` |
+                | **Fill in the Blank** | `The word is {{gray \| grey}}.` | Prompt contains `{{canonical \| alt1 \| alt2}}` |
+                | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered task list with empty `[ ]` (min 2 items, source order is target sequence) |
                 | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` |
                 | **Essay / Free Text** | Question prompt with no answers | No answer tokens |
                 | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | 4 statements marked `[+]` or `[-]` |
 
                 ---
 
-                ### Quiz Metadata & Versioning
-                You can specify quiz-level version, language, topic, keywords, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
+                ### Quiz Metadata & Shuffling
+                You can specify quiz-level settings using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
 
                 **Way A: Top-Level Header Metadata**
                 ```markdown
                 # Biology Exam
                 Version: 1.2.0
                 Language: en
+                Shuffle: yes
                 Topic: Molecular Biology
                 Keywords: cells, genetics, dna
                 ```
@@ -212,6 +214,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 title: Biology Exam
                 version: 1.2.0
                 language: en
+                shuffle: yes
                 topic: Molecular Biology
                 keywords: [cells, genetics, dna]
                 ---
@@ -224,6 +227,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
                 - `Points: 3` (default: 1)
                 - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
+                - `Shuffle: false` (overrides quiz shuffle for this question)
                 - `Topic: Genetics` (overrides quiz-level Topic in OpenOLAT)
                 - `Keywords: rna, translation` (overrides quiz-level Keywords in OpenOLAT)
                 - `Additional_Info: Custom note` (overrides OpenOLAT Zusatzinformationen)
@@ -232,13 +236,13 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 - `Identifier: custom_id` (optional, default: auto-generated)
 
                 ```markdown
-                ## What is the capital of France?
-                Topic: Geography
-                Keywords: europe, capitals
-                - [ ] Berlin
-                - [X] Paris
-                - [ ] Rome
-                Feedback: Paris has been the capital since 508 AD.
+                ## Order the biological taxonomy ranks
+                Points: 2
+                1. [ ] Domain
+                1. [ ] Kingdom
+                1. [ ] Phylum
+                1. [ ] Class
+                Feedback: Remember "Dear King Philip Came Over For Good Soup".
                 ```
                 """
             )

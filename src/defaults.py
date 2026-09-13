@@ -22,6 +22,9 @@ DEFAULTS: Dict[str, Any] = {
     "kprim_full_points": 1.0,
     "kprim_half_points": 0.5,
     "kprim_num_statements": 4,
+
+    # Order question defaults
+    "order_min_items": 2,
     
     # Numerical tolerance defaults
     "tolerance": 0.0,

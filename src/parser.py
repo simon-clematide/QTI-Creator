@@ -30,6 +30,8 @@ from src.model import (
     KprimStatement,
     MultipleChoiceQuestion,
     NumericalQuestion,
+    OrderItem,
+    OrderQuestion,
     Question,
     Quiz,
     SingleChoiceQuestion,
@@ -42,8 +44,9 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 # Regex patterns
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
-RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language):\s*(.+)$", re.IGNORECASE)
+RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle):\s*(.+)$", re.IGNORECASE)
 RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
+RE_ORDER_TASK = re.compile(r"^\d+\.\s*\[([ xX])\]\s*(.*)$")
 RE_KPRIM_HEADER = re.compile(r"^kprim:\s*$", re.IGNORECASE)
 RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
 RE_NUMERICAL = re.compile(
@@ -62,12 +65,43 @@ class RawQuestionBlock:
         self.metadata: Dict[str, Any] = {}
         self.prompt_lines: List[str] = []
         self.choices: List[Tuple[bool, str, str, int]] = []  # (is_correct, mark, text, line_no)
+        self.order_items: List[Tuple[str, int]] = []  # (text, line_no)
+        self.order_invalid_marks: List[Tuple[str, int]] = []  # (mark, line_no)
         self.kprim_items: List[Tuple[bool, str, int]] = []  # (is_true, text, line_no)
         self.numerical: Optional[Tuple[float, float, int]] = None  # (val, tol, line_no)
         self.is_kprim_mode = False
 
 
-RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations):\s*(.+)$", re.IGNORECASE)
+RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations|shuffle):\s*(.+)$", re.IGNORECASE)
+
+
+def _parse_bool(val: Any) -> Optional[bool]:
+    """Parse common boolean representations."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return bool(val)
+    if isinstance(val, str):
+        cleaned = val.strip().lower()
+        if cleaned in ("true", "yes", "1", "on"):
+            return True
+        if cleaned in ("false", "no", "0", "off"):
+            return False
+    return None
+
+
+def _parse_gaps(prompt: str) -> List[Gap]:
+    """Parse gap tokens {{canonical | alt1 | alt2}} into Gap objects."""
+    raw_gaps = RE_GAP.findall(prompt)
+    gaps: List[Gap] = []
+    for g in raw_gaps:
+        parts = [p.strip() for p in g.split("|") if p.strip()]
+        if not parts:
+            continue
+        canonical = parts[0]
+        alternatives = parts[1:]
+        gaps.append(Gap(expected_value=canonical, alternatives=alternatives))
+    return gaps
 
 
 def _split_keywords(val: Any) -> List[str]:
@@ -291,7 +325,29 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     else:
         quiz_additional_info = None
 
-    # 7. Description
+    # 7. Shuffle
+    fm_shuffle = _parse_bool(frontmatter.get("shuffle"))
+    meta_shuffle = _parse_bool(top_meta.get("shuffle"))
+    if fm_shuffle is not None and meta_shuffle is not None:
+        if fm_shuffle != meta_shuffle:
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent shuffle: frontmatter specifies '{fm_shuffle}' but header metadata specifies '{meta_shuffle}'. Using header metadata.",
+                    Severity.WARNING,
+                    top_meta_lines.get("shuffle"),
+                )
+            )
+            quiz_shuffle = meta_shuffle
+        else:
+            quiz_shuffle = meta_shuffle
+    elif meta_shuffle is not None:
+        quiz_shuffle = meta_shuffle
+    elif fm_shuffle is not None:
+        quiz_shuffle = fm_shuffle
+    else:
+        quiz_shuffle = DEFAULTS["shuffle"]
+
+    # 8. Description
     quiz_description = (
         "\n".join(description_lines).strip()
         or top_meta.get("description")
@@ -316,6 +372,8 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                     q.keywords = list(quiz_keywords)
                 if q.language is None and quiz_language is not None:
                     q.language = quiz_language
+                if q.shuffle is None:
+                    q.shuffle = quiz_shuffle
                 if q.additional_info is None:
                     if quiz_additional_info is not None:
                         q.additional_info = quiz_additional_info
@@ -337,6 +395,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
         topic=quiz_topic,
         keywords=quiz_keywords,
         additional_info=quiz_additional_info,
+        shuffle=quiz_shuffle,
     )
 
     # Add any global quiz diagnostics
@@ -389,6 +448,17 @@ def _classify_block_lines(block: RawQuestionBlock) -> None:
             block.kprim_items.append((is_true, stmt_text, line_no))
             continue
 
+        # Check Order task list item: 1. [ ], 1. [x], 1. [X]
+        order_match = RE_ORDER_TASK.match(stripped)
+        if order_match:
+            mark = order_match.group(1)
+            item_text = order_match.group(2).strip()
+            if mark == " ":
+                block.order_items.append((item_text, line_no))
+            else:
+                block.order_invalid_marks.append((mark, line_no))
+            continue
+
         # Check Task list item: - [ ], - [x], - [X]
         task_match = RE_TASK_LIST.match(stripped)
         if task_match:
@@ -437,6 +507,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         or (f"Version: {block.metadata['version']}" if "version" in block.metadata else None)
     )
     language = block.metadata.get("language")
+    q_shuffle = _parse_bool(block.metadata.get("shuffle")) if "shuffle" in block.metadata else None
 
     # Combine prompt text
     prompt = "\n".join(block.prompt_lines).strip()
@@ -455,14 +526,38 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "keywords": keywords,
         "additional_info": additional_info,
         "language": language,
+        "shuffle": q_shuffle,
     }
 
-    # Prevent conflicting choice markers and Kprim markers
+    # Reject invalid numbered task-list items: 1. [x] or 1. [X]
+    if block.order_invalid_marks:
+        first_invalid_mark, line_no = block.order_invalid_marks[0]
+        raise QuizValidationError(
+            f"Numbered task-list items cannot contain [{first_invalid_mark}]; Order questions require empty checkboxes [ ].",
+            [Diagnostic(
+                f"Numbered task-list items cannot contain [{first_invalid_mark}]; Order questions require empty checkboxes [ ].",
+                Severity.ERROR,
+                line_no,
+                q_idx,
+            )],
+        )
+
+    # Prevent conflicting choice markers, Kprim markers, and Order items
     if block.choices and (block.kprim_items or block.is_kprim_mode):
         raise QuizValidationError(
             "Cannot combine choice markers [X]/[x] with Kprim markers [+]/[-] in the same question.",
             [Diagnostic(
                 "Cannot combine choice markers [X]/[x] with Kprim markers [+]/[-] in the same question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+    if block.order_items and (block.choices or block.kprim_items or block.is_kprim_mode):
+        raise QuizValidationError(
+            "Cannot combine Order items (N. [ ]) with choice or Kprim markers in the same question.",
+            [Diagnostic(
+                "Cannot combine Order items (N. [ ]) with choice or Kprim markers in the same question.",
                 Severity.ERROR,
                 block.start_line,
                 q_idx,
@@ -485,7 +580,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         elif explicit_type in ("essay", "freetext", "open"):
             return EssayQuestion(**common_kwargs)
         elif explicit_type in ("fillinblank", "fillblank", "fib"):
-            gaps = [Gap(expected_value=g) for g in RE_GAP.findall(prompt)]
+            gaps = _parse_gaps(prompt)
             return FillBlankQuestion(**common_kwargs, gaps=gaps)
         elif explicit_type in ("numerical", "num"):
             val, tol = (block.numerical[0], block.numerical[1]) if block.numerical else (0.0, 0.0)
@@ -493,19 +588,26 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         elif explicit_type == "kprim":
             stmts = [KprimStatement(text=it[1], is_correct=it[0]) for it in block.kprim_items]
             return KprimQuestion(**common_kwargs, statements=stmts)
+        elif explicit_type in ("order", "sequence", "sequencing"):
+            items = [OrderItem(text=it[0]) for it in block.order_items]
+            return OrderQuestion(**common_kwargs, items=items)
 
-    # 2. Inferred: Kprim
+    # 2. Inferred: Order / Sequencing (N. [ ] ...)
+    if block.order_items:
+        items = [OrderItem(text=it[0]) for it in block.order_items]
+        return OrderQuestion(**common_kwargs, items=items)
+
+    # 3. Inferred: Kprim
     if block.is_kprim_mode or block.kprim_items:
         stmts = [KprimStatement(text=it[1], is_correct=it[0]) for it in block.kprim_items]
         return KprimQuestion(**common_kwargs, statements=stmts)
 
-    # 3. Inferred: Fill-in-the-Blank
-    gaps_found = RE_GAP.findall(prompt)
+    # 4. Inferred: Fill-in-the-Blank
+    gaps_found = _parse_gaps(prompt)
     if gaps_found:
-        gaps = [Gap(expected_value=g) for g in gaps_found]
-        return FillBlankQuestion(**common_kwargs, gaps=gaps)
+        return FillBlankQuestion(**common_kwargs, gaps=gaps_found)
 
-    # 4. Inferred: Numerical
+    # 5. Inferred: Numerical
     if block.numerical is not None:
         val, tol = block.numerical[0], block.numerical[1]
         return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)

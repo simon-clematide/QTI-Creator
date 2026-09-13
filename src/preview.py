@@ -9,6 +9,7 @@ from src.model import (
     KprimQuestion,
     MultipleChoiceQuestion,
     NumericalQuestion,
+    OrderQuestion,
     Question,
     Quiz,
     SingleChoiceQuestion,
@@ -86,6 +87,8 @@ def _get_type_label(q: Question) -> str:
         return "Numerical"
     elif isinstance(q, KprimQuestion):
         return "Kprim (Matrix)"
+    elif isinstance(q, OrderQuestion):
+        return "Order / Sequencing"
     return "Question"
 
 
@@ -104,6 +107,8 @@ def _get_badge_color(q: Question) -> str:
         return "#ec4899"  # Pink
     elif isinstance(q, KprimQuestion):
         return "#6366f1"  # Indigo
+    elif isinstance(q, OrderQuestion):
+        return "#0ea5e9"  # Sky
     return "#64748b"
 
 
@@ -127,7 +132,10 @@ def _render_question_body(q: Question) -> str:
         return f"<ul style='padding-left: 4px; margin: 0;'>{''.join(items)}</ul>"
 
     elif isinstance(q, FillBlankQuestion):
-        items = [f"<li><strong>Gap {i+1}:</strong> <code>{html.escape(g.expected_value)}</code></li>" for i, g in enumerate(q.gaps)]
+        items = []
+        for i, g in enumerate(q.gaps):
+            alts_str = f" (alternatives: {', '.join(html.escape(a) for a in g.alternatives)})" if g.alternatives else ""
+            items.append(f"<li><strong>Gap {i+1}:</strong> <code>{html.escape(g.expected_value)}</code>{alts_str}</li>")
         return f"<ul style='padding-left: 20px; margin: 0; color: #475569;'>{''.join(items)}</ul>"
 
     elif isinstance(q, NumericalQuestion):
@@ -143,5 +151,9 @@ def _render_question_body(q: Question) -> str:
             symbol = "<span style='color: #16a34a; font-weight: bold;'>[+] True</span>" if stmt.is_correct else "<span style='color: #dc2626; font-weight: bold;'>[-] False</span>"
             rows.append(f"<tr><td style='padding: 6px 12px; border: 1px solid #e2e8f0;'>{html.escape(stmt.text)}</td><td style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: center;'>{symbol}</td></tr>")
         return f"<table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'><tr style='background: #f8fafc;'><th style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: left;'>Statement</th><th style='padding: 6px 12px; border: 1px solid #e2e8f0; width: 100px;'>Key</th></tr>{''.join(rows)}</table>"
+
+    elif isinstance(q, OrderQuestion):
+        items = [f"<li style='margin-bottom: 4px;'>{html.escape(it.text)}</li>" for it in q.items]
+        return f"<div style='color: #475569; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;'>Target Sequence:</div><ol style='padding-left: 24px; margin: 0; color: #1e293b;'>{''.join(items)}</ol>"
 
     return ""

@@ -10,6 +10,7 @@ from src.model import (
     FillBlankQuestion,
     NumericalQuestion,
     KprimQuestion,
+    OrderQuestion,
 )
 
 
@@ -394,6 +395,89 @@ Version: 2.0.0
         self.assertEqual(q2.keywords, ["physics", "quantum", "subatomic"])
         self.assertEqual(q2.language, "en")
         self.assertEqual(q2.additional_info, "Version: 2.0.0")
+
+    def test_shuffle_parsing_and_inheritance(self):
+        text = """---
+shuffle: yes
+---
+# Shuffled Quiz
+
+## Question 1 (Inherits quiz shuffle)
+- [X] A
+- [ ] B
+
+## Question 2 (Overrides shuffle to no)
+Shuffle: off
+- [x] C
+- [ ] D
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        self.assertTrue(quiz.shuffle)
+        self.assertTrue(quiz.questions[0].shuffle)
+        self.assertFalse(quiz.questions[1].shuffle)
+
+    def test_gap_alternatives_parsing(self):
+        text = """## Spelling Test
+The color can be written {{gray | grey |  greyish }}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        self.assertEqual(len(quiz.questions), 1)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, FillBlankQuestion)
+        self.assertEqual(len(q.gaps), 1)
+        gap = q.gaps[0]
+        self.assertEqual(gap.expected_value, "gray")
+        self.assertEqual(gap.alternatives, ["grey", "greyish"])
+
+    def test_order_question_inference_generous_numbering(self):
+        text = """## Order the stages of an NLP pipeline
+1. [ ] Tokenization
+1. [ ] Feature extraction
+99. [ ] Model inference
+2. [ ] Evaluation
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(len(quiz.questions), 1)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, OrderQuestion)
+        self.assertEqual(len(q.items), 4)
+        # Verify source order is strictly preserved
+        self.assertEqual(
+            [it.text for it in q.items],
+            ["Tokenization", "Feature extraction", "Model inference", "Evaluation"]
+        )
+
+    def test_order_question_min_items_validation(self):
+        text = """## Only One Item
+1. [ ] Solo item
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("requires at least 2 items" in d.message for d in diags))
+
+    def test_order_question_invalid_mark_rejected(self):
+        text = """## Invalid Numbered Task List
+1. [x] First
+2. [ ] Second
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Numbered task-list items cannot contain [x]" in d.message for d in diags))
+
+    def test_ordinary_numbered_list_not_converted_to_order(self):
+        text = """## Essay with Numbered Points
+Explain why the following three principles matter:
+1. Transparency
+2. Accountability
+3. Fairness
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        self.assertEqual(len(quiz.questions), 1)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, EssayQuestion)
+        self.assertIn("1. Transparency", q.prompt)
 
     def test_all_registered_examples_parse_and_package(self):
         from src.examples import EXAMPLES

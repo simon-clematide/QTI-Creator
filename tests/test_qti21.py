@@ -14,6 +14,8 @@ from src.model import (
     KprimStatement,
     MultipleChoiceQuestion,
     NumericalQuestion,
+    OrderItem,
+    OrderQuestion,
     Quiz,
     SingleChoiceQuestion,
     TrueFalseQuestion,
@@ -142,11 +144,48 @@ def square(n):
                 KprimStatement("Lake Geneva is completely in France", False),
             ],
             points=2.0,
+            shuffle=True,
         )
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
         self.assertIn("matchInteraction", xml_str)
+        self.assertIn('shuffle="true"', xml_str)
         self.assertIn("simpleAssociableChoice", xml_str)
+
+    def test_order_xml_validity(self):
+        q = OrderQuestion(
+            prompt="Order the following steps:",
+            items=[
+                OrderItem("Step 1"),
+                OrderItem("Step 2"),
+                OrderItem("Step 3"),
+            ],
+            points=2.0,
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("orderInteraction", xml_str)
+        self.assertIn('shuffle="true"', xml_str)
+        self.assertIn("match_correct", xml_str)
+        # Check correct response order
+        values = [elem.text for elem in root.findall(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}correctResponse/{http://www.imsglobal.org/xsd/imsqti_v2p1}value")]
+        self.assertEqual(values, [it.identifier for it in q.items])
+
+    def test_gap_alternatives_xml(self):
+        q = FillBlankQuestion(
+            prompt="The color is {{gray | grey}}.",
+            gaps=[Gap("gray", alternatives=["grey"])],
+            points=2.0,
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        # Verify both values in correctResponse
+        values = [elem.text for elem in root.findall(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}correctResponse/{http://www.imsglobal.org/xsd/imsqti_v2p1}value")]
+        self.assertIn("gray", values)
+        self.assertIn("grey", values)
+        # Verify mapping entries for both with full score
+        self.assertIn('mapKey="gray" mappedValue="2.0"', xml_str)
+        self.assertIn('mapKey="grey" mappedValue="2.0"', xml_str)
 
     def test_manifest_and_test_xml(self):
         quiz = Quiz(title="Swiss Test", version="1.3.5", language="fr", topic="Geography")

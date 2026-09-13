@@ -35,8 +35,9 @@ def generate_kprim_xml(q: KprimQuestion) -> str:
   </responseDeclaration>"""
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
-    <matchInteraction responseIdentifier="RESPONSE" shuffle="false" maxAssociations="4">
+    <matchInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxAssociations="4">
       <simpleMatchSet>
 {chr(10).join(associable_choices)}
       </simpleMatchSet>

@@ -27,8 +27,9 @@ def generate_single_choice_xml(q: SingleChoiceQuestion) -> str:
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
-    <choiceInteraction responseIdentifier="RESPONSE" shuffle="false" maxChoices="1">
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="1">
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
 
@@ -88,8 +89,9 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
-    <choiceInteraction responseIdentifier="RESPONSE" shuffle="false" maxChoices="0">
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="0">
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
 

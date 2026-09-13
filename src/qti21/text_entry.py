@@ -3,6 +3,7 @@ import re
 import html
 from src.markdown import markdown_to_qti_xhtml
 from src.model import FillBlankQuestion
+from src.parser import RE_GAP
 from src.qti21.item import wrap_assessment_item
 
 
@@ -50,7 +51,7 @@ def generate_fill_blank_xml(q: FillBlankQuestion, asset_map: Optional[Dict[str, 
         gap_counter += 1
         return f'<textEntryInteraction responseIdentifier="{resp_id}" expectedLength="15"/>'
 
-    item_body = re.sub(r"\{\{([^}]+)\}\}", replace_gap, prompt_xhtml)
+    item_body = RE_GAP.sub(replace_gap, prompt_xhtml)
 
     if len(q.gaps) == 1:
         response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""

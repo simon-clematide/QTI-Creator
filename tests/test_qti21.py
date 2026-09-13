@@ -164,6 +164,18 @@ def square(n):
         self.assertIsNotNone(elem, "textEntryInteraction must exist as an XML element, not escaped text")
         self.assertEqual(elem.attrib.get("responseIdentifier"), "RESPONSE_0")
 
+    def test_fill_blank_escapes_xml_validity(self):
+        q = FillBlankQuestion(
+            prompt=r"The template is {{answer containing \}\} braces | alternative}}.",
+            gaps=[Gap("answer containing }} braces", ["alternative"])],
+        )
+        xml_str = generate_item_xml(q)
+        self.assertNotIn("&lt;textEntryInteraction", xml_str)
+        self.assertIn("<textEntryInteraction", xml_str)
+        root = ET.fromstring(xml_str)
+        self.assertIn("answer containing }} braces", xml_str)
+        self.assertIn("alternative", xml_str)
+
 
     def test_numerical_xml_validity(self):
         q = NumericalQuestion(

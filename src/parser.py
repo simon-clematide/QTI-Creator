@@ -52,7 +52,7 @@ RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
 RE_NUMERICAL = re.compile(
     r"^=\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:±|\+-|\+/-)\s*(\d+(?:\.\d+)?))?$"
 )
-RE_GAP = re.compile(r"\{\{([^}]+)\}\}")
+RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
 
 
 class RawQuestionBlock:
@@ -90,12 +90,42 @@ def _parse_bool(val: Any) -> Optional[bool]:
     return None
 
 
+def _split_gap_inner(inner: str) -> List[str]:
+    """Split inner gap on unescaped '|' and unescape \\|, \\}, \\\\."""
+    parts = []
+    current = []
+    i = 0
+    while i < len(inner):
+        if inner[i] == "\\" and i + 1 < len(inner):
+            escaped_char = inner[i + 1]
+            if escaped_char in ("|", "}", "\\"):
+                current.append(escaped_char)
+                i += 2
+                continue
+            else:
+                current.append(inner[i])
+                current.append(escaped_char)
+                i += 2
+                continue
+        elif inner[i] == "|":
+            parts.append("".join(current).strip())
+            current = []
+            i += 1
+            continue
+        else:
+            current.append(inner[i])
+            i += 1
+    if current or not parts:
+        parts.append("".join(current).strip())
+    return [p for p in parts if p]
+
+
 def _parse_gaps(prompt: str) -> List[Gap]:
-    """Parse gap tokens {{canonical | alt1 | alt2}} into Gap objects."""
+    """Parse gap tokens {{canonical | alt1 | alt2}} into Gap objects, supporting escapes."""
     raw_gaps = RE_GAP.findall(prompt)
     gaps: List[Gap] = []
     for g in raw_gaps:
-        parts = [p.strip() for p in g.split("|") if p.strip()]
+        parts = _split_gap_inner(g)
         if not parts:
             continue
         canonical = parts[0]

@@ -165,6 +165,22 @@ The past tense of *go* is {{went}} and the past participle is {{gone}}.
         self.assertEqual(q.gaps[0].expected_value, "went")
         self.assertEqual(q.gaps[1].expected_value, "gone")
 
+    def test_fill_blank_escaping(self):
+        text = r"""## Code and Math Gaps
+The function is {{answer containing \}\} braces | alternative}}.
+The symbol is {{a \| b}} and the path is {{C:\\data}}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, FillBlankQuestion)
+        self.assertEqual(len(q.gaps), 3)
+        self.assertEqual(q.gaps[0].expected_value, "answer containing }} braces")
+        self.assertEqual(q.gaps[0].alternatives, ["alternative"])
+        self.assertEqual(q.gaps[1].expected_value, "a | b")
+        self.assertEqual(q.gaps[1].alternatives, [])
+        self.assertEqual(q.gaps[2].expected_value, r"C:\data")
+
     def test_numerical_inference(self):
         text = """## Gravitational acceleration:
 = 9.81 ± 0.05

@@ -298,6 +298,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 - Wrap target blanks in `{{...}}`.
                 - Provide acceptable synonyms or alternate spellings with pipe `|`: `{{gray | grey}}`.
                 - The first value is canonical; all alternatives receive equal full credit.
+                - **Escaping syntax characters**: Within `{{...}}`, use a backslash to escape syntax characters: `\\|` (literal `|`), `\\}` (literal `}`), and `\\\\` (literal `\\`), e.g., `{{answer containing \\}\\} braces | alternative}}`.
 
                 #### 4. Numerical Questions
                 - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.

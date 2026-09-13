@@ -116,6 +116,7 @@ The American spelling of the colour between black and white is {{gray | grey}}.
 - All subsequent values (`grey`) are accepted alternatives.
 - In OpenOLAT, every alternative receives the same full credit for that blank.
 - Whitespace around `|` is automatically trimmed.
+- **Escaping syntax characters**: Within `{{...}}`, use a backslash to escape syntax characters: `\|` (literal `|`), `\}` (literal `}`), and `\\` (literal `\`). For example: `{{answer containing \}\} braces | alternative}}`.
 
 ### 4. Order / Sequencing Questions (`N. [ ]`)
 Order questions require students to drag and drop items into the correct target sequence.

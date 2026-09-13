@@ -185,9 +185,12 @@ def mystery(n):
 
 ## 🚀 Complete Quiz Examples
 
-### Example 1: General Knowledge & Science Quiz
+### Example 1: General Knowledge & Science Quiz (Header Metadata)
 ```markdown
 # General Knowledge & Science Quiz
+Version: 1.0.0
+Language: en
+
 A comprehensive demonstration covering all question types.
 
 ## What is the capital of France?
@@ -228,9 +231,13 @@ Points: 2
 - [-] Mammals are ectothermic organisms.
 ```
 
-### Example 2: Linguistics & Language Quiz
+### Example 2: Linguistics & Language Quiz (YAML Frontmatter)
 ```markdown
-# Introduction to Linguistics Quiz
+---
+title: Introduction to Linguistics Quiz
+version: 1.1.0
+language: en
+---
 
 ## Which language family does English belong to?
 - [ ] Romance
@@ -262,6 +269,8 @@ Points: 2
 ### Example 3: STEM, Physics & Mathematics Quiz
 ```markdown
 # Physics & Mathematics Foundations
+Version: 2.0.0
+Language: en
 
 ## Universal Gravitation
 Which physicist formulated the Universal Law of Gravitation?

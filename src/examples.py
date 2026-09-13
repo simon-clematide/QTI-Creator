@@ -1,6 +1,9 @@
 """Sample QuizMD documents for the user interface."""
 
 SAMPLE_ALL_TYPES = """# General Knowledge & Science Quiz
+Version: 1.0.0
+Language: en
+
 A demonstration quiz covering all supported question types with automatic inference.
 
 ## What is the capital of France?
@@ -41,7 +44,11 @@ Points: 2
 - [-] Mammals are ectothermic organisms.
 """
 
-SAMPLE_LINGUISTICS = """# Introduction to Linguistics Quiz
+SAMPLE_LINGUISTICS = """---
+title: Introduction to Linguistics Quiz
+version: 1.1.0
+language: en
+---
 
 ## Which language family does English belong to?
 - [ ] Romance
@@ -60,6 +67,8 @@ Provide at least one clear example.
 """
 
 SAMPLE_STEM = """# Physics & Chemistry Quiz
+Version: 2.0.0
+Language: en
 
 ## Which particles are found inside the nucleus of an atom?
 - [x] Protons
@@ -79,6 +88,8 @@ Points: 4
 """
 
 SAMPLE_CS = r"""# Computer Science & Python Quiz
+Version: 1.0.0
+Language: en
 
 ## Python List Operations
 What does the following snippet evaluate to?
@@ -108,7 +119,11 @@ What is the average time complexity of looking up a key in a hash table (or Pyth
 - [ ] $O(n^2)$
 """
 
-SAMPLE_MATH = r"""# Mathematics & LaTeX Typesetting Test
+SAMPLE_MATH = r"""---
+title: Mathematics & LaTeX Typesetting Test
+version: 1.2.0
+language: en
+---
 A comprehensive test suite covering diverse mathematical typesetting: inline equations, display math, integrals, limits, summations, matrices, and piecewise functions across multiple question types.
 
 ## Calculus: Integration by Parts

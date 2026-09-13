@@ -85,11 +85,21 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
     </correctResponse>
   </responseDeclaration>"""
         response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"/>"""
-    else:
-        # OpenOLAT native partial scoring:
-        # Points are divided proportionally across correct answers.
-        # Incorrect answers deduct proportionally if there are incorrect alternatives.
-        # Lower bound clamped at 0.0, upper bound at q.points.
+        return wrap_assessment_item(
+            identifier=q.identifier,
+            title=q.title,
+            response_declarations=response_decl,
+            item_body_content=item_body,
+            response_processing=response_proc,
+            feedback=q.feedback,
+            hint=q.hint,
+            max_score=q.points,
+            min_score=0.0,
+            asset_map=asset_map,
+        )
+
+    elif scoring_mode in ("points-per-answer", "per-answer", "points_per_answer"):
+        # Explicit mapping per choice
         pos_val = round(q.points / n_correct, 4) if n_correct > 0 else 0.0
         neg_val = round(-(q.points / n_incorrect), 4) if n_incorrect > 0 else 0.0
 
@@ -109,18 +119,137 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
     </mapping>
   </responseDeclaration>"""
         response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
+        return wrap_assessment_item(
+            identifier=q.identifier,
+            title=q.title,
+            response_declarations=response_decl,
+            item_body_content=item_body,
+            response_processing=response_proc,
+            feedback=q.feedback,
+            hint=q.hint,
+            max_score=q.points,
+            min_score=0.0,
+            asset_map=asset_map,
+        )
 
-    return wrap_assessment_item(
-        identifier=q.identifier,
-        title=q.title,
-        response_declarations=response_decl,
-        item_body_content=item_body,
-        response_processing=response_proc,
-        feedback=q.feedback,
-        hint=q.hint,
-        max_score=q.points,
-        asset_map=asset_map,
-    )
+    else:
+        # OpenOLAT native "Teilpunkte" (Partial scoring):
+        # OpenOLAT uses NPS_NUMCORRECT and NPS_NUMINCORRECT accumulators in responseProcessing
+        # without a <mapping> element, calculating:
+        # SCORE = (NPS_NUMCORRECT * MAXSCORE / n_correct) - (NPS_NUMINCORRECT * MAXSCORE / n_incorrect)
+        # clamped between MINSCORE (0.0) and MAXSCORE.
+        response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
+    <correctResponse>
+{correct_values_xml}
+    </correctResponse>
+  </responseDeclaration>"""
+
+        extra_outcomes = """  <outcomeDeclaration identifier="FEEDBACKBASIC" cardinality="single" baseType="identifier" view="testConstructor">
+    <defaultValue>
+      <value>none</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="NPS_NUMCORRECT" cardinality="single" baseType="integer" view="testConstructor">
+    <defaultValue>
+      <value>0</value>
+    </defaultValue>
+  </outcomeDeclaration>
+  <outcomeDeclaration identifier="NPS_NUMINCORRECT" cardinality="single" baseType="integer" view="testConstructor">
+    <defaultValue>
+      <value>0</value>
+    </defaultValue>
+  </outcomeDeclaration>"""
+
+        condition_blocks = []
+        for c in q.choices:
+            target_var = "NPS_NUMCORRECT" if c.is_correct else "NPS_NUMINCORRECT"
+            condition_blocks.append(f"""    <responseCondition>
+      <responseIf>
+        <member>
+          <baseValue baseType="identifier">{c.identifier}</baseValue>
+          <variable identifier="RESPONSE"/>
+        </member>
+        <setOutcomeValue identifier="{target_var}">
+          <sum>
+            <variable identifier="{target_var}"/>
+            <baseValue baseType="integer">1</baseValue>
+          </sum>
+        </setOutcomeValue>
+      </responseIf>
+    </responseCondition>""")
+
+        conditions_xml = "\n".join(condition_blocks)
+
+        # Build subtract expression for correct vs incorrect
+        correct_term = f"""<divide>
+        <product>
+          <integerToFloat>
+            <variable identifier="NPS_NUMCORRECT"/>
+          </integerToFloat>
+          <variable identifier="MAXSCORE"/>
+        </product>
+        <baseValue baseType="integer">{n_correct}</baseValue>
+      </divide>"""
+
+        if n_incorrect > 0:
+            incorrect_term = f"""<divide>
+        <product>
+          <integerToFloat>
+            <variable identifier="NPS_NUMINCORRECT"/>
+          </integerToFloat>
+          <variable identifier="MAXSCORE"/>
+        </product>
+        <baseValue baseType="integer">{n_incorrect}</baseValue>
+      </divide>"""
+            calc_xml = f"""<subtract>
+      {correct_term}
+      {incorrect_term}
+    </subtract>"""
+        else:
+            calc_xml = correct_term
+
+        response_proc = f"""  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response">
+{conditions_xml}
+    <setOutcomeValue identifier="SCORE">
+      {calc_xml}
+    </setOutcomeValue>
+    <responseCondition>
+      <responseIf>
+        <lt>
+          <variable identifier="SCORE"/>
+          <variable identifier="MINSCORE"/>
+        </lt>
+        <setOutcomeValue identifier="SCORE">
+          <variable identifier="MINSCORE"/>
+        </setOutcomeValue>
+      </responseIf>
+    </responseCondition>
+    <responseCondition>
+      <responseIf>
+        <gt>
+          <variable identifier="SCORE"/>
+          <variable identifier="MAXSCORE"/>
+        </gt>
+        <setOutcomeValue identifier="SCORE">
+          <variable identifier="MAXSCORE"/>
+        </setOutcomeValue>
+      </responseIf>
+    </responseCondition>
+  </responseProcessing>"""
+
+        return wrap_assessment_item(
+            identifier=q.identifier,
+            title=q.title,
+            response_declarations=response_decl,
+            item_body_content=item_body,
+            response_processing=response_proc,
+            feedback=q.feedback,
+            hint=q.hint,
+            max_score=q.points,
+            min_score=0.0,
+            extra_outcome_declarations=extra_outcomes,
+            asset_map=asset_map,
+        )
 
 
 def generate_true_false_xml(q: TrueFalseQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

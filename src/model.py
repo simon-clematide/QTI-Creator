@@ -115,10 +115,10 @@ class MultipleChoiceQuestion(Question):
                 "Multiple Choice requires at least 1 correct answer marked.",
                 [Diagnostic("Multiple Choice requires at least 1 correct answer marked.", Severity.ERROR, self.line_number)],
             )
-        if self.scoring not in ("partial", "all-correct", "all_correct", "allcorrect"):
+        if self.scoring not in ("partial", "all-correct", "all_correct", "allcorrect", "per-answer", "per_answer", "points-per-answer", "points_per_answer"):
             raise QuizValidationError(
-                f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct'.",
-                [Diagnostic(f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct'.", Severity.ERROR, self.line_number)],
+                f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct', 'per-answer'.",
+                [Diagnostic(f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct', 'per-answer'.", Severity.ERROR, self.line_number)],
             )
 
 

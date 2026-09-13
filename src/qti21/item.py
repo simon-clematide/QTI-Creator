@@ -12,6 +12,8 @@ def wrap_assessment_item(
     feedback: Optional[str] = None,
     hint: Optional[str] = None,
     max_score: float = 1.0,
+    min_score: Optional[float] = None,
+    extra_outcome_declarations: Optional[str] = None,
     asset_map: Optional[Dict[str, str]] = None,
 ) -> str:
     """Wrap components into a fully compliant QTI 2.1 <assessmentItem> XML document."""
@@ -33,6 +35,17 @@ def wrap_assessment_item(
     {feedback_body}
   </modalFeedback>"""
 
+    minscore_xml = ""
+    if min_score is not None:
+        minscore_xml = f"""
+  <outcomeDeclaration identifier="MINSCORE" cardinality="single" baseType="float" view="testConstructor">
+    <defaultValue>
+      <value>{min_score}</value>
+    </defaultValue>
+  </outcomeDeclaration>"""
+
+    extra_outcomes_xml = f"\n{extra_outcome_declarations}" if extra_outcome_declarations else ""
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <assessmentItem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                 xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
@@ -48,12 +61,12 @@ def wrap_assessment_item(
     <defaultValue>
       <value>0.0</value>
     </defaultValue>
-  </outcomeDeclaration>
+  </outcomeDeclaration>{minscore_xml}
   <outcomeDeclaration identifier="MAXSCORE" cardinality="single" baseType="float">
     <defaultValue>
       <value>{max_score}</value>
     </defaultValue>
-  </outcomeDeclaration>
+  </outcomeDeclaration>{extra_outcomes_xml}
   <outcomeDeclaration identifier="FEEDBACK" cardinality="single" baseType="identifier"/>
   <itemBody>
 {item_body_content}{hint_xml}

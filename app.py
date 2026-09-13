@@ -265,7 +265,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 keywords: [cells, genetics, dna]
                 ---
                 ```
-                *(Quiz-level metadata acts as defaults that automatically inherit to every question unless locally overridden).*
+                ---
+
+                ### Multiple Choice Scoring Options
+                By default, Multiple Choice questions use OpenOLAT's native **partial credit** (`Scoring: partial`). You can configure alternative scoring methods globally or per question:
+
+                - **Partial credit (default)**: `Scoring: partial`
+                  Points are awarded proportionally for correct choices and deducted for incorrect choices (floored at 0).
+                - **All or nothing**: `Scoring: all-correct`
+                  Full points only if all correct answers and no incorrect answers are selected; otherwise 0 points.
+                - **Kprim evaluation**: If a question has exactly 4 statements to evaluate as true/false, use Kprim format (`- [+]` and `- [-]`) to get standard 4/4 = full, 3/4 = half, ≤2/4 = 0 scoring.
 
                 ---
 

@@ -100,7 +100,10 @@ Multiple Choice questions (`- [x]`) use OpenOLAT's native **Partial score** by d
   - Incorrect selections subtract proportionally according to the number of incorrect alternatives ($-\text{points} / N_{\text{incorrect}}$).
   - When all alternatives are correct (e.g. 4/4 correct options), selecting all awards 100%, 3/4 awards 75%, 2/4 awards 50%, and 1/4 awards 25%.
   - The result is strictly bounded by $[0.0, \text{Points}]$ (`lowerBound="0.0"` and `upperBound="points"`), ensuring a score can never become negative.
-- **Scoring Method Override**: Authors can override the scoring method at the quiz level or per question using `Scoring: all-correct` (requires selecting all correct answers and no distractors for 100%, otherwise 0.0) or `Scoring: partial`.
+- **Scoring Method Overrides**:
+  - `Scoring: partial` (default): Proportional partial scoring with penalty deductions bounded at 0.0.
+  - `Scoring: all-correct`: All-or-nothing evaluation requiring all correct choices and zero distractors for full credit, otherwise 0.0.
+  - **Kprim Evaluation**: If an item consists of 4 statements to be judged as true or false, write it as a Kprim question with `+` and `-` markers (`- [+]` and `- [-]`). This generates OpenOLAT's native Kprim matrix with 4/4 = full, 3/4 = half, ≤2/4 = 0 scoring.
 
 ### 3. Fill-in-the-Blank with Gap Alternatives
 Accept multiple valid spellings or synonyms using the pipe `|` separator:

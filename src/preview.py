@@ -61,6 +61,9 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
   code {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; color: #0f172a; }}
   pre code {{ background: transparent; padding: 0; border-radius: 0; color: inherit; }}
   blockquote {{ border-left: 3px solid #cbd5e1; margin: 8px 0; padding-left: 12px; color: #475569; }}
+  .order-answer {{ padding-left: 1.8rem; margin: 0; }}
+  .order-answer li {{ padding-left: 0.25rem; margin: 0.25rem 0; color: #1e293b; }}
+  .order-answer li::marker {{ color: #16a34a; font-weight: 700; }}
 </style>
 <div style="font-family: system-ui, -apple-system, sans-serif;">
   <div style="margin-bottom: 16px;">
@@ -153,7 +156,7 @@ def _render_question_body(q: Question) -> str:
         return f"<table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'><tr style='background: #f8fafc;'><th style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: left;'>Statement</th><th style='padding: 6px 12px; border: 1px solid #e2e8f0; width: 100px;'>Key</th></tr>{''.join(rows)}</table>"
 
     elif isinstance(q, OrderQuestion):
-        items = [f"<li style='margin-bottom: 4px;'>{html.escape(it.text)}</li>" for it in q.items]
-        return f"<div style='color: #475569; margin-bottom: 4px; font-weight: 500; font-size: 0.9em;'>Target Sequence:</div><ol style='padding-left: 24px; margin: 0; color: #1e293b;'>{''.join(items)}</ol>"
+        items = [f"<li>{html.escape(it.text)}</li>" for it in q.items]
+        return f"<ol class='order-answer'>{''.join(items)}</ol>"
 
     return ""

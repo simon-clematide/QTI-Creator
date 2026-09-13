@@ -172,11 +172,92 @@ State each algebraic step clearly.
 Points: 4
 """
 
+SAMPLE_CONFIG_SHOWCASE = r"""---
+title: Advanced Configuration & Metadata Showcase
+version: 2.1.0
+language: de
+topic: Computer Science
+keywords: [algorithms, data-structures, python]
+shuffle: yes
+additional_info: Final Exam - Section A
+description: |
+  Demonstrating all global and question-level configuration options in QuizMD:
+  YAML frontmatter, metadata inheritance, local overrides, custom point weights,
+  post-submission feedback, custom QTI identifiers, and shuffling toggles.
+---
+
+## Linear Search Time Complexity
+Points: 2
+Shuffle: no
+Topic: Search Algorithms
+Keywords: search, linear, complexity
+Additional_Info: Source: Knuth TAOCP Vol 3
+Feedback: Linear search scans sequentially through $n$ elements, resulting in $O(n)$ worst-case time complexity.
+- [ ] $O(1)$
+- [X] $O(n)$
+- [ ] $O(n \log n)$
+- [ ] $O(n^2)$
+
+## Which data structures are non-linear?
+Points: 3
+- [x] Tree
+- [x] Graph
+- [ ] Array
+- [ ] Linked list
+Feedback: Trees and graphs are non-linear hierarchical or networked structures.
+
+## An empty Python list evaluates to True in a boolean context.
+Points: 0.5
+Feedback: In Python, empty collections (lists, tuples, dicts, sets) evaluate to False.
+- [ ] True
+- [X] False
+
+## Complexity Hierarchy
+Points: 2.5
+Feedback: Arrange from slowest growing (fastest execution) to fastest growing.
+1. [ ] Constant: $O(1)$
+1. [ ] Logarithmic: $O(\log n)$
+1. [ ] Linear: $O(n)$
+1. [ ] Quadratic: $O(n^2)$
+
+## String Formatting Syntax
+Points: 2
+Feedback: Both 'upper' and 'str.upper' or 'uppercase' are accepted synonyms.
+In Python, to convert a string to uppercase one calls the {{upper | uppercase | str.upper}} method, while {{lower | lowercase}} converts to lowercase.
+
+## Floating Point Tolerance
+Points: 2
+Feedback: Exact answer is 0.125 with an allowable tolerance band of ±0.001.
+What is the decimal value of $2^{-3}$?
+= 0.125 +- 0.001
+
+## Binary Search Trees
+Points: 4
+Topic: Tree Data Structures
+Keywords: bst, trees, invariant
+Evaluate each statement regarding Binary Search Trees:
+- [+] The left subtree contains only nodes with keys less than the node's key.
+- [+] The right subtree contains only nodes with keys greater than the node's key.
+- [-] An in-order traversal of a BST yields elements in descending order.
+- [-] Lookup in any binary search tree is guaranteed to be $O(\log n)$ in the worst case.
+Feedback: In-order traversal yields ascending order. Unbalanced trees degrade to $O(n)$.
+
+## Explain Amortized Complexity
+Points: 5
+Topic: Complexity Theory
+Keywords: amortized, analysis, array
+Identifier: amortized_analysis_q08
+Provide a detailed explanation of amortized time complexity.
+Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $O(n)$ worst-case copy steps.
+"""
+
 EXAMPLES = {
     "All Question Types (Showcase)": SAMPLE_ALL_TYPES,
+    "Full Configuration & Metadata Showcase": SAMPLE_CONFIG_SHOWCASE,
     "Mathematics & LaTeX Typesetting": SAMPLE_MATH,
     "Computer Science & Python (Code Snippets)": SAMPLE_CS,
     "STEM & Physics Quiz": SAMPLE_STEM,
     "Linguistics Quiz": SAMPLE_LINGUISTICS,
 }
+
 

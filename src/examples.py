@@ -10,6 +10,10 @@ A demonstration quiz covering all supported question types with automatic infere
 - [ ] Rome
 - [ ] Madrid
 
+## The Earth completes one full orbit around the Sun in approximately 365.25 days.
+- [X] True
+- [ ] False
+
 ## Which of the following numbers are prime?
 - [x] 2
 - [x] 3
@@ -17,13 +21,19 @@ A demonstration quiz covering all supported question types with automatic infere
 - [x] 5
 - [ ] 6
 
-## The Earth completes one full orbit around the Sun in approximately 365.25 days.
-- [X] True
-- [ ] False
+## Characteristics of Mammals
+- [+] They possess hair or fur.
+- [+] Females produce milk to nourish their young.
+- [-] All mammals give birth to live young without exception.
+- [-] Mammals are ectothermic organisms.
 
 ## Irregular Verb Forms
 The past tense of *go* is {{went}} and the past participle is {{gone}}.
 The American spelling of the colour between black and white is {{gray | grey}}.
+
+## Gravitational Acceleration
+What is the acceleration due to gravity on Earth's surface in m/s²?
+= 9.81 ± 0.05
 
 ## Order the stages of a machine learning workflow.
 1. [ ] Data collection
@@ -31,18 +41,8 @@ The American spelling of the colour between black and white is {{gray | grey}}.
 1. [ ] Model training
 1. [ ] Evaluation
 
-## Gravitational Acceleration
-What is the acceleration due to gravity on Earth's surface in m/s²?
-= 9.81 ± 0.05
-
 ## Cellular Respiration
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
-
-## Characteristics of Mammals
-- [+] They possess hair or fur.
-- [+] Females produce milk to nourish their young.
-- [-] All mammals give birth to live young without exception.
-- [-] Mammals are ectothermic organisms.
 """
 
 SAMPLE_LINGUISTICS = """---

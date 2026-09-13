@@ -306,7 +306,7 @@ def preflight_media(
             try:
                 req = urllib.request.Request(
                     src,
-                    headers={"User-Agent": "QTI-Creator/1.0 (OpenOLAT Package Builder)"}
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; QTI-Creator/1.0; +https://github.com/simon-clematide/QTI-Creator)"}
                 )
                 with urllib.request.urlopen(req, timeout=10.0) as resp:
                     if resp.status != 200:

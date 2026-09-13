@@ -251,13 +251,61 @@ Provide a detailed explanation of amortized time complexity.
 Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $O(n)$ worst-case copy steps.
 """
 
+SAMPLE_MEDIA = r"""---
+title: Astronomy & Science Image Quiz
+version: 1.0.0
+language: en
+topic: Astronomy & History of Science
+keywords: [astronomy, science, images, space]
+shuffle: yes
+---
+A multimedia quiz demonstrating remote image embedding from Wikimedia Commons. Images render directly in preview and can be packaged as self-contained assets in OpenOLAT.
+
+## Mars Exploration
+![Mars in true color](https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg)
+The image above shows the "Red Planet". What chemical compound is primarily responsible for its reddish surface appearance?
+- [ ] Copper oxide
+- [X] Iron(III) oxide (rust)
+- [ ] Silicon dioxide
+- [ ] Titanium dioxide
+Feedback: Iron(III) oxide (rust) in the Martian regolith gives the surface its distinctive reddish hue.
+
+## Hubble Space Telescope
+Points: 2
+![Hubble Space Telescope during Servicing Mission 4](https://upload.wikimedia.org/wikipedia/commons/3/3f/HST-SM4.jpeg)
+Which statements regarding the Hubble Space Telescope are correct?
+- [x] It was designed to be serviced in orbit by Space Shuttle astronauts.
+- [x] It operates in low Earth orbit outside the distorting effects of the atmosphere.
+- [ ] It observes exclusively in the microwave and radio wavelengths.
+- [x] It has provided deep-field observations revealing thousands of early galaxies.
+Feedback: Hubble observes in ultraviolet, visible, and near-infrared wavelengths (not radio/microwaves).
+
+## DNA Pioneer
+Points: 1.5
+![Historical portrait](https://upload.wikimedia.org/wikipedia/commons/9/97/Rosalind_Franklin.jpg)
+This scientist's Photo 51 was critical to discovering the double-helix structure of DNA. Who is she?
+- [ ] Marie Curie
+- [ ] Ada Lovelace
+- [X] Rosalind Franklin
+- [ ] Lise Meitner
+Feedback: Rosalind Franklin's X-ray diffraction images of DNA, particularly Photo 51, enabled Watson and Crick to determine the double-helix structure.
+
+## European Union Geography
+![Map of Europe](https://upload.wikimedia.org/wikipedia/commons/f/f0/European_Union_map.png)
+The member states of the European Union are highlighted on the map.
+The administrative headquarters and principal seat of the European Commission is located in {{Brussels}}.
+Feedback: Brussels, Belgium serves as the de facto capital of the European Union.
+"""
+
 EXAMPLES = {
     "All Question Types (Showcase)": SAMPLE_ALL_TYPES,
     "Full Configuration & Metadata Showcase": SAMPLE_CONFIG_SHOWCASE,
+    "Astronomy & Science (Images Showcase)": SAMPLE_MEDIA,
     "Mathematics & LaTeX Typesetting": SAMPLE_MATH,
     "Computer Science & Python (Code Snippets)": SAMPLE_CS,
     "STEM & Physics Quiz": SAMPLE_STEM,
     "Linguistics Quiz": SAMPLE_LINGUISTICS,
 }
+
 
 

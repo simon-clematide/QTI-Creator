@@ -177,6 +177,17 @@ Feedback: Important question.
         self.assertEqual(q.points, 5.0)
         self.assertEqual(q.feedback, "Important question.")
 
+    def test_feedback_placement_after_choices(self):
+        text = """## Capital of France
+- [ ] Berlin
+- [X] Paris
+Feedback: Paris has been the capital since 508 AD.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        q = quiz.questions[0]
+        self.assertEqual(q.feedback, "Paris has been the capital since 508 AD.")
+
     def test_missing_correct_answer_diagnostic(self):
         text = """## Broken question:
 - [ ] Option 1

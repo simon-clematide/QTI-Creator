@@ -277,7 +277,7 @@ def _classify_block_lines(block: RawQuestionBlock) -> None:
 
         # Check metadata lines: Points, Type, Feedback, Identifier
         meta_match = RE_META.match(stripped)
-        if meta_match and not block.choices and not block.kprim_items:
+        if meta_match:
             key = meta_match.group(1).lower()
             val = meta_match.group(2).strip()
             block.metadata[key] = val

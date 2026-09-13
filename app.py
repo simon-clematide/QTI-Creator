@@ -185,7 +185,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 | Question Type | Syntax Pattern | Inference Rule |
                 | :--- | :--- | :--- |
                 | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` |
-                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` |
+                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` (scored as Kprim: all correct = 100%, 1 mistake = 50%, $\ge$ 2 mistakes = 0%) |
                 | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
                 | **Fill in the Blank** | `The capital of France is {{Paris}}.` | Prompt contains `{{gap}}` |
                 | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` |

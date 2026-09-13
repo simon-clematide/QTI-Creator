@@ -46,17 +46,27 @@ def generate_single_choice_xml(q: SingleChoiceQuestion) -> str:
 
 
 def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
-    """Generate QTI 2.1 XML for a Multiple Choice question."""
+    """Generate QTI 2.1 XML for a Multiple Choice question with Kprim-style scoring.
+
+    Kprim-style evaluation rules:
+    - Each option presents a binary decision: selecting a correct option is +1 point,
+      selecting an incorrect option is -1 point (penalty for false positive).
+    - If all decisions are correct (max score = total correct choices), full points are awarded.
+    - If exactly 1 mistake is made (score = max - 1), half points (50%) are awarded.
+    - If 2 or more mistakes are made (score <= max - 2), 0 points are awarded.
+    - Score floor is 0.0.
+    """
     correct_choices = [c for c in q.choices if c.is_correct]
-    pts_per_correct = q.points / len(correct_choices) if correct_choices else q.points
+    total_correct = len(correct_choices)
 
     correct_values_xml = "\n".join(
         f"      <value>{c.identifier}</value>" for c in correct_choices
     )
 
+    # 1.0 for each correct selection, -1.0 for each incorrect selection
     mapping_entries_xml = []
     for c in q.choices:
-        val = pts_per_correct if c.is_correct else 0.0
+        val = 1.0 if c.is_correct else -1.0
         mapping_entries_xml.append(
             f'      <mapEntry mapKey="{c.identifier}" mappedValue="{val}"/>'
         )
@@ -65,7 +75,7 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
     <correctResponse>
 {correct_values_xml}
     </correctResponse>
-    <mapping defaultValue="0.0" lowerBound="0.0">
+    <mapping defaultValue="0.0">
 {chr(10).join(mapping_entries_xml)}
     </mapping>
   </responseDeclaration>"""
@@ -83,7 +93,37 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
 
-    response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
+    half_pts = q.points * 0.5
+    threshold_full = float(total_correct)
+    threshold_half = float(total_correct - 1)
+
+    response_proc = f"""  <responseProcessing>
+    <responseCondition>
+      <responseIf>
+        <gte>
+          <mapResponse identifier="RESPONSE"/>
+          <baseValue baseType="float">{threshold_full}</baseValue>
+        </gte>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">{q.points}</baseValue>
+        </setOutcomeValue>
+      </responseIf>
+      <responseElseIf>
+        <gte>
+          <mapResponse identifier="RESPONSE"/>
+          <baseValue baseType="float">{threshold_half}</baseValue>
+        </gte>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">{half_pts}</baseValue>
+        </setOutcomeValue>
+      </responseElseIf>
+      <responseElse>
+        <setOutcomeValue identifier="SCORE">
+          <baseValue baseType="float">0.0</baseValue>
+        </setOutcomeValue>
+      </responseElse>
+    </responseCondition>
+  </responseProcessing>"""
 
     return wrap_assessment_item(
         identifier=q.identifier,

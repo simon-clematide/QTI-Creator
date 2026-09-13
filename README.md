@@ -74,6 +74,10 @@ Points: 2
 - [x] 5
 - [ ] 6
 ```
+*Scoring in OpenOLAT (Kprim-style evaluation):*
+- **100% (full points)**: All choices evaluated correctly (all correct items selected, no incorrect items selected).
+- **50% (half points)**: Exactly 1 mistake made (e.g. 1 missed correct choice OR 1 extra incorrect choice checked).
+- **0%**: 2 or more mistakes made (with floor at 0 points).
 
 ### 3. True / False (TF)
 Two choices matching "True" and "False" are recognized as a True/False question:

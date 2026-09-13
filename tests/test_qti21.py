@@ -78,7 +78,12 @@ def square(n):
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
         self.assertIn("assessmentItem", root.tag)
-        self.assertIn("maxChoices=\"0\"", xml_str)
+        self.assertIn('maxChoices="0"', xml_str)
+        # Verify Kprim proportion scoring in responseProcessing
+        self.assertIn("<responseProcessing>", xml_str)
+        self.assertIn('<baseValue baseType="float">3.0</baseValue>', xml_str)
+        self.assertIn('<baseValue baseType="float">2.0</baseValue>', xml_str)
+        self.assertIn('<baseValue baseType="float">1.5</baseValue>', xml_str)
 
     def test_true_false_xml_validity(self):
         q = TrueFalseQuestion(

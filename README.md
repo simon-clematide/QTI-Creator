@@ -126,11 +126,21 @@ Points: 2
 ### 8. Quiz Versioning & Document Metadata
 You can specify the quiz version, language, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B). The version is automatically encoded into the IMS package manifest (`<manifest version="...">`) and IMS LOM lifecycle metadata (`<imsmd:lifecycle><imsmd:version>`) for OpenOLAT.
 
+#### Protected Keywords at the Beginning of a Quiz
+In the preamble section before the first `## Question`, the following keywords are reserved and will **not** be treated as quiz description text:
+- **`Version:`** — Sets the quiz version (e.g. `Version: 1.2.0`). Default: `1.0.0`.
+- **`Language:`** — Sets the ISO language code (e.g. `Language: en`, `Language: de`). Default: `en`.
+- **`Title:`** — Alternative way to declare the quiz title (though `# Title` is standard).
+- **`Description:`** — Explicit single-line description (though any regular paragraph in the preamble is also collected as description).
+- **`# Title`** — Standard Markdown Level 1 heading for the quiz title.
+
 **Way A: Top-Level Header Metadata**
 ```markdown
 # Cellular Biology Quiz
 Version: 1.2.0
 Language: en
+
+This is an introductory test covering cell structures.
 ```
 
 **Way B: YAML Frontmatter**
@@ -140,6 +150,8 @@ title: Cellular Biology Quiz
 version: 1.2.0
 language: en
 ---
+
+This is an introductory test covering cell structures.
 ```
 *(If both frontmatter and header metadata are specified, they must be consistent; contradictory values will produce a warning diagnostic).*
 
@@ -328,4 +340,82 @@ QTI-Creator includes a full test suite verifying model invariants, parser infere
 
 ```bash
 python3 -m unittest discover tests/
+```
+
+---
+
+## 🔌 Programmatic API Access (Gradio API)
+
+Because QTI-Creator is built with Gradio, it automatically exposes a REST and WebSocket API. You can integrate quiz conversion directly into CI/CD pipelines, LMS automation scripts, or external authoring tools without using the web UI.
+
+An interactive API explorer is always accessible directly at the bottom of the running app via the **"Use via API"** link.
+
+### 1. Python Client (`gradio_client`)
+
+Install the official Gradio client:
+```bash
+pip install gradio_client
+```
+
+Convert Markdown into an OpenOLAT QTI 2.1 `.zip` package:
+```python
+from gradio_client import Client
+
+# Connect to the Hugging Face Space (or local instance: Client("http://localhost:7860"))
+client = Client("simon-clmtd/qti-creator")
+
+markdown_quiz = """# General Knowledge Quiz
+Version: 1.0.0
+
+## What is the capital of Switzerland?
+- [ ] Zurich
+- [X] Bern
+- [ ] Geneva
+"""
+
+# Call the /convert endpoint
+zip_file_path, status_message = client.predict(
+    quiz_text=markdown_quiz,
+    api_name="/convert"
+)
+
+print("Status:", status_message)
+print("Downloaded QTI 2.1 package saved at:", zip_file_path)
+```
+
+You can also call the `/preview` endpoint to validate Markdown without downloading:
+```python
+html_preview, diagnostics = client.predict(
+    quiz_text=markdown_quiz,
+    api_name="/preview"
+)
+print("Diagnostics:", diagnostics)
+```
+
+### 2. JavaScript / TypeScript Client (`@gradio/client`)
+
+Install via npm:
+```bash
+npm install @gradio/client
+```
+
+```javascript
+import { Client } from "@gradio/client";
+
+const app = await Client.connect("simon-clmtd/qti-creator");
+
+const result = await app.predict("/convert", [
+  `# History Quiz\n## What year did WW2 end?\n- [X] 1945\n- [ ] 1939`
+]);
+
+console.log("Result:", result.data);
+```
+
+### 3. cURL / REST API
+
+You can also trigger conversions via standard HTTP requests:
+```bash
+curl -X POST https://simon-clmtd-qti-creator.hf.space/call/convert \
+  -H "Content-Type: application/json" \
+  -d '{"data": ["# Math Quiz\n## 2 + 2 = ?\n- [X] 4\n- [ ] 5"]}'
 ```

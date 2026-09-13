@@ -143,24 +143,28 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 fn=load_example,
                 inputs=[example_dropdown],
                 outputs=[quiz_input],
+                api_name=False,
             )
 
             file_upload.change(
                 fn=load_file,
                 inputs=[file_upload],
                 outputs=[quiz_input],
+                api_name=False,
             )
 
             btn_preview.click(
                 fn=update_preview_and_validate,
                 inputs=[quiz_input],
                 outputs=[preview_display, status_box],
+                api_name="preview",
             )
 
             btn_convert.click(
                 fn=convert_and_download,
                 inputs=[quiz_input],
                 outputs=[download_output, status_box],
+                api_name="convert",
             )
 
             # Initial preview load
@@ -168,6 +172,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 fn=update_preview_and_validate,
                 inputs=[quiz_input],
                 outputs=[preview_display, status_box],
+                api_name=False,
             )
 
         # TAB 2: Syntax Cheat Sheet

@@ -225,7 +225,7 @@ class Quiz:
     topic: Optional[str] = None
     keywords: List[str] = field(default_factory=list)
     additional_info: Optional[str] = None
-    shuffle: bool = False
+    shuffle: bool = True
 
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""

@@ -118,22 +118,24 @@ Points: 2
 - **Automatic Shuffling**: In the generated QTI package, the question interaction is set to `shuffle="true"` so students are presented with scrambled tiles.
 
 ### 5. Shuffling / Randomization
-Enable answer scrambling across Single Choice, Multiple Choice, Kprim, and Order interactions:
+QuizMD defaults to **shuffling answer options** wherever the interaction supports and benefits from it (`Shuffle: yes` by default), reducing authoring boilerplate and preventing accidental answer leakage.
 
-**At the Quiz Level (Inherited by all questions):**
-```markdown
-# My Quiz
-Shuffle: yes
-```
-Accepted boolean forms: `true` / `yes` / `1` / `on` and `false` / `no` / `0` / `off`.
+- **Choice & Kprim Questions**: Answer choices are shuffled by default in OpenOLAT. Use `Shuffle: no` (or `false`, `0`, `off`) when choice ordering matters pedagogically (e.g. "All of the above" or progressive numeric options).
+- **Order Questions**: Learner-facing item order is **always presented in shuffled order** (`shuffle="true"`), because the source order represents the correct solution. A quiz-level `Shuffle: no` will not disable the necessary presentation scrambling of an Order question.
 
-**Question-Level Override:**
+**Disabling Shuffling for a Specific Question:**
 ```markdown
 ## Which of the following is true?
-Shuffle: false
+Shuffle: no
 - [ ] Option A
 - [ ] Option B
 - [X] All of the above
+```
+
+**Disabling Shuffling Across the Entire Quiz:**
+```markdown
+# History Quiz
+Shuffle: no
 ```
 
 ### 6. Preamble Metadata & Frontmatter Space

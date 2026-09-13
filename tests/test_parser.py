@@ -397,17 +397,14 @@ Version: 2.0.0
         self.assertEqual(q2.additional_info, "Version: 2.0.0")
 
     def test_shuffle_parsing_and_inheritance(self):
-        text = """---
-shuffle: yes
----
-# Shuffled Quiz
+        text = """# Default Shuffled Quiz
 
-## Question 1 (Inherits quiz shuffle)
+## Question 1 (Inherits QuizMD default: True)
 - [X] A
 - [ ] B
 
-## Question 2 (Overrides shuffle to no)
-Shuffle: off
+## Question 2 (Explicit override to False)
+Shuffle: no
 - [x] C
 - [ ] D
 """

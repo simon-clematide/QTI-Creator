@@ -227,7 +227,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
                 - `Points: 3` (default: 1)
                 - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
-                - `Shuffle: false` (overrides quiz shuffle for this question)
+                - `Shuffle: false` (disables QuizMD's default answer shuffling for this question)
                 - `Topic: Genetics` (overrides quiz-level Topic in OpenOLAT)
                 - `Keywords: rna, translation` (overrides quiz-level Keywords in OpenOLAT)
                 - `Additional_Info: Custom note` (overrides OpenOLAT Zusatzinformationen)

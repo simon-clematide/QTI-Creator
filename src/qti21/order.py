@@ -27,10 +27,10 @@ def generate_order_xml(q: OrderQuestion) -> str:
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
-    # Learner-facing item order should be shuffled by default (shuffle="true") unless shuffle is explicitly False
-    shuffle_str = "false" if q.shuffle is False else "true"
+    # For Order questions, learner-facing item order MUST be shuffled because
+    # the source order represents the correct solution.
     item_body = f"""    {prompt_xhtml}
-    <orderInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}">
+    <orderInteraction responseIdentifier="RESPONSE" shuffle="true">
 {chr(10).join(choices_xml)}
     </orderInteraction>"""
 

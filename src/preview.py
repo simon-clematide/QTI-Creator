@@ -183,13 +183,13 @@ def _render_question_body(q: Question) -> str:
     elif isinstance(q, FillBlankQuestion):
         items = []
         for i, g in enumerate(q.gaps):
-            alts_str = f" (alternatives: {', '.join(html.escape(a) for a in g.alternatives)})" if g.alternatives else ""
-            items.append(f"<li><strong>Gap {i+1}:</strong> <code>{html.escape(g.expected_value)}</code>{alts_str}</li>")
+            alts_str = f" <span style='color: #64748b; font-size: 0.9em;'>(alternatives: {', '.join(html.escape(a) for a in g.alternatives)})</span>" if g.alternatives else ""
+            items.append(f"<li style='margin-bottom: 4px;'><strong>Gap {i+1}:</strong> <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{html.escape(g.expected_value)}</code>{alts_str}</li>")
         return f"<ul style='padding-left: 20px; margin: 0; color: #475569;'>{''.join(items)}</ul>"
 
     elif isinstance(q, NumericalQuestion):
         tol_str = f" ± {q.tolerance}" if q.tolerance > 0 else ""
-        return f"<div style='color: #475569;'><strong>Expected Answer:</strong> <code>{q.answer}{tol_str}</code></div>"
+        return f"<div style='color: #475569;'><strong>Expected Answer:</strong> <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{q.answer}{tol_str}</code></div>"
 
     elif isinstance(q, EssayQuestion):
         return "<div style='color: #64748b; font-style: italic; background: #f8fafc; padding: 8px 12px; border-radius: 4px;'>[Open text response area for learner]</div>"

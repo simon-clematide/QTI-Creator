@@ -32,6 +32,13 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
 
         prompt_html = markdown_to_qti_xhtml(q.prompt)
         body_html = _render_question_body(q)
+        hint_html = (
+            f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
+            f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
+            f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint)}</div></details>"
+            if q.hint
+            else ""
+        )
         feedback_html = (
             f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
             f"<strong>Feedback:</strong> {html.escape(q.feedback)}</div>"
@@ -50,6 +57,7 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
   </div>
   <div style="color: #334155; margin-bottom: 12px; line-height: 1.5;">{prompt_html}</div>
   {body_html}
+  {hint_html}
   {feedback_html}
 </div>
 """

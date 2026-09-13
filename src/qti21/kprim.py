@@ -82,6 +82,7 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
         item_body_content=item_body,
         response_processing=response_proc,
         feedback=q.feedback,
+        hint=q.hint,
         max_score=q.points,
         asset_map=asset_map,
     )

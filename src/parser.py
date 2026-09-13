@@ -44,7 +44,7 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 # Regex patterns
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
-RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
+RE_META = re.compile(r"^(points|type|feedback|hint|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
 RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
 RE_ORDER_TASK = re.compile(r"^\d+\.\s*\[([ xX])\]\s*(.*)$")
 RE_KPRIM_HEADER = re.compile(r"^kprim:\s*$", re.IGNORECASE)
@@ -521,6 +521,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
 
     identifier = block.metadata.get("identifier") or generate_id("item")
     feedback = block.metadata.get("feedback") or DEFAULTS["feedback"]
+    hint = block.metadata.get("hint") or DEFAULTS["hint"]
     explicit_type = block.metadata.get("type", "").lower().replace("-", "").replace("_", "")
 
     # Question-level metadata overrides
@@ -547,6 +548,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "prompt": prompt,
         "points": points,
         "feedback": feedback,
+        "hint": hint,
         "identifier": identifier,
         "line_number": block.start_line,
         "topic": topic,

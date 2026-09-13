@@ -10,11 +10,20 @@ def wrap_assessment_item(
     item_body_content: str,
     response_processing: str,
     feedback: Optional[str] = None,
+    hint: Optional[str] = None,
     max_score: float = 1.0,
     asset_map: Optional[Dict[str, str]] = None,
 ) -> str:
     """Wrap components into a fully compliant QTI 2.1 <assessmentItem> XML document."""
     escaped_title = html.escape(title)
+
+    hint_xml = ""
+    if hint:
+        hint_body = markdown_to_qti_xhtml(hint, asset_map=asset_map)
+        hint_xml = f"""
+    <rubricBlock view="candidate">
+      {hint_body}
+    </rubricBlock>"""
 
     feedback_xml = ""
     if feedback:
@@ -47,7 +56,7 @@ def wrap_assessment_item(
   </outcomeDeclaration>
   <outcomeDeclaration identifier="FEEDBACK" cardinality="single" baseType="identifier"/>
   <itemBody>
-{item_body_content}
+{item_body_content}{hint_xml}
   </itemBody>
 {response_processing}{feedback_xml}
 </assessmentItem>"""

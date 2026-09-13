@@ -178,11 +178,12 @@ keywords: [cell, organelle, biology]
 - **`Keywords:`** / **`Tags:`** Mapped to `<imsmd:keyword><imsmd:langstring ...>`.
 - **`Language:`** Sets the ISO language code for LOM and QTI items.
 
-### 7. Question-Level Metadata & Post-Submission Feedback
+### 7. Question-Level Metadata, Hints & Feedback
 Metadata lines can appear **before or after** choices:
 - `Points: <number>` (default: 1)
+- `Hint: <text>`: Pre-submission hint displayed during test-taking in OpenOLAT (supports Markdown and math).
+- `Feedback: <text>`: Post-submission feedback displayed after test completion in OpenOLAT (supports Markdown and math).
 - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
-- `Feedback: <text>`: Post-submission feedback displayed to learners in OpenOLAT. Supports Markdown and LaTeX math (`$...$`).
 - `Shuffle: <bool>`: Overrides quiz shuffling.
 - `Topic: <text>`: Overrides question topic in OpenOLAT.
 - `Keywords: <kw1, kw2>`: Overrides question keywords.

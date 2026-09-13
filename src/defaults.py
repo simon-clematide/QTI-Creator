@@ -15,6 +15,7 @@ DEFAULTS: Dict[str, Any] = {
     # Question level defaults
     "points": 1.0,
     "feedback": None,
+    "hint": None,
     "shuffle": True,
     "mc_scoring": "partial",  # 'partial' (default) or 'all-correct'
     

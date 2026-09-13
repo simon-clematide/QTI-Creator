@@ -50,6 +50,7 @@ class Question:
     title: str = ""
     points: float = field(default_factory=lambda: DEFAULTS["points"])
     feedback: Optional[str] = None
+    hint: Optional[str] = None
     identifier: str = field(default_factory=lambda: generate_id("item"))
     line_number: Optional[int] = None
     topic: Optional[str] = None

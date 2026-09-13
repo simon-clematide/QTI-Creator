@@ -39,12 +39,16 @@ class TestQTI21Generator(unittest.TestCase):
             ],
             points=2.0,
             feedback="Bern is the federal city.",
+            hint="Think of the Swiss canton with a bear on its flag.",
         )
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
         self.assertIn("assessmentItem", root.tag)
         self.assertIn("Bern", xml_str)
         self.assertIn("Bern is the federal city.", xml_str)
+        self.assertIn("<rubricBlock", xml_str)
+        self.assertIn('view="candidate"', xml_str)
+        self.assertIn("Think of the Swiss canton with a bear on its flag.", xml_str)
 
     def test_code_snippets_in_qti_xml(self):
         text = '''## Function Output

@@ -116,6 +116,20 @@ scoring: invalid_method
         quiz, diags = parse_quizmd(text)
         self.assertTrue(any("Invalid scoring method 'invalid_method'" in d.message for d in diags))
 
+    def test_question_hint_parsing(self):
+        text = """## Capital of Italy
+Hint: It is known as the Eternal City.
+Feedback: Rome is the capital of Italy.
+- [ ] Milan
+- [X] Rome
+- [ ] Naples
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        q = quiz.questions[0]
+        self.assertEqual(q.hint, "It is known as the Eternal City.")
+        self.assertEqual(q.feedback, "Rome is the capital of Italy.")
+
     def test_true_false_inference(self):
         text = """## Earth is flat.
 - [ ] True

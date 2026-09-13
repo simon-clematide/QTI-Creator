@@ -192,6 +192,7 @@ Shuffle: no
 Topic: Search Algorithms
 Keywords: search, linear, complexity
 Additional_Info: Source: Knuth TAOCP Vol 3
+Hint: Think about how many comparisons are made if the target element is at the very end of the list.
 Feedback: Linear search scans sequentially through $n$ elements, resulting in $O(n)$ worst-case time complexity.
 - [ ] $O(1)$
 - [X] $O(n)$

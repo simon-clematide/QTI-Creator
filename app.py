@@ -319,8 +319,9 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ### Question Metadata & Local Overrides
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
                 - `Points: <number>` (default: 1)
+                - `Hint: <text>` (pre-submission hint shown during test-taking; supports Markdown & math)
+                - `Feedback: <text>` (post-submission explanation shown after test submission; supports Markdown & math)
                 - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
-                - `Feedback: <text>` (explanatory feedback shown to learners after submission; supports Markdown & math)
                 - `Shuffle: yes / no` (controls answer scrambling; default: `yes`)
                 - `Topic: <text>` (overrides quiz-level Topic in OpenOLAT)
                 - `Keywords: <kw1, kw2>` (overrides quiz-level Keywords in OpenOLAT)

@@ -45,6 +45,7 @@ def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict
         item_body_content=item_body,
         response_processing=response_proc,
         feedback=q.feedback,
+        hint=q.hint,
         max_score=q.points,
         asset_map=asset_map,
     )
@@ -116,6 +117,7 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
         item_body_content=item_body,
         response_processing=response_proc,
         feedback=q.feedback,
+        hint=q.hint,
         max_score=q.points,
         asset_map=asset_map,
     )
@@ -156,6 +158,7 @@ def generate_true_false_xml(q: TrueFalseQuestion, asset_map: Optional[Dict[str, 
         item_body_content=item_body,
         response_processing=response_proc,
         feedback=q.feedback,
+        hint=q.hint,
         max_score=q.points,
         asset_map=asset_map,
     )

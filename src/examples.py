@@ -1,9 +1,6 @@
 """Sample QuizMD documents for the user interface."""
 
 SAMPLE_ALL_TYPES = """# General Knowledge & Science Quiz
-Version: 1.0.0
-Language: en
-Shuffle: yes
 
 A demonstration quiz covering all supported question types with automatic inference.
 
@@ -12,10 +9,8 @@ A demonstration quiz covering all supported question types with automatic infere
 - [X] Paris
 - [ ] Rome
 - [ ] Madrid
-Feedback: Paris has been the capital since 508 AD.
 
 ## Which of the following numbers are prime?
-Points: 2
 - [x] 2
 - [x] 3
 - [ ] 4
@@ -30,23 +25,20 @@ Points: 2
 The past tense of *go* is {{went}} and the past participle is {{gone}}.
 The American spelling of the colour between black and white is {{gray | grey}}.
 
-## Gravitational Acceleration
-What is the acceleration due to gravity on Earth's surface in m/s²?
-= 9.81 ± 0.05
-
 ## Order the stages of a machine learning workflow.
-Points: 2
 1. [ ] Data collection
 1. [ ] Feature engineering
 1. [ ] Model training
 1. [ ] Evaluation
 
+## Gravitational Acceleration
+What is the acceleration due to gravity on Earth's surface in m/s²?
+= 9.81 ± 0.05
+
 ## Cellular Respiration
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
-Points: 3
 
 ## Characteristics of Mammals
-Points: 2
 - [+] They possess hair or fur.
 - [+] Females produce milk to nourish their young.
 - [-] All mammals give birth to live young without exception.

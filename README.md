@@ -44,6 +44,19 @@ The past tense of *go* is {{went}}.
 1. [ ] Tokenization
 1. [ ] Parsing
 1. [ ] Evaluation
+
+## Gravitational Acceleration
+What is the acceleration due to gravity on Earth's surface in m/s²?
+= 9.81 ± 0.05
+
+## Cellular Respiration
+Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
+
+## Characteristics of Mammals
+- [+] They possess hair or fur.
+- [+] Females produce milk to nourish their young.
+- [-] All mammals give birth to live young without exception.
+- [-] Mammals are ectothermic organisms.
 ```
 
 ### Core Syntax at a Glance

@@ -21,7 +21,7 @@ from src.markdown import markdown_to_qti_xhtml
 
 
 def render_quiz_preview_html(quiz: Quiz) -> str:
-    """Generate clean HTML cards to visually preview parsed questions."""
+    """Generate clean collapsible HTML cards to visually preview parsed questions."""
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
 
@@ -47,19 +47,24 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
         )
 
         card = f"""
-<div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
-    <span style="font-weight: 600; font-size: 1.1em; color: #1e293b;">{idx}. {html.escape(q.title)}</span>
-    <div>
+<details class="quiz-question-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
+  <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+      <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
+      <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{idx}. {html.escape(q.title)}</span>
+    </div>
+    <div style="flex-shrink: 0; margin-left: 12px;">
       <span style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px;">{type_name}</span>
       <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">{q.points} pt</span>
     </div>
+  </summary>
+  <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
+    <div style="color: #334155; margin-bottom: 12px; line-height: 1.5;">{prompt_html}</div>
+    {body_html}
+    {hint_html}
+    {feedback_html}
   </div>
-  <div style="color: #334155; margin-bottom: 12px; line-height: 1.5;">{prompt_html}</div>
-  {body_html}
-  {hint_html}
-  {feedback_html}
-</div>
+</details>
 """
         cards.append(card)
 
@@ -73,11 +78,43 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
   .order-answer li {{ padding-left: 0.25rem; margin: 0.25rem 0; color: #1e293b; }}
   .order-answer li::marker {{ color: #16a34a; font-weight: 700; }}
   img {{ max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; }}
+  .quiz-question-card summary::-webkit-details-marker {{ display: none; }}
+  .quiz-question-card[open] {{ border-color: #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.06); }}
+  .quiz-question-card[open] > summary .quiz-chevron {{ transform: rotate(90deg); }}
+  .quiz-expand-btn {{
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.82em;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }}
+  .quiz-expand-btn:hover {{
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+  }}
 </style>
 <div style="font-family: system-ui, -apple-system, sans-serif;">
-  <div style="margin-bottom: 16px;">
-    <h3 style="margin: 0; color: #0f172a;">{html.escape(quiz.title)}</h3>
-    <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed</span>
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+    <div>
+      <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
+      <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed</span>
+    </div>
+    <div>
+      <button type="button" class="quiz-expand-btn" onclick="
+        var cards = document.querySelectorAll('.quiz-question-card');
+        var anyClosed = Array.from(cards).some(c => !c.open);
+        cards.forEach(c => c.open = anyClosed);
+        this.innerHTML = anyClosed ? '▼ Collapse All' : '▶ Expand All';
+      ">▶ Expand All</button>
+    </div>
   </div>
   {''.join(cards)}
 </div>

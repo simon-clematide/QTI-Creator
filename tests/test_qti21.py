@@ -76,16 +76,98 @@ def square(n):
                 Choice("English", False),
             ],
             points=3.0,
+            scoring="partial",
         )
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
         self.assertIn("assessmentItem", root.tag)
         self.assertIn('maxChoices="0"', xml_str)
-        # Verify Kprim proportion scoring in responseProcessing
-        self.assertIn("<responseProcessing>", xml_str)
-        self.assertIn('<baseValue baseType="float">3.0</baseValue>', xml_str)
-        self.assertIn('<baseValue baseType="float">2.0</baseValue>', xml_str)
-        self.assertIn('<baseValue baseType="float">1.5</baseValue>', xml_str)
+        # Verify OpenOLAT native partial scoring mapping entries
+        self.assertIn('lowerBound="0.0"', xml_str)
+        self.assertIn('upperBound="3.0"', xml_str)
+        self.assertIn('mappedValue="1.0"', xml_str)  # 3.0 / 3 correct
+        self.assertIn('mappedValue="-3.0"', xml_str)  # -3.0 / 1 incorrect
+        self.assertIn('rptemplates/map_response', xml_str)
+
+    def test_multiple_choice_all_correct_xml_validity(self):
+        q = MultipleChoiceQuestion(
+            prompt="Select primes:",
+            choices=[
+                Choice("2", True),
+                Choice("3", True),
+                Choice("4", False),
+            ],
+            points=2.0,
+            scoring="all-correct",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("assessmentItem", root.tag)
+        self.assertIn('rptemplates/match_correct', xml_str)
+        self.assertNotIn('<mapping', xml_str)
+
+    def test_multiple_choice_proportional_all_four_correct(self):
+        q = MultipleChoiceQuestion(
+            prompt="Which of these are mammals?",
+            choices=[
+                Choice("Dog", True),
+                Choice("Cat", True),
+                Choice("Whale", True),
+                Choice("Bat", True),
+            ],
+            points=1.0,
+            scoring="partial",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("assessmentItem", root.tag)
+        self.assertIn('mappedValue="0.25"', xml_str)
+        self.assertNotIn('mappedValue="-', xml_str)
+
+    def test_multiple_choice_proportional_weights_1_to_4_correct(self):
+        # 1 correct out of 4 (1 correct, 3 incorrect)
+        q1 = MultipleChoiceQuestion(
+            prompt="1 of 4 correct",
+            choices=[Choice("A", True), Choice("B", False), Choice("C", False), Choice("D", False)],
+            points=1.0,
+            scoring="partial",
+        )
+        xml1 = generate_item_xml(q1)
+        self.assertIn('mappedValue="1.0"', xml1)
+        self.assertIn('mappedValue="-0.3333"', xml1)
+
+        # 2 correct out of 4 (2 correct, 2 incorrect)
+        q2 = MultipleChoiceQuestion(
+            prompt="2 of 4 correct",
+            choices=[Choice("A", True), Choice("B", True), Choice("C", False), Choice("D", False)],
+            points=1.0,
+            scoring="partial",
+        )
+        xml2 = generate_item_xml(q2)
+        self.assertIn('mappedValue="0.5"', xml2)
+        self.assertIn('mappedValue="-0.5"', xml2)
+
+        # 3 correct out of 4 (3 correct, 1 incorrect)
+        q3 = MultipleChoiceQuestion(
+            prompt="3 of 4 correct",
+            choices=[Choice("A", True), Choice("B", True), Choice("C", True), Choice("D", False)],
+            points=1.0,
+            scoring="partial",
+        )
+        xml3 = generate_item_xml(q3)
+        self.assertIn('mappedValue="0.3333"', xml3)
+        self.assertIn('mappedValue="-1.0"', xml3)
+
+        # 4 correct out of 4 (4 correct, 0 incorrect)
+        q4 = MultipleChoiceQuestion(
+            prompt="4 of 4 correct",
+            choices=[Choice("A", True), Choice("B", True), Choice("C", True), Choice("D", True)],
+            points=1.0,
+            scoring="partial",
+        )
+        xml4 = generate_item_xml(q4)
+        self.assertIn('mappedValue="0.25"', xml4)
+        self.assertNotIn('mappedValue="-', xml4)
 
     def test_true_false_xml_validity(self):
         q = TrueFalseQuestion(

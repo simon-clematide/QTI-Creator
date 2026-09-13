@@ -44,7 +44,7 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 # Regex patterns
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
-RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle):\s*(.+)$", re.IGNORECASE)
+RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
 RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
 RE_ORDER_TASK = re.compile(r"^\d+\.\s*\[([ xX])\]\s*(.*)$")
 RE_KPRIM_HEADER = re.compile(r"^kprim:\s*$", re.IGNORECASE)
@@ -72,7 +72,7 @@ class RawQuestionBlock:
         self.is_kprim_mode = False
 
 
-RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations|shuffle):\s*(.+)$", re.IGNORECASE)
+RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
 
 
 def _parse_bool(val: Any) -> Optional[bool]:
@@ -347,7 +347,29 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     else:
         quiz_shuffle = DEFAULTS["shuffle"]
 
-    # 8. Description
+    # 8. MC Scoring
+    fm_scoring = frontmatter.get("scoring")
+    meta_scoring = top_meta.get("scoring")
+    if fm_scoring is not None and meta_scoring is not None:
+        if str(fm_scoring).strip().lower() != str(meta_scoring).strip().lower():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent scoring: frontmatter specifies '{fm_scoring}' but header metadata specifies '{meta_scoring.strip()}'. Using header metadata '{meta_scoring.strip()}'.",
+                    Severity.WARNING,
+                    top_meta_lines.get("scoring"),
+                )
+            )
+            quiz_mc_scoring = meta_scoring.strip().lower()
+        else:
+            quiz_mc_scoring = meta_scoring.strip().lower()
+    elif meta_scoring is not None:
+        quiz_mc_scoring = meta_scoring.strip().lower()
+    elif fm_scoring is not None:
+        quiz_mc_scoring = str(fm_scoring).strip().lower()
+    else:
+        quiz_mc_scoring = DEFAULTS["mc_scoring"]
+
+    # 9. Description
     quiz_description = (
         "\n".join(description_lines).strip()
         or top_meta.get("description")
@@ -374,6 +396,9 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                     q.language = quiz_language
                 if q.shuffle is None:
                     q.shuffle = quiz_shuffle
+                if isinstance(q, MultipleChoiceQuestion) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
+                    if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
+                        q.scoring = quiz_mc_scoring
                 if q.additional_info is None:
                     if quiz_additional_info is not None:
                         q.additional_info = quiz_additional_info
@@ -396,6 +421,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
         keywords=quiz_keywords,
         additional_info=quiz_additional_info,
         shuffle=quiz_shuffle,
+        mc_scoring=quiz_mc_scoring,
     )
 
     # Add any global quiz diagnostics
@@ -508,6 +534,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
     )
     language = block.metadata.get("language")
     q_shuffle = _parse_bool(block.metadata.get("shuffle")) if "shuffle" in block.metadata else None
+    q_scoring = block.metadata.get("scoring", "").strip().lower() if "scoring" in block.metadata else None
 
     # Combine prompt text
     prompt = "\n".join(block.prompt_lines).strip()
@@ -573,7 +600,10 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             return SingleChoiceQuestion(**common_kwargs, choices=choices)
         elif explicit_type in ("multiplechoice", "mc"):
             choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
-            return MultipleChoiceQuestion(**common_kwargs, choices=choices)
+            mc_kwargs = dict(common_kwargs)
+            if q_scoring is not None:
+                mc_kwargs["scoring"] = q_scoring
+            return MultipleChoiceQuestion(**mc_kwargs, choices=choices)
         elif explicit_type in ("truefalse", "tf"):
             choices = [Choice(text=text, is_correct=is_corr) for is_corr, _, text, _ in block.choices]
             return TrueFalseQuestion(**common_kwargs, choices=choices)
@@ -661,7 +691,10 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         if count_X == 1:
             return SingleChoiceQuestion(**common_kwargs, choices=choices)
         elif count_x >= 1:
-            return MultipleChoiceQuestion(**common_kwargs, choices=choices)
+            mc_kwargs = dict(common_kwargs)
+            if q_scoring is not None:
+                mc_kwargs["scoring"] = q_scoring
+            return MultipleChoiceQuestion(**mc_kwargs, choices=choices)
 
     # 6. Inferred: Essay / Free Text (question prompt with no answer tokens)
     return EssayQuestion(**common_kwargs)

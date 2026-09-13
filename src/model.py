@@ -99,6 +99,7 @@ class SingleChoiceQuestion(Question):
 class MultipleChoiceQuestion(Question):
     """Multiple Choice: More than one checked alternative (or explicit MC)."""
     choices: List[Choice] = field(default_factory=list)
+    scoring: str = field(default_factory=lambda: DEFAULTS["mc_scoring"])  # 'partial' or 'all-correct'
 
     def validate(self) -> None:
         super().validate()
@@ -112,6 +113,11 @@ class MultipleChoiceQuestion(Question):
             raise QuizValidationError(
                 "Multiple Choice requires at least 1 correct answer marked.",
                 [Diagnostic("Multiple Choice requires at least 1 correct answer marked.", Severity.ERROR, self.line_number)],
+            )
+        if self.scoring not in ("partial", "all-correct", "all_correct", "allcorrect"):
+            raise QuizValidationError(
+                f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct'.",
+                [Diagnostic(f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct'.", Severity.ERROR, self.line_number)],
             )
 
 
@@ -226,6 +232,7 @@ class Quiz:
     keywords: List[str] = field(default_factory=list)
     additional_info: Optional[str] = None
     shuffle: bool = True
+    mc_scoring: str = field(default_factory=lambda: DEFAULTS["mc_scoring"])
 
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""

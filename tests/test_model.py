@@ -61,6 +61,18 @@ class TestModelInvariants(unittest.TestCase):
             ],
         )
         self.assertEqual(len(q.choices), 3)
+        self.assertEqual(q.scoring, "partial")
+
+    def test_multiple_choice_invalid_scoring(self):
+        with self.assertRaises(QuizValidationError):
+            MultipleChoiceQuestion(
+                prompt="Select primes:",
+                choices=[
+                    Choice("2", is_correct=True),
+                    Choice("3", is_correct=True),
+                ],
+                scoring="unsupported-scoring",
+            )
 
     def test_true_false_valid(self):
         q = TrueFalseQuestion(

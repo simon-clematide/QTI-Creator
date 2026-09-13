@@ -229,7 +229,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 | Question Type | Syntax Pattern | Inference Rule |
                 | :--- | :--- | :--- |
                 | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` |
-                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` (scored as Kprim: all correct = 100%, 1 mistake = 50%, ≥ 2 mistakes = 0%) |
+                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` (scored proportionally: partial credit by default) |
                 | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
                 | **Fill in the Blank** | `The word is {{gray \\| grey}}.` | Prompt contains `{{canonical \\| alt1 \\| alt2}}` |
                 | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered task list with empty `[ ]` (min 2 items, source order is target sequence) |
@@ -270,6 +270,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ### Question Metadata & Local Overrides
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
                 - `Points: 3` (default: 1)
+                - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
                 - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
                 - `Shuffle: false` (disables QuizMD's default answer shuffling for this question)
                 - `Topic: Genetics` (overrides quiz-level Topic in OpenOLAT)

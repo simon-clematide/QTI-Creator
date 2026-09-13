@@ -90,13 +90,15 @@ QTI-Creator enforces clear marker families:
 - **Multiple Choice**: Lowercase `[x]`. Any question with `[x]` is Multiple Choice (even if only 1 option is checked).
 - **Prohibited**: Mixing `[X]` and `[x]` in the same question is forbidden to prevent ambiguity. Legacy `[o]`, `(o)`, or `(*)` are not supported.
 
-### 2. Multiple Choice Scoring (Automatic Kprim Proportion)
-In OpenOLAT, multiple-choice questions are automatically evaluated with **Kprim-style proportion scoring**:
-- Selecting a correct option awards `+1.0`.
-- Selecting an incorrect option deducts `-1.0` (eliminating the "select-all" guessing cheat).
-- **100% (full points)**: All choices evaluated correctly (all correct items selected, no distractors selected).
-- **50% (half points)**: Exactly 1 mistake made (either 1 missed correct answer OR 1 distractor selected).
-- **0%**: 2 or more mistakes made (with score floored at `0.0`).
+### 2. Native OpenOLAT Partial Scoring for Multiple Choice
+Multiple Choice questions (`- [x]`) use OpenOLAT's native **Partial score** by default:
+- Each question defaults to 1.0 point (or any custom value set via `Points: <n>`).
+- Partial scoring follows OpenOLAT's proportional model:
+  - Correct selections contribute proportionally according to the number of correct alternatives ($+\text{points} / N_{\text{correct}}$).
+  - Incorrect selections subtract proportionally according to the number of incorrect alternatives ($-\text{points} / N_{\text{incorrect}}$).
+  - When all alternatives are correct (e.g. 4/4 correct options), selecting all awards 100%, 3/4 awards 75%, 2/4 awards 50%, and 1/4 awards 25%.
+  - The result is strictly bounded by $[0.0, \text{Points}]$ (`lowerBound="0.0"` and `upperBound="points"`), ensuring a score can never become negative.
+- **Scoring Method Override**: Authors can override the scoring method at the quiz level or per question using `Scoring: all-correct` (requires selecting all correct answers and no distractors for 100%, otherwise 0.0) or `Scoring: partial`.
 
 ### 3. Fill-in-the-Blank with Gap Alternatives
 Accept multiple valid spellings or synonyms using the pipe `|` separator:
@@ -174,6 +176,7 @@ keywords: [cell, organelle, biology]
 ### 7. Question-Level Metadata & Post-Submission Feedback
 Metadata lines can appear **before or after** choices:
 - `Points: <number>` (default: 1)
+- `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
 - `Feedback: <text>`: Post-submission feedback displayed to learners in OpenOLAT. Supports Markdown and LaTeX math (`$...$`).
 - `Shuffle: <bool>`: Overrides quiz shuffling.
 - `Topic: <text>`: Overrides question topic in OpenOLAT.

@@ -51,29 +51,15 @@ def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict
 
 
 def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
-    """Generate QTI 2.1 XML for a Multiple Choice question with Kprim-style scoring."""
+    """Generate QTI 2.1 XML for a Multiple Choice question with partial or all-correct scoring."""
     correct_choices = [c for c in q.choices if c.is_correct]
-    total_correct = len(correct_choices)
+    incorrect_choices = [c for c in q.choices if not c.is_correct]
+    n_correct = len(correct_choices)
+    n_incorrect = len(incorrect_choices)
 
     correct_values_xml = "\n".join(
         f"      <value>{c.identifier}</value>" for c in correct_choices
     )
-
-    mapping_entries_xml = []
-    for c in q.choices:
-        val = 1.0 if c.is_correct else -1.0
-        mapping_entries_xml.append(
-            f'      <mapEntry mapKey="{c.identifier}" mappedValue="{val}"/>'
-        )
-
-    response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
-    <correctResponse>
-{correct_values_xml}
-    </correctResponse>
-    <mapping defaultValue="0.0">
-{chr(10).join(mapping_entries_xml)}
-    </mapping>
-  </responseDeclaration>"""
 
     choices_xml = []
     for c in q.choices:
@@ -89,37 +75,39 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
 
-    half_pts = q.points * 0.5
-    threshold_full = float(total_correct)
-    threshold_half = float(total_correct - 1)
+    scoring_mode = q.scoring.lower() if q.scoring else "partial"
 
-    response_proc = f"""  <responseProcessing>
-    <responseCondition>
-      <responseIf>
-        <gte>
-          <mapResponse identifier="RESPONSE"/>
-          <baseValue baseType="float">{threshold_full}</baseValue>
-        </gte>
-        <setOutcomeValue identifier="SCORE">
-          <baseValue baseType="float">{q.points}</baseValue>
-        </setOutcomeValue>
-      </responseIf>
-      <responseElseIf>
-        <gte>
-          <mapResponse identifier="RESPONSE"/>
-          <baseValue baseType="float">{threshold_half}</baseValue>
-        </gte>
-        <setOutcomeValue identifier="SCORE">
-          <baseValue baseType="float">{half_pts}</baseValue>
-        </setOutcomeValue>
-      </responseElseIf>
-      <responseElse>
-        <setOutcomeValue identifier="SCORE">
-          <baseValue baseType="float">0.0</baseValue>
-        </setOutcomeValue>
-      </responseElse>
-    </responseCondition>
-  </responseProcessing>"""
+    if scoring_mode in ("all-correct", "all_correct", "allcorrect"):
+        response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
+    <correctResponse>
+{correct_values_xml}
+    </correctResponse>
+  </responseDeclaration>"""
+        response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"/>"""
+    else:
+        # OpenOLAT native partial scoring:
+        # Points are divided proportionally across correct answers.
+        # Incorrect answers deduct proportionally if there are incorrect alternatives.
+        # Lower bound clamped at 0.0, upper bound at q.points.
+        pos_val = round(q.points / n_correct, 4) if n_correct > 0 else 0.0
+        neg_val = round(-(q.points / n_incorrect), 4) if n_incorrect > 0 else 0.0
+
+        mapping_entries_xml = []
+        for c in q.choices:
+            val = pos_val if c.is_correct else neg_val
+            mapping_entries_xml.append(
+                f'      <mapEntry mapKey="{c.identifier}" mappedValue="{val}"/>'
+            )
+
+        response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
+    <correctResponse>
+{correct_values_xml}
+    </correctResponse>
+    <mapping defaultValue="0.0" lowerBound="0.0" upperBound="{q.points}">
+{chr(10).join(mapping_entries_xml)}
+    </mapping>
+  </responseDeclaration>"""
+        response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
 
     return wrap_assessment_item(
         identifier=q.identifier,

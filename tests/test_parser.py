@@ -84,6 +84,37 @@ class TestQuizMDParser(unittest.TestCase):
         q = quiz.questions[0]
         self.assertIsInstance(q, MultipleChoiceQuestion)
         self.assertEqual(len([c for c in q.choices if c.is_correct]), 3)
+        self.assertEqual(q.scoring, "partial")
+
+    def test_multiple_choice_scoring_metadata(self):
+        text = """# Quiz with Scoring Settings
+scoring: all-correct
+
+## Question with Inherited Scoring
+- [x] Choice A
+- [x] Choice B
+- [ ] Choice C
+
+## Question with Explicit Override
+scoring: partial
+- [x] Choice 1
+- [x] Choice 2
+- [ ] Choice 3
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        self.assertEqual(quiz.mc_scoring, "all-correct")
+        self.assertEqual(quiz.questions[0].scoring, "all-correct")
+        self.assertEqual(quiz.questions[1].scoring, "partial")
+
+    def test_multiple_choice_invalid_scoring_diagnostic(self):
+        text = """## Bad Scoring
+scoring: invalid_method
+- [x] A
+- [x] B
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Invalid scoring method 'invalid_method'" in d.message for d in diags))
 
     def test_true_false_inference(self):
         text = """## Earth is flat.

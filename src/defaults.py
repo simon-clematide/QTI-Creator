@@ -16,6 +16,7 @@ DEFAULTS: Dict[str, Any] = {
     "points": 1.0,
     "feedback": None,
     "shuffle": True,
+    "mc_scoring": "partial",  # 'partial' (default) or 'all-correct'
     
     # Kprim specific defaults (Swiss university scoring)
     # 4/4 correct = full points, 3/4 correct = half points, <=2/4 correct = 0 points

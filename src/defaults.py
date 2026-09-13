@@ -10,6 +10,7 @@ DEFAULTS: Dict[str, Any] = {
     # Quiz level defaults
     "language": "en",
     "quiz_title": "Untitled Quiz",
+    "quiz_version": "1.0.0",
     
     # Question level defaults
     "points": 1.0,

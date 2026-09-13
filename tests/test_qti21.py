@@ -144,7 +144,7 @@ def square(n):
         self.assertIn("simpleAssociableChoice", xml_str)
 
     def test_manifest_and_test_xml(self):
-        quiz = Quiz(title="Swiss Test")
+        quiz = Quiz(title="Swiss Test", version="1.3.5", language="fr")
         q = SingleChoiceQuestion(
             prompt="Capital?",
             choices=[Choice("Bern", True), Choice("Zurich", False)],
@@ -154,6 +154,9 @@ def square(n):
         manifest_xml = generate_manifest_xml(quiz)
         m_root = ET.fromstring(manifest_xml)
         self.assertIn("manifest", m_root.tag)
+        self.assertEqual(m_root.attrib.get("version"), "1.3.5")
+        self.assertIn("<imsmd:version>", manifest_xml)
+        self.assertIn('<imsmd:langstring xml:lang="fr">1.3.5</imsmd:langstring>', manifest_xml)
 
         test_xml = generate_test_xml(quiz)
         t_root = ET.fromstring(test_xml)

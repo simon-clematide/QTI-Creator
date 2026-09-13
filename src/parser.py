@@ -67,25 +67,51 @@ class RawQuestionBlock:
         self.is_kprim_mode = False
 
 
+RE_TOP_META = re.compile(r"^(version|language|title|description):\s*(.+)$", re.IGNORECASE)
+
+
 def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     """Parse a QuizMD Markdown string into a typed Quiz and diagnostic messages."""
     diagnostics: List[Diagnostic] = []
     lines = text.splitlines()
 
-    quiz_title = DEFAULTS["quiz_title"]
+    # Step 0: Extract YAML Frontmatter if present at start of document
+    frontmatter: Dict[str, str] = {}
+    content_start_idx = 0
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped == "---":
+            # Search for closing ---
+            for close_idx in range(idx + 1, len(lines)):
+                if lines[close_idx].strip() == "---":
+                    content_start_idx = close_idx + 1
+                    raw_fm = "\n".join(lines[idx + 1 : close_idx])
+                    try:
+                        import yaml
+                        data = yaml.safe_load(raw_fm)
+                        if isinstance(data, dict):
+                            frontmatter = {str(k).lower(): str(v) for k, v in data.items() if v is not None}
+                    except Exception:
+                        for fm_line in lines[idx + 1 : close_idx]:
+                            m = re.match(r"^([a-zA-Z0-9_-]+):\s*(.+)$", fm_line.strip())
+                            if m:
+                                frontmatter[m.group(1).lower()] = m.group(2).strip().strip("'\"")
+                    break
+        break
+
+    h1_title: Optional[str] = None
+    h1_line: Optional[int] = None
+    top_meta: Dict[str, str] = {}
+    top_meta_lines: Dict[str, int] = {}
     description_lines: List[str] = []
     question_blocks: List[RawQuestionBlock] = []
     current_block: Optional[RawQuestionBlock] = None
 
     # Step 1: Document & question segmentation
-    for line_idx, line in enumerate(lines, start=1):
+    for line_idx, line in enumerate(lines[content_start_idx:], start=content_start_idx + 1):
         stripped = line.strip()
-
-        # Check Level 1 heading (Quiz Title)
-        h1_match = RE_H1.match(stripped)
-        if h1_match and not question_blocks and current_block is None:
-            quiz_title = h1_match.group(1).strip()
-            continue
 
         # Check Level 2 heading (Question start)
         h2_match = RE_H2.match(stripped)
@@ -101,11 +127,100 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
         if current_block is not None:
             current_block.raw_lines.append((line_idx, line))
         else:
-            # Text before any question belongs to quiz description
+            # Preamble section (before any question)
+            h1_match = RE_H1.match(stripped)
+            if h1_match and h1_title is None:
+                h1_title = h1_match.group(1).strip()
+                h1_line = line_idx
+                continue
+
+            top_meta_match = RE_TOP_META.match(stripped)
+            if top_meta_match:
+                key = top_meta_match.group(1).lower()
+                val = top_meta_match.group(2).strip()
+                top_meta[key] = val
+                top_meta_lines[key] = line_idx
+                continue
+
             description_lines.append(line)
 
     if current_block is not None:
         question_blocks.append(current_block)
+
+    # Resolve Quiz-level metadata with consistency checking between Way A & Way B
+    # 1. Version
+    fm_ver = frontmatter.get("version")
+    meta_ver = top_meta.get("version")
+    if fm_ver is not None and meta_ver is not None:
+        if fm_ver.strip() != meta_ver.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent version: frontmatter specifies '{fm_ver.strip()}' but header metadata specifies '{meta_ver.strip()}'. Using header metadata '{meta_ver.strip()}'.",
+                    Severity.WARNING,
+                    top_meta_lines.get("version"),
+                )
+            )
+            quiz_version = meta_ver.strip()
+        else:
+            quiz_version = meta_ver.strip()
+    elif meta_ver is not None:
+        quiz_version = meta_ver.strip()
+    elif fm_ver is not None:
+        quiz_version = fm_ver.strip()
+    else:
+        quiz_version = DEFAULTS["quiz_version"]
+
+    # 2. Title
+    fm_title = frontmatter.get("title")
+    header_title = h1_title or top_meta.get("title")
+    if fm_title is not None and header_title is not None:
+        if fm_title.strip() != header_title.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{header_title.strip()}'. Using header title '{header_title.strip()}'.",
+                    Severity.WARNING,
+                    h1_line or top_meta_lines.get("title"),
+                )
+            )
+            quiz_title = header_title.strip()
+        else:
+            quiz_title = header_title.strip()
+    elif header_title is not None:
+        quiz_title = header_title.strip()
+    elif fm_title is not None:
+        quiz_title = fm_title.strip()
+    else:
+        quiz_title = DEFAULTS["quiz_title"]
+
+    # 3. Language
+    fm_lang = frontmatter.get("language")
+    meta_lang = top_meta.get("language")
+    if fm_lang is not None and meta_lang is not None:
+        if fm_lang.strip() != meta_lang.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent language: frontmatter specifies '{fm_lang.strip()}' but header metadata specifies '{meta_lang.strip()}'. Using header metadata '{meta_lang.strip()}'.",
+                    Severity.WARNING,
+                    top_meta_lines.get("language"),
+                )
+            )
+            quiz_language = meta_lang.strip()
+        else:
+            quiz_language = meta_lang.strip()
+    elif meta_lang is not None:
+        quiz_language = meta_lang.strip()
+    elif fm_lang is not None:
+        quiz_language = fm_lang.strip()
+    else:
+        quiz_language = DEFAULTS["language"]
+
+    # 4. Description
+    quiz_description = (
+        "\n".join(description_lines).strip()
+        or top_meta.get("description")
+        or frontmatter.get("description")
+        or None
+    )
 
     # Step 2: Line classification for each block
     for block in question_blocks:
@@ -125,8 +240,10 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
     quiz = Quiz(
         title=quiz_title,
-        description="\n".join(description_lines).strip() or None,
+        description=quiz_description,
         questions=questions,
+        language=quiz_language,
+        version=quiz_version,
     )
 
     # Add any global quiz diagnostics

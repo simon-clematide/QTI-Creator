@@ -259,6 +259,89 @@ def greet():
         xml_math = "Condition: $a < b & c > d$."
         self.assertIn('<span class="math" title="a%20%3C%20b%20%26%20c%20%3E%20d">a &lt; b &amp; c &gt; d</span>', markdown_to_qti_xhtml(xml_math))
 
+    def test_quiz_version_from_header_metadata(self):
+        text = """# Physics Quiz
+Version: 1.2.3
+Language: de
+
+## What is the speed of light?
+- [X] ~300,000 km/s
+- [ ] ~150,000 km/s
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.version, "1.2.3")
+        self.assertEqual(quiz.language, "de")
+        self.assertEqual(quiz.title, "Physics Quiz")
+
+    def test_quiz_version_from_yaml_frontmatter(self):
+        text = """---
+title: Biology Quiz
+version: 2.0.1
+language: fr
+---
+
+## What is DNA?
+- [X] Genetic material
+- [ ] A protein
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.version, "2.0.1")
+        self.assertEqual(quiz.title, "Biology Quiz")
+        self.assertEqual(quiz.language, "fr")
+
+    def test_quiz_version_consistent_frontmatter_and_header(self):
+        text = """---
+title: History Quiz
+version: 1.0.0
+---
+# History Quiz
+Version: 1.0.0
+
+## What year did WW2 end?
+- [X] 1945
+- [ ] 1939
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.version, "1.0.0")
+
+    def test_quiz_version_inconsistent_warning(self):
+        text = """---
+title: Math Quiz
+version: 1.0.0
+---
+# Math Quiz
+Version: 2.0.0
+
+## What is 1 + 1?
+- [X] 2
+- [ ] 3
+"""
+        quiz, diags = parse_quizmd(text)
+        warnings = [d for d in diags if "Inconsistent version" in d.message]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("frontmatter specifies '1.0.0'", warnings[0].message)
+        self.assertIn("header metadata specifies '2.0.0'", warnings[0].message)
+        self.assertEqual(quiz.version, "2.0.0")
+
+    def test_quiz_title_inconsistent_warning(self):
+        text = """---
+title: Front Title
+version: 1.0.0
+---
+# Header Title
+
+## Question
+- [X] A
+- [ ] B
+"""
+        quiz, diags = parse_quizmd(text)
+        warnings = [d for d in diags if "Inconsistent title" in d.message]
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(quiz.title, "Header Title")
+
     def test_all_registered_examples_parse_and_package(self):
         from src.examples import EXAMPLES
         from src.packager import create_qti_package_bytes

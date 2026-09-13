@@ -194,6 +194,7 @@ class Quiz:
     questions: List[Question] = field(default_factory=list)
     identifier: str = field(default_factory=lambda: generate_id("quiz"))
     language: str = field(default_factory=lambda: DEFAULTS["language"])
+    version: str = field(default_factory=lambda: DEFAULTS["quiz_version"])
 
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""

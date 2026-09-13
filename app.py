@@ -189,8 +189,30 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
                 ---
 
-                ### Optional Metadata
-                Metadata is only needed when changing defaults (default is 1 point, auto ID):
+                ### Quiz Metadata & Versioning
+                You can specify quiz-level version, language, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
+
+                **Way A: Top-Level Header Metadata**
+                ```markdown
+                # Biology Exam
+                Version: 1.2.0
+                Language: en
+                ```
+
+                **Way B: YAML Frontmatter**
+                ```markdown
+                ---
+                title: Biology Exam
+                version: 1.2.0
+                language: en
+                ---
+                ```
+                *(If both are provided, they must be consistent; contradictory values will trigger a warning diagnostic).*
+
+                ---
+
+                ### Question Metadata
+                Question metadata is only needed when changing defaults (default is 1 point, auto ID):
                 ```markdown
                 ## Question Title
                 Points: 3

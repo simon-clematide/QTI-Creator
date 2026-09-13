@@ -5,6 +5,8 @@ IMS QTI metadata (imsqti:qtiMetadata) to guarantee native editable recognition
 in OpenOLAT.
 """
 
+import html
+
 from src.model import (
     EssayQuestion,
     FillBlankQuestion,
@@ -53,6 +55,8 @@ def _get_openolat_question_type(q: Question) -> str:
 def generate_manifest_xml(quiz: Quiz) -> str:
     """Generate the root-level imsmanifest.xml required by OpenOLAT."""
     test_res_id = f"RES_{quiz.identifier}"
+    escaped_version = html.escape(quiz.version)
+    escaped_lang = html.escape(quiz.language)
 
     item_dependencies = []
     item_resources = []
@@ -89,14 +93,31 @@ def generate_manifest_xml(quiz: Quiz) -> str:
           xmlns:ns4="http://www.openolat.org/xsd/oomd_v1p1"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           identifier="MANIFEST_{quiz.identifier}"
+          version="{escaped_version}"
           xsi:schemaLocation="http://www.imsglobal.org/xsd/imscp_v1p1 http://www.imsglobal.org/xsd/imscp_v1p1.xsd http://www.imsglobal.org/xsd/imsmd_v1p2 http://www.imsglobal.org/xsd/imsmd_v1p2p4.xsd http://www.imsglobal.org/xsd/imsqti_metadata_v2p1 http://www.imsglobal.org/xsd/qti/qtiv2p1/imsqti_metadata_v2p1.xsd">
   <metadata>
     <schema>QTIv2.1</schema>
     <schemaversion>2.1</schemaversion>
+    <imsmd:lom>
+      <imsmd:lifecycle>
+        <imsmd:version>
+          <imsmd:langstring xml:lang="{escaped_lang}">{escaped_version}</imsmd:langstring>
+        </imsmd:version>
+      </imsmd:lifecycle>
+    </imsmd:lom>
   </metadata>
   <organizations/>
   <resources>
     <resource identifier="{test_res_id}" type="imsqti_test_xmlv2p1" href="Test.xml">
+      <metadata>
+        <imsmd:lom>
+          <imsmd:lifecycle>
+            <imsmd:version>
+              <imsmd:langstring xml:lang="{escaped_lang}">{escaped_version}</imsmd:langstring>
+            </imsmd:version>
+          </imsmd:lifecycle>
+        </imsmd:lom>
+      </metadata>
       <file href="Test.xml"/>
 {chr(10).join(item_dependencies)}
     </resource>

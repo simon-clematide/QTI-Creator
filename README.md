@@ -123,13 +123,33 @@ Points: 2
 ```
 *Scoring in OpenOLAT:* 4/4 correct = full points (2 pt); 3/4 correct = half points (1 pt); $\le$ 2/4 correct = 0 points.
 
-### 8. Optional Metadata
-Metadata is optional and case-insensitive:
+### 8. Quiz Versioning & Document Metadata
+You can specify the quiz version, language, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B). The version is automatically encoded into the IMS package manifest (`<manifest version="...">`) and IMS LOM lifecycle metadata (`<imsmd:lifecycle><imsmd:version>`) for OpenOLAT.
+
+**Way A: Top-Level Header Metadata**
+```markdown
+# Cellular Biology Quiz
+Version: 1.2.0
+Language: en
+```
+
+**Way B: YAML Frontmatter**
+```markdown
+---
+title: Cellular Biology Quiz
+version: 1.2.0
+language: en
+---
+```
+*(If both frontmatter and header metadata are specified, they must be consistent; contradictory values will produce a warning diagnostic).*
+
+### 9. Question-Level Metadata
+Question-level metadata is optional and case-insensitive:
 - `Points: <number>` — Sets the question point value (default: `1`).
 - `Feedback: <text>` — Adds feedback shown to learners after submission.
 - `Type: <type>` — Explicit override if you wish to bypass inference (e.g. `Type: multiple-choice`).
 
-### 9. Code Snippets (Inline & Multiline Fenced Blocks)
+### 10. Code Snippets (Inline & Multiline Fenced Blocks)
 Both inline code and multiline fenced code blocks are supported in prompts and choices:
 - **Inline code**: Wrap code in single backticks: `` `print("hello")` `` or `` `int main()` ``.
 - **Multiline code blocks**: Use standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks (including assignment operators `=`, task items `- [ ]`, or comments) are protected and will never be misclassified as quiz markers.

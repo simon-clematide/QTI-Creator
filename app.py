@@ -223,19 +223,19 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
         with gr.TabItem("📖 Syntax Cheat Sheet"):
             gr.Markdown(
                 """
-                ### Minimal QuizMD Cheat Sheet
-                QuizMD uses standard Markdown whenever possible. The question type is inferred automatically:
+                ### QuizMD Cheat Sheet
+                QuizMD uses standard Markdown whenever possible. Question types are detected automatically from the syntax:
 
-                | Question Type | Syntax Pattern | Inference Rule | Default Scoring (all questions = 1 pt) |
+                | Question Type | Syntax Pattern | Inference Rule | Default Scoring (1 point per question) |
                 | :--- | :--- | :--- | :--- |
-                | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` | All or nothing |
-                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` | Partial credit based on correct and incorrect selections |
-                | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" | All or nothing |
-                | **Fill in the Blank** | `The word is {{gray \\| grey}}.` | Prompt contains `{{canonical \\| alt1 \\| alt2}}` | Points divided equally across blanks |
-                | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered task list with empty `[ ]` (min 2 items, source order is target sequence) | All or nothing |
-                | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` | All or nothing within tolerance |
-                | **Essay / Free Text** | Question prompt with no answers | No answer tokens | Manual grading |
-                | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | 4 statements marked `[+]` or `[-]` | 4/4 = full, 3/4 = half, ≤2/4 = zero |
+                | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly one option marked `[X]` | All or nothing |
+                | **True / False** | `- [X] True`<br>`- [ ] False` | Single Choice with exactly True and False | All or nothing |
+                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more options marked `[x]` | Partial credit for correct and incorrect selections |
+                | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | Exactly 4 statements marked `[+]` or `[-]` | 4/4 = full, 3/4 = half, ≤2/4 = zero |
+                | **Fill in the Blank** | `The word is {{gray \\| grey}}.` | Answer embedded as `{{answer \\| alternative}}` | Points divided equally across blanks |
+                | **Numerical** | `= 9.81 ± 0.05` | Answer line starts with `= number (optional ± tolerance)` | All or nothing within tolerance |
+                | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered list with empty `[ ]` (minimum 2 items) | All or nothing |
+                | **Essay / Free Text** | Question prompt with no answers | No answer syntax | Manual grading |
 
                 *All questions are worth 1 point by default. Use `Points: <number>` to change a question's weight.*
 
@@ -267,8 +267,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ```
                 ---
 
-                ---
-
                 ### Multiple Choice Scoring Options
                 By default, Multiple Choice questions use OpenOLAT's native **partial credit** (`Scoring: partial`). You can configure alternative scoring methods globally in the quiz header/frontmatter or per question:
 
@@ -286,30 +284,34 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
                 ### Question Types & Formatting Guide
 
-                #### 1. Single Choice vs. Multiple Choice Markers
-                - **Single Choice**: Exactly one uppercase `[X]`. More than 1 `[X]` produces a validation error.
-                - **Multiple Choice**: Lowercase `[x]`. Any question with `[x]` is Multiple Choice (even if only 1 option is checked).
+                #### 1. Single Choice, True / False, and Multiple Choice
+                - **Single Choice**: Mark exactly one correct option with uppercase `[X]`.
+                - **True / False**: A Single Choice question with exactly two options, `True` and `False`.
+                - **Multiple Choice**: Mark each correct option with lowercase `[x]`. Even one `[x]` makes the question Multiple Choice.
                 - *Do not mix `[X]` and `[x]` in the same question.*
 
-                #### 2. Fill in the Blank with Alternatives
+                #### 2. Kprim (4-Statement Matrix)
+                - Write exactly 4 statements, marking each as true with `- [+]` or false with `- [-]`.
+                - Scoring in OpenOLAT: 4/4 correct = full points, 3/4 correct = half points, ≤2/4 = 0 points.
+
+                #### 3. Fill in the Blank with Alternatives
                 - Wrap target blanks in `{{...}}`.
                 - Provide acceptable synonyms or alternate spellings with pipe `|`: `{{gray | grey}}`.
                 - The first value is canonical; all alternatives receive equal full credit.
 
-                #### 3. Order / Sequencing Questions
-                - Write an ordered task list with empty boxes: `1. [ ] Step A`, `1. [ ] Step B`, `1. [ ] Step C` (minimum 2 items).
-                - **The order in Markdown is the correct solution.**
-                - Learner-facing tiles are automatically scrambled (`shuffle="true"`).
-                - *Regular numbered lists (`1. Foo`, `2. Bar`) without `[ ]` remain standard Markdown text.*
-
                 #### 4. Numerical Questions
                 - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.
 
-                #### 5. Kprim (4-Statement Matrix)
-                - Exactly 4 statements marked with `- [+]` (true) or `- [-]` (false).
-                - Scored natively in OpenOLAT: 4/4 correct = full points, 3/4 correct = half points, ≤2/4 = 0 points.
+                #### 5. Order / Sequencing Questions
+                - Write an ordered list with empty boxes: `1. [ ] Step A`, `1. [ ] Step B`, `1. [ ] Step C` (minimum 2 items).
+                - **The order written in Markdown is the correct solution.**
+                - Learner-facing tiles are automatically scrambled (`shuffle="true"`).
+                - *Regular numbered lists (`1. Foo`, `2. Bar`) without `[ ]` remain standard Markdown text.*
 
-                #### 6. Formulas & Code Blocks
+                #### 6. Essay / Free Text
+                - Write the prompt without any answer markers. OpenOLAT creates an open text response area for manual grading.
+
+                #### 7. Formulas & Code Blocks
                 - **Inline Math**: `$E = mc^2$` (rendered natively via MathJax in OpenOLAT).
                 - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                 - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.

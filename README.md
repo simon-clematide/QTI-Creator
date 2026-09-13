@@ -61,16 +61,16 @@ Explain the difference between aerobic and anaerobic respiration in 2-3 sentence
 
 ### Core Syntax at a Glance
 
-| Question Type | How to Write It | Inference Rule | Default Scoring (all questions = 1 pt) |
+| Question Type | Syntax Pattern | Inference Rule | Default Scoring (1 point per question) |
 | :--- | :--- | :--- | :--- |
-| **Single Choice** | `- [X] Correct Option`<br>`- [ ] Wrong Option` | Exactly 1 marked with uppercase `[X]` | All or nothing |
-| **Multiple Choice** | `- [x] Correct Option 1`<br>`- [x] Correct Option 2`<br>`- [ ] Distractor` | One or more marked with lowercase `[x]` | Partial credit based on correct and incorrect selections |
-| **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" | All or nothing |
-| **Fill in the Blank** | `The capital is {{Paris}}.` | Wrap target word in `{{gap}}` | Points divided equally across blanks |
-| **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Numbered task list with empty `[ ]` (min 2 items) | All or nothing |
-| **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tolerance)` | All or nothing within tolerance |
-| **Essay / Free Text** | Prompt without answer markers | Open text area for student response | Manual grading |
+| **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly one option marked `[X]` | All or nothing |
+| **True / False** | `- [X] True`<br>`- [ ] False` | Single Choice with exactly True and False | All or nothing |
+| **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more options marked `[x]` | Partial credit for correct and incorrect selections |
 | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | Exactly 4 statements marked `[+]` or `[-]` | 4/4 = full, 3/4 = half, ≤2/4 = zero |
+| **Fill in the Blank** | `The word is {{gray \| grey}}.` | Answer embedded as `{{answer \| alternative}}` | Points divided equally across blanks |
+| **Numerical** | `= 9.81 ± 0.05` | Answer line starts with `= number (optional ± tolerance)` | All or nothing within tolerance |
+| **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered list with empty `[ ]` (minimum 2 items) | All or nothing |
+| **Essay / Free Text** | Question prompt with no answers | No answer syntax | Manual grading |
 
 *All questions are worth 1 point by default. Use `Points: <number>` to change a question's weight.*
 

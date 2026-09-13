@@ -1,7 +1,5 @@
-"""Base XML template and helper functions for QTI 2.1 assessment items."""
-
 import html
-from typing import Optional
+from typing import Dict, Optional
 from src.markdown import markdown_to_qti_xhtml
 
 
@@ -13,13 +11,14 @@ def wrap_assessment_item(
     response_processing: str,
     feedback: Optional[str] = None,
     max_score: float = 1.0,
+    asset_map: Optional[Dict[str, str]] = None,
 ) -> str:
     """Wrap components into a fully compliant QTI 2.1 <assessmentItem> XML document."""
     escaped_title = html.escape(title)
 
     feedback_xml = ""
     if feedback:
-        feedback_body = markdown_to_qti_xhtml(feedback)
+        feedback_body = markdown_to_qti_xhtml(feedback, asset_map=asset_map)
         feedback_xml = f"""
   <modalFeedback outcomeIdentifier="FEEDBACK" identifier="feedback_modal" showHide="show">
     {feedback_body}

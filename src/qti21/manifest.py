@@ -57,8 +57,15 @@ def _get_openolat_question_type(q: Question) -> str:
     return "sc"
 
 
-def generate_manifest_xml(quiz: Quiz) -> str:
-    """Generate the root-level imsmanifest.xml required by OpenOLAT."""
+from typing import Dict, List, Optional
+
+
+def generate_manifest_xml(quiz: Quiz, question_asset_map: Optional[Dict[str, List[str]]] = None) -> str:
+    """Generate the root-level imsmanifest.xml required by OpenOLAT.
+    
+    If question_asset_map is provided (mapping question_id -> list of package relative filenames),
+    each media file is declared under its referencing item <resource>.
+    """
     test_res_id = f"RES_{quiz.identifier}"
     escaped_version = html.escape(quiz.version)
     escaped_lang = html.escape(quiz.language)
@@ -104,6 +111,11 @@ def generate_manifest_xml(quiz: Quiz) -> str:
 {chr(10).join(oo_parts)}
         </ns4:ooMetadata>"""
 
+        file_entries = [f'      <file href="{item_filename}"/>']
+        if question_asset_map and q.identifier in question_asset_map:
+            for asset_path in question_asset_map[q.identifier]:
+                file_entries.append(f'      <file href="{html.escape(asset_path)}"/>')
+
         item_dependencies.append(f'      <dependency identifierref="{item_res_id}"/>')
         item_resources.append(f"""    <resource identifier="{item_res_id}" type="imsqti_item_xmlv2p1" href="{item_filename}">
       <metadata>
@@ -119,7 +131,7 @@ def generate_manifest_xml(quiz: Quiz) -> str:
         </imsqti:qtiMetadata>
 {oo_block}
       </metadata>
-      <file href="{item_filename}"/>
+{chr(10).join(file_entries)}
     </resource>""")
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>

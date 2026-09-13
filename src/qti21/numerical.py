@@ -1,11 +1,10 @@
-"""QTI 2.1 generator for Numerical questions with tolerance."""
-
+from typing import Dict, Optional
 from src.markdown import markdown_to_qti_xhtml
 from src.model import NumericalQuestion
 from src.qti21.item import wrap_assessment_item
 
 
-def generate_numerical_xml(q: NumericalQuestion) -> str:
+def generate_numerical_xml(q: NumericalQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a Numerical question."""
     lower_bound = q.answer - q.tolerance
     upper_bound = q.answer + q.tolerance
@@ -19,7 +18,7 @@ def generate_numerical_xml(q: NumericalQuestion) -> str:
     </mapping>
   </responseDeclaration>"""
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     item_body = f"""    {prompt_xhtml}
     <p>
       <textEntryInteraction responseIdentifier="RESPONSE" expectedLength="10"/>
@@ -61,4 +60,5 @@ def generate_numerical_xml(q: NumericalQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )

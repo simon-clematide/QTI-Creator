@@ -9,14 +9,15 @@ import tempfile
 import gradio as gr
 
 from src.examples import EXAMPLES, SAMPLE_ALL_TYPES
+from src.media import preflight_media
 from src.packager import create_qti_package
 from src.parser import parse_quizmd
 from src.preview import render_quiz_preview_html
 from src.validation import Severity
 
 
-def update_preview_and_validate(text: str):
-    """Parse the text, validate invariants, render HTML preview, and format diagnostics."""
+def update_preview_and_validate(text: str, include_media: bool = False):
+    """Parse the text, perform passive media preflight, render preview, and format status."""
     if not text or not text.strip():
         return (
             "<p style='color: #64748b; font-style: italic;'>Enter questions or load an example to begin.</p>",
@@ -27,26 +28,34 @@ def update_preview_and_validate(text: str):
     quiz, diagnostics = parse_quizmd(text)
     preview_html = render_quiz_preview_html(quiz)
 
+    # Passive media preflight (zero network requests, provides inventory & scheme warnings)
+    media_res = preflight_media(quiz, include_media=False)
+    diagnostics.extend(media_res.diagnostics)
+
     errors = [d for d in diagnostics if d.severity == Severity.ERROR]
     warnings = [d for d in diagnostics if d.severity == Severity.WARNING]
 
+    msg_lines = []
     if errors:
-        msg_lines = ["⚠️ **Validation Errors:**"]
+        msg_lines.append("⚠️ **Validation Errors:**")
         for err in errors:
             msg_lines.append(f"- {str(err)}")
-        status_md = "\n".join(msg_lines)
     elif warnings:
-        msg_lines = [f"✅ **{len(quiz.questions)} question(s) parsed.** (With warnings:)\n"]
+        msg_lines.append(f"✅ **{len(quiz.questions)} question(s) parsed.** (With warnings:)\n")
         for warn in warnings:
             msg_lines.append(f"- {str(warn)}")
-        status_md = "\n".join(msg_lines)
     else:
-        status_md = f"✅ **{len(quiz.questions)} question(s) successfully parsed with zero errors.**"
+        msg_lines.append(f"✅ **{len(quiz.questions)} question(s) successfully parsed with zero errors.**")
 
+    media_summary = media_res.summary_text()
+    if media_summary:
+        msg_lines.append(f"\n{media_summary}")
+
+    status_md = "\n".join(msg_lines)
     return preview_html, status_md
 
 
-def convert_and_download(text: str):
+def convert_and_download(text: str, include_media: bool, media_zip_file):
     """Generate the QTI 2.1 ZIP package and return the temporary file path for download."""
     if not text or not text.strip():
         return None, "❌ Cannot generate package: text is empty."
@@ -57,13 +66,30 @@ def convert_and_download(text: str):
         error_details = "\n".join(f"- {str(e)}" for e in errors)
         return None, f"❌ **Fix errors before downloading:**\n{error_details}"
 
+    media_zip_bytes = None
+    if media_zip_file is not None:
+        try:
+            with open(media_zip_file.name, "rb") as f:
+                media_zip_bytes = f.read()
+        except Exception as e:
+            return None, f"❌ **Cannot read uploaded Media ZIP:** {e}"
+
+    # Perform media preflight (passive if include_media is False, active if True)
+    media_res = preflight_media(quiz, include_media=include_media, media_zip_bytes=media_zip_bytes)
+    if include_media and media_res.has_errors:
+        media_errors = [d for d in media_res.diagnostics if d.severity == Severity.ERROR]
+        error_details = "\n".join(f"- {str(e)}" for e in media_errors)
+        return None, f"❌ **Media Preflight Failed:**\n{error_details}"
+
     # Create temporary zip file
     safe_name = "".join(c if c.isalnum() else "_" for c in quiz.title).strip("_") or "qti_quiz"
     tmp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(tmp_dir, f"{safe_name}_qti21.zip")
 
-    create_qti_package(quiz, zip_path)
-    return zip_path, f"🎉 **Success!** Download your OpenOLAT QTI package below."
+    create_qti_package(quiz, zip_path, media_preflight=media_res)
+    
+    media_info = f"\n{media_res.summary_text()}" if media_res.summary_text() else ""
+    return zip_path, f"🎉 **Success!** Download your OpenOLAT QTI package below.{media_info}"
 
 
 def load_example(example_name: str):
@@ -130,6 +156,18 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                         lines=22,
                     )
 
+                    with gr.Accordion("🖼️ Media & Image Packaging (Optional)", open=False):
+                        include_media_cb = gr.Checkbox(
+                            value=False,
+                            label="Include media in QTI package",
+                            info="Download remote images and include uploaded relative images to make the QTI package self-contained.",
+                        )
+                        media_zip_upload = gr.File(
+                            label="Media ZIP (Required when including images referenced by relative paths)",
+                            file_types=[".zip"],
+                            type="filepath",
+                        )
+
                     with gr.Row():
                         btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
                         btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
@@ -161,14 +199,14 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
             btn_preview.click(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input],
+                inputs=[quiz_input, include_media_cb],
                 outputs=[preview_display, status_box],
                 api_name="preview",
             )
 
             btn_convert.click(
                 fn=convert_and_download,
-                inputs=[quiz_input],
+                inputs=[quiz_input, include_media_cb, media_zip_upload],
                 outputs=[download_output, status_box],
                 api_name="convert",
             )
@@ -176,7 +214,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
             # Initial preview load
             demo.load(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input],
+                inputs=[quiz_input, include_media_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
             )
@@ -250,6 +288,17 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 1. [ ] Class
                 Feedback: Remember "Dear King Philip Came Over For Good Soup".
                 ```
+
+                ---
+
+                ### Media & Images
+                Embed images anywhere in question prompts, choices, or feedback using standard Markdown:
+                - **Remote URL**: `![Diagram](https://example.org/diagram.png)`
+                - **Relative Path**: `![Tree](tree.png)` or `![Chart](images/chart.png)`
+
+                **Packaging Behavior:**
+                - By default (*Include media* OFF), image references remain external URLs / relative links in the QTI package.
+                - When *Include media* is enabled, remote images are downloaded and relative images are extracted from the uploaded **Media ZIP** to create a fully self-contained QTI package for OpenOLAT.
                 """
             )
 

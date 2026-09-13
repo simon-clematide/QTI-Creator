@@ -1,5 +1,4 @@
-"""QTI 2.1 generator for Fill-in-the-Blank (Text Entry) questions."""
-
+from typing import Dict, Optional
 import re
 import html
 from src.markdown import markdown_to_qti_xhtml
@@ -7,7 +6,7 @@ from src.model import FillBlankQuestion
 from src.qti21.item import wrap_assessment_item
 
 
-def generate_fill_blank_xml(q: FillBlankQuestion) -> str:
+def generate_fill_blank_xml(q: FillBlankQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a Fill-in-the-Blank question."""
     pts_per_gap = q.points / len(q.gaps) if q.gaps else q.points
 
@@ -40,7 +39,7 @@ def generate_fill_blank_xml(q: FillBlankQuestion) -> str:
         map_responses.append(f'<mapResponse identifier="{resp_id}"/>')
 
     # 1. Convert prompt markdown to XHTML first
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
 
     # 2. Replace {{gap}} tokens in XHTML with unescaped XML <textEntryInteraction>
     gap_counter = 0
@@ -72,4 +71,5 @@ def generate_fill_blank_xml(q: FillBlankQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )

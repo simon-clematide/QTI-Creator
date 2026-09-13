@@ -1,12 +1,11 @@
-"""QTI 2.1 generator for Kprim questions (OpenOLAT 4-statement matrix)."""
-
+from typing import Dict, Optional
 import html
 from src.markdown import markdown_to_qti_xhtml
 from src.model import KprimQuestion
 from src.qti21.item import wrap_assessment_item
 
 
-def generate_kprim_xml(q: KprimQuestion) -> str:
+def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a Kprim question with 4/4, 3/4, <=2/4 scoring."""
     correct_values = []
     map_entries = []
@@ -20,7 +19,7 @@ def generate_kprim_xml(q: KprimQuestion) -> str:
         correct_values.append(f"      <value>{pair_key}</value>")
         map_entries.append(f'      <mapEntry mapKey="{pair_key}" mappedValue="1.0"/>')
 
-        stmt_xhtml = markdown_to_qti_xhtml(stmt.text)
+        stmt_xhtml = markdown_to_qti_xhtml(stmt.text, asset_map=asset_map)
         associable_choices.append(
             f'        <simpleAssociableChoice identifier="{stmt_id}" matchMax="1">{stmt_xhtml}</simpleAssociableChoice>'
         )
@@ -34,7 +33,7 @@ def generate_kprim_xml(q: KprimQuestion) -> str:
     </mapping>
   </responseDeclaration>"""
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
     <matchInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxAssociations="4">
@@ -84,4 +83,5 @@ def generate_kprim_xml(q: KprimQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )

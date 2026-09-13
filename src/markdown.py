@@ -13,11 +13,15 @@ Initial support:
 import html
 import re
 import urllib.parse
-from typing import List
+from typing import Dict, List, Optional
 
 
-def markdown_to_qti_xhtml(text: str) -> str:
-    """Convert a Markdown text string into well-formed XHTML suitable for <itemBody>."""
+def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Convert a Markdown text string into well-formed XHTML suitable for <itemBody>.
+    
+    If asset_map is provided (mapping original source -> packaged relative path),
+    image src attributes are rewritten accordingly.
+    """
     if not text:
         return ""
 
@@ -88,7 +92,7 @@ def markdown_to_qti_xhtml(text: str) -> str:
             while i < len(lines) and lines[i].strip().startswith(">"):
                 quote_lines.append(lines[i].strip()[1:].strip())
                 i += 1
-            quote_body = markdown_to_qti_xhtml("\n".join(quote_lines))
+            quote_body = markdown_to_qti_xhtml("\n".join(quote_lines), asset_map=asset_map)
             output_blocks.append(f"<blockquote>{quote_body}</blockquote>")
             continue
 
@@ -98,7 +102,7 @@ def markdown_to_qti_xhtml(text: str) -> str:
             items = []
             while i < len(lines) and re.match(choice_prefix, lines[i].strip()):
                 item_text = re.sub(r"^[-*]\s+", "", lines[i].strip())
-                items.append(f"<li>{_format_inlines(item_text)}</li>")
+                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map)}</li>")
                 i += 1
             output_blocks.append(f"<ul>{''.join(items)}</ul>")
             continue
@@ -108,7 +112,7 @@ def markdown_to_qti_xhtml(text: str) -> str:
             items = []
             while i < len(lines) and re.match(r"^\d+\.\s+", lines[i].strip()):
                 item_text = re.sub(r"^\d+\.\s+", "", lines[i].strip())
-                items.append(f"<li>{_format_inlines(item_text)}</li>")
+                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map)}</li>")
                 i += 1
             output_blocks.append(f"<ol>{''.join(items)}</ol>")
             continue
@@ -124,18 +128,17 @@ def markdown_to_qti_xhtml(text: str) -> str:
             i += 1
 
         para_text = " ".join(para_lines)
-        output_blocks.append(f"<p>{_format_inlines(para_text)}</p>")
+        output_blocks.append(f"<p>{_format_inlines(para_text, asset_map=asset_map)}</p>")
 
     return "\n".join(output_blocks)
 
 
-def _format_inlines(text: str) -> str:
-    """Format inline markdown elements while protecting math spans and code spans.
+def _format_inlines(text: str, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Format inline markdown elements while protecting math spans, code spans, and images.
 
     OpenOLAT natively renders literal $$...$$ (display math) and $...$ (inline math).
-    Math and code spans are protected before markdown styling so that LaTeX symbols
-    like underscores, asterisks, and backslashes are preserved verbatim without being
-    misinterpreted as Markdown formatting.
+    Math, code spans, and images are protected before markdown styling so that LaTeX symbols
+    and URL characters are preserved verbatim without being misinterpreted as Markdown formatting.
     """
     placeholders = {}
     counter = 0
@@ -146,7 +149,6 @@ def _format_inlines(text: str) -> str:
         key = f"XXMATHDISP{counter}XX"
         counter += 1
         raw_math = match.group(1)
-        # Escape XML-sensitive characters (&, <, >) while preserving LaTeX syntax
         placeholders[key] = f"$${html.escape(raw_math, quote=False)}$$"
         return key
 
@@ -158,7 +160,6 @@ def _format_inlines(text: str) -> str:
         key = f"XXMATHINL{counter}XX"
         counter += 1
         raw_math = match.group(1)
-        # OpenOLAT uses <span class="math" title="encoded">raw_latex</span> without \(...\)
         title_val = urllib.parse.quote(raw_math)
         escaped_latex = html.escape(raw_math, quote=False)
         placeholders[key] = f'<span class="math" title="{title_val}">{escaped_latex}</span>'
@@ -177,19 +178,46 @@ def _format_inlines(text: str) -> str:
 
     text = re.sub(r"`(.+?)`", save_code, text)
 
-    # 4. Safely HTML-escape remaining text
+    # 4. Protect images: ![alt](src)
+    def save_image(match):
+        nonlocal counter
+        key = f"XXIMG{counter}XX"
+        counter += 1
+        alt = match.group(1)
+        src = match.group(2).strip()
+        # If asset_map is provided and maps this src to a packaged relative path, rewrite it
+        target_src = asset_map.get(src, src) if asset_map else src
+        escaped_alt = html.escape(alt)
+        escaped_src = html.escape(target_src)
+        placeholders[key] = f'<img src="{escaped_src}" alt="{escaped_alt}" />'
+        return key
+
+    text = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", save_image, text)
+
+    # 5. Protect standard links: [text](href) -> <a href="...">text</a>
+    def save_link(match):
+        nonlocal counter
+        key = f"XXLINK{counter}XX"
+        counter += 1
+        link_text = match.group(1)
+        href = match.group(2).strip()
+        escaped_href = html.escape(href)
+        escaped_text = html.escape(link_text)
+        placeholders[key] = f'<a href="{escaped_href}">{escaped_text}</a>'
+        return key
+
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", save_link, text)
+
+    # 6. Safely HTML-escape remaining text
     s = html.escape(text)
 
-    # 5. Format Markdown inline styles (bold, italic)
-    # Bold: **text** or __text__
+    # 7. Format Markdown inline styles (bold, italic)
     s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
     s = re.sub(r"__(.+?)__", r"<strong>\1</strong>", s)
-
-    # Italic: *text* or _text_
     s = re.sub(r"\*(.+?)\*", r"<em>\1</em>", s)
     s = re.sub(r"_(.+?)_", r"<em>\1</em>", s)
 
-    # 6. Restore protected math and code placeholders
+    # 8. Restore protected placeholders
     for key, val in placeholders.items():
         s = s.replace(key, val)
 

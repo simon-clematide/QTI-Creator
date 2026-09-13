@@ -1,14 +1,12 @@
-"""QTI 2.1 generator for Order / Sequencing questions (OpenOLAT native type 'order')."""
-
+from typing import Dict, Optional
 import html
 from src.markdown import markdown_to_qti_xhtml
 from src.model import OrderQuestion
 from src.qti21.item import wrap_assessment_item
 
 
-def generate_order_xml(q: OrderQuestion) -> str:
+def generate_order_xml(q: OrderQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for an Order question with orderInteraction."""
-    # Correct response lists items in the target sequence defined by source order
     correct_values = "\n".join(
         f"      <value>{it.identifier}</value>" for it in q.items
     )
@@ -21,14 +19,12 @@ def generate_order_xml(q: OrderQuestion) -> str:
 
     choices_xml = []
     for it in q.items:
-        choice_xhtml = markdown_to_qti_xhtml(it.text)
+        choice_xhtml = markdown_to_qti_xhtml(it.text, asset_map=asset_map)
         choices_xml.append(
             f'      <simpleChoice identifier="{it.identifier}">{choice_xhtml}</simpleChoice>'
         )
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
-    # For Order questions, learner-facing item order MUST be shuffled because
-    # the source order represents the correct solution.
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     item_body = f"""    {prompt_xhtml}
     <orderInteraction responseIdentifier="RESPONSE" shuffle="true">
 {chr(10).join(choices_xml)}
@@ -44,4 +40,5 @@ def generate_order_xml(q: OrderQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )

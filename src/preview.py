@@ -64,6 +64,7 @@ def render_quiz_preview_html(quiz: Quiz) -> str:
   .order-answer {{ padding-left: 1.8rem; margin: 0; }}
   .order-answer li {{ padding-left: 0.25rem; margin: 0.25rem 0; color: #1e293b; }}
   .order-answer li::marker {{ color: #16a34a; font-weight: 700; }}
+  img {{ max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; }}
 </style>
 <div style="font-family: system-ui, -apple-system, sans-serif;">
   <div style="margin-bottom: 16px;">

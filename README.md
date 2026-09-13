@@ -279,6 +279,20 @@ Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
+### 10. Media & Image Support (Remote & Relative Packaging)
+Embed images anywhere in questions, choices, or feedback using standard Markdown:
+```markdown
+## Plant Biology
+![Leaf Anatomy](https://example.org/leaf.png)
+What tissue facilitates photosynthesis?
+- [X] Mesophyll
+- [ ] Epidermis
+```
+
+**Packaging Modes:**
+- **Default (Include media OFF)**: Media references remain external URLs or relative links in the generated QTI. Passive preflight inventories references and checks URL schemes with zero network requests or ZIP unpacking.
+- **Enabled (Include media ON)**: Remote images are fetched and verified (PNG, JPEG, GIF, WebP, max 10MB, timeout 10s, SSRF protection). Relative images (e.g. `![Tree](images/tree.png)`) are extracted from the uploaded **Media ZIP** from the ZIP root. Assets are deduplicated by source and content hash (SHA-256) and packaged into `media/` within the self-contained QTI package.
+
 ---
 
 ## 🧪 Testing & Validation

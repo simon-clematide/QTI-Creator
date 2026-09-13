@@ -6,7 +6,10 @@ from src.model import MultipleChoiceQuestion, SingleChoiceQuestion, TrueFalseQue
 from src.qti21.item import wrap_assessment_item
 
 
-def generate_single_choice_xml(q: SingleChoiceQuestion) -> str:
+from typing import Dict, Optional
+
+
+def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a Single Choice question."""
     correct_choice = next(c for c in q.choices if c.is_correct)
 
@@ -21,12 +24,12 @@ def generate_single_choice_xml(q: SingleChoiceQuestion) -> str:
 
     choices_xml = []
     for c in q.choices:
-        choice_xhtml = markdown_to_qti_xhtml(c.text)
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
         choices_xml.append(
             f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
         )
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
     <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="1">
@@ -43,20 +46,12 @@ def generate_single_choice_xml(q: SingleChoiceQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )
 
 
-def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
-    """Generate QTI 2.1 XML for a Multiple Choice question with Kprim-style scoring.
-
-    Kprim-style evaluation rules:
-    - Each option presents a binary decision: selecting a correct option is +1 point,
-      selecting an incorrect option is -1 point (penalty for false positive).
-    - If all decisions are correct (max score = total correct choices), full points are awarded.
-    - If exactly 1 mistake is made (score = max - 1), half points (50%) are awarded.
-    - If 2 or more mistakes are made (score <= max - 2), 0 points are awarded.
-    - Score floor is 0.0.
-    """
+def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Generate QTI 2.1 XML for a Multiple Choice question with Kprim-style scoring."""
     correct_choices = [c for c in q.choices if c.is_correct]
     total_correct = len(correct_choices)
 
@@ -64,7 +59,6 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
         f"      <value>{c.identifier}</value>" for c in correct_choices
     )
 
-    # 1.0 for each correct selection, -1.0 for each incorrect selection
     mapping_entries_xml = []
     for c in q.choices:
         val = 1.0 if c.is_correct else -1.0
@@ -83,12 +77,12 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
 
     choices_xml = []
     for c in q.choices:
-        choice_xhtml = markdown_to_qti_xhtml(c.text)
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
         choices_xml.append(
             f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
         )
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     shuffle_str = "true" if q.shuffle else "false"
     item_body = f"""    {prompt_xhtml}
     <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="0">
@@ -135,10 +129,11 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )
 
 
-def generate_true_false_xml(q: TrueFalseQuestion) -> str:
+def generate_true_false_xml(q: TrueFalseQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a True/False question (represented as Single Choice in QTI 2.1)."""
     correct_choice = next(c for c in q.choices if c.is_correct)
 
@@ -153,12 +148,12 @@ def generate_true_false_xml(q: TrueFalseQuestion) -> str:
 
     choices_xml = []
     for c in q.choices:
-        choice_xhtml = markdown_to_qti_xhtml(c.text)
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
         choices_xml.append(
             f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
         )
 
-    prompt_xhtml = markdown_to_qti_xhtml(q.prompt)
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
     item_body = f"""    {prompt_xhtml}
     <choiceInteraction responseIdentifier="RESPONSE" shuffle="false" maxChoices="1">
 {chr(10).join(choices_xml)}
@@ -174,4 +169,5 @@ def generate_true_false_xml(q: TrueFalseQuestion) -> str:
         response_processing=response_proc,
         feedback=q.feedback,
         max_score=q.points,
+        asset_map=asset_map,
     )

@@ -226,16 +226,18 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ### Minimal QuizMD Cheat Sheet
                 QuizMD uses standard Markdown whenever possible. The question type is inferred automatically:
 
-                | Question Type | Syntax Pattern | Inference Rule |
-                | :--- | :--- | :--- |
-                | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` |
-                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` (scored proportionally: partial credit by default) |
-                | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" |
-                | **Fill in the Blank** | `The word is {{gray \\| grey}}.` | Prompt contains `{{canonical \\| alt1 \\| alt2}}` |
-                | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered task list with empty `[ ]` (min 2 items, source order is target sequence) |
-                | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` |
-                | **Essay / Free Text** | Question prompt with no answers | No answer tokens |
-                | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | 4 statements marked `[+]` or `[-]` |
+                | Question Type | Syntax Pattern | Inference Rule | Default Scoring (all questions = 1 pt) |
+                | :--- | :--- | :--- | :--- |
+                | **Single Choice** | `- [ ] Option`<br>`- [X] Correct Option` | Exactly 1 checked with `[X]` | All or nothing |
+                | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more checked with `[x]` | Partial credit based on correct and incorrect selections |
+                | **True / False** | `- [X] True`<br>`- [ ] False` | Exactly 2 choices with "True" and "False" | All or nothing |
+                | **Fill in the Blank** | `The word is {{gray \\| grey}}.` | Prompt contains `{{canonical \\| alt1 \\| alt2}}` | Points divided equally across blanks |
+                | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered task list with empty `[ ]` (min 2 items, source order is target sequence) | All or nothing |
+                | **Numerical** | `= 9.81 ± 0.05` | Line starting with `= number (± tol)` | All or nothing within tolerance |
+                | **Essay / Free Text** | Question prompt with no answers | No answer tokens | Manual grading |
+                | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | 4 statements marked `[+]` or `[-]` | 4/4 = full, 3/4 = half, ≤2/4 = zero |
+
+                *All questions are worth 1 point by default. Use `Points: <number>` to change a question's weight.*
 
                 ---
 

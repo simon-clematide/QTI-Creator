@@ -42,7 +42,7 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 # Regex patterns
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
-RE_META = re.compile(r"^(points|type|feedback|identifier):\s*(.+)$", re.IGNORECASE)
+RE_META = re.compile(r"^(points|type|feedback|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language):\s*(.+)$", re.IGNORECASE)
 RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
 RE_KPRIM_HEADER = re.compile(r"^kprim:\s*$", re.IGNORECASE)
 RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
@@ -67,7 +67,16 @@ class RawQuestionBlock:
         self.is_kprim_mode = False
 
 
-RE_TOP_META = re.compile(r"^(version|language|title|description):\s*(.+)$", re.IGNORECASE)
+RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations):\s*(.+)$", re.IGNORECASE)
+
+
+def _split_keywords(val: Any) -> List[str]:
+    """Parse keywords into a list of strings from string or list."""
+    if isinstance(val, list):
+        return [str(k).strip() for k in val if str(k).strip()]
+    if isinstance(val, str):
+        return [k.strip() for k in val.split(",") if k.strip()]
+    return []
 
 
 def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
@@ -76,7 +85,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     lines = text.splitlines()
 
     # Step 0: Extract YAML Frontmatter if present at start of document
-    frontmatter: Dict[str, str] = {}
+    frontmatter: Dict[str, Any] = {}
     content_start_idx = 0
     for idx, line in enumerate(lines):
         stripped = line.strip()
@@ -92,7 +101,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         import yaml
                         data = yaml.safe_load(raw_fm)
                         if isinstance(data, dict):
-                            frontmatter = {str(k).lower(): str(v) for k, v in data.items() if v is not None}
+                            frontmatter = {str(k).lower(): v for k, v in data.items() if v is not None}
                     except Exception:
                         for fm_line in lines[idx + 1 : close_idx]:
                             m = re.match(r"^([a-zA-Z0-9_-]+):\s*(.+)$", fm_line.strip())
@@ -214,7 +223,75 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     else:
         quiz_language = DEFAULTS["language"]
 
-    # 4. Description
+    # 4. Topic
+    fm_topic = frontmatter.get("topic")
+    meta_topic = top_meta.get("topic")
+    if fm_topic is not None and meta_topic is not None:
+        if str(fm_topic).strip() != meta_topic.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent topic: frontmatter specifies '{fm_topic}' but header metadata specifies '{meta_topic.strip()}'. Using header metadata '{meta_topic.strip()}'.",
+                    Severity.WARNING,
+                    top_meta_lines.get("topic"),
+                )
+            )
+            quiz_topic = meta_topic.strip()
+        else:
+            quiz_topic = meta_topic.strip()
+    elif meta_topic is not None:
+        quiz_topic = meta_topic.strip()
+    elif fm_topic is not None:
+        quiz_topic = str(fm_topic).strip()
+    else:
+        quiz_topic = None
+
+    # 5. Keywords / Tags
+    fm_kw = frontmatter.get("keywords") or frontmatter.get("tags")
+    meta_kw = top_meta.get("keywords") or top_meta.get("tags")
+    parsed_meta_kw = _split_keywords(meta_kw) if meta_kw else []
+    parsed_fm_kw = _split_keywords(fm_kw) if fm_kw else []
+    if parsed_fm_kw and parsed_meta_kw:
+        if parsed_fm_kw != parsed_meta_kw:
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent keywords: frontmatter specifies '{parsed_fm_kw}' but header metadata specifies '{parsed_meta_kw}'. Using header metadata.",
+                    Severity.WARNING,
+                    top_meta_lines.get("keywords") or top_meta_lines.get("tags"),
+                )
+            )
+            quiz_keywords = parsed_meta_kw
+        else:
+            quiz_keywords = parsed_meta_kw
+    elif parsed_meta_kw:
+        quiz_keywords = parsed_meta_kw
+    elif parsed_fm_kw:
+        quiz_keywords = parsed_fm_kw
+    else:
+        quiz_keywords = []
+
+    # 6. Additional Info
+    fm_info = frontmatter.get("additional_info") or frontmatter.get("additionalinformations")
+    meta_info = top_meta.get("additional_info") or top_meta.get("additionalinformations")
+    if fm_info is not None and meta_info is not None:
+        if str(fm_info).strip() != meta_info.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent additional_info: frontmatter specifies '{fm_info}' but header metadata specifies '{meta_info.strip()}'. Using header metadata '{meta_info.strip()}'.",
+                    Severity.WARNING,
+                    top_meta_lines.get("additional_info") or top_meta_lines.get("additionalinformations"),
+                )
+            )
+            quiz_additional_info = meta_info.strip()
+        else:
+            quiz_additional_info = meta_info.strip()
+    elif meta_info is not None:
+        quiz_additional_info = meta_info.strip()
+    elif fm_info is not None:
+        quiz_additional_info = str(fm_info).strip()
+    else:
+        quiz_additional_info = None
+
+    # 7. Description
     quiz_description = (
         "\n".join(description_lines).strip()
         or top_meta.get("description")
@@ -232,6 +309,19 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
         try:
             q = _build_question_from_block(block, q_idx)
             if q is not None:
+                # Inherit quiz metadata to question if not explicitly overridden at question level
+                if q.topic is None and quiz_topic is not None:
+                    q.topic = quiz_topic
+                if not q.keywords and quiz_keywords:
+                    q.keywords = list(quiz_keywords)
+                if q.language is None and quiz_language is not None:
+                    q.language = quiz_language
+                if q.additional_info is None:
+                    if quiz_additional_info is not None:
+                        q.additional_info = quiz_additional_info
+                    elif quiz_version is not None:
+                        q.additional_info = f"Version: {quiz_version}"
+
                 questions.append(q)
         except QuizValidationError as e:
             for d in e.diagnostics:
@@ -244,6 +334,9 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
         questions=questions,
         language=quiz_language,
         version=quiz_version,
+        topic=quiz_topic,
+        keywords=quiz_keywords,
+        additional_info=quiz_additional_info,
     )
 
     # Add any global quiz diagnostics
@@ -334,6 +427,17 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
     feedback = block.metadata.get("feedback") or DEFAULTS["feedback"]
     explicit_type = block.metadata.get("type", "").lower().replace("-", "").replace("_", "")
 
+    # Question-level metadata overrides
+    topic = block.metadata.get("topic")
+    kw_raw = block.metadata.get("keywords") or block.metadata.get("tags")
+    keywords = _split_keywords(kw_raw) if kw_raw else []
+    additional_info = (
+        block.metadata.get("additional_info")
+        or block.metadata.get("additionalinformations")
+        or (f"Version: {block.metadata['version']}" if "version" in block.metadata else None)
+    )
+    language = block.metadata.get("language")
+
     # Combine prompt text
     prompt = "\n".join(block.prompt_lines).strip()
     if not prompt:
@@ -347,6 +451,10 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "feedback": feedback,
         "identifier": identifier,
         "line_number": block.start_line,
+        "topic": topic,
+        "keywords": keywords,
+        "additional_info": additional_info,
+        "language": language,
     }
 
     # Prevent conflicting choice markers and Kprim markers

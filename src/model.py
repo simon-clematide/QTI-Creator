@@ -52,6 +52,10 @@ class Question:
     feedback: Optional[str] = None
     identifier: str = field(default_factory=lambda: generate_id("item"))
     line_number: Optional[int] = None
+    topic: Optional[str] = None
+    keywords: List[str] = field(default_factory=list)
+    additional_info: Optional[str] = None
+    language: Optional[str] = None
 
     def __post_init__(self):
         if not self.title:
@@ -195,6 +199,9 @@ class Quiz:
     identifier: str = field(default_factory=lambda: generate_id("quiz"))
     language: str = field(default_factory=lambda: DEFAULTS["language"])
     version: str = field(default_factory=lambda: DEFAULTS["quiz_version"])
+    topic: Optional[str] = None
+    keywords: List[str] = field(default_factory=list)
+    additional_info: Optional[str] = None
 
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""

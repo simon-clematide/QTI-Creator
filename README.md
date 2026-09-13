@@ -123,15 +123,20 @@ Points: 2
 ```
 *Scoring in OpenOLAT:* 4/4 correct = full points (2 pt); 3/4 correct = half points (1 pt); $\le$ 2/4 correct = 0 points.
 
-### 8. Quiz Versioning & Document Metadata
-You can specify the quiz version, language, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B). The version is automatically encoded into the IMS package manifest (`<manifest version="...">`) and IMS LOM lifecycle metadata (`<imsmd:lifecycle><imsmd:version>`) for OpenOLAT.
+### 8. Quiz Metadata, Versioning & OpenOLAT Attributes
+You can specify the quiz version, language, topic, keywords, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B).
+
+Quiz-level metadata automatically inherits down to every question as defaults unless locally overridden.
 
 #### Protected Keywords at the Beginning of a Quiz
-In the preamble section before the first `## Question`, the following keywords are reserved and will **not** be treated as quiz description text:
-- **`Version:`** — Sets the quiz version (e.g. `Version: 1.2.0`). Default: `1.0.0`.
+In the preamble section before the first `## Question`, the following keywords are reserved:
+- **`Version:`** — Sets the quiz version (e.g. `Version: 1.2.0`). Default: `1.0.0`. Automatically mapped to OpenOLAT *Zusatzinformationen* (Additional Information) on questions if not overridden.
 - **`Language:`** — Sets the ISO language code (e.g. `Language: en`, `Language: de`). Default: `en`.
-- **`Title:`** — Alternative way to declare the quiz title (though `# Title` is standard).
-- **`Description:`** — Explicit single-line description (though any regular paragraph in the preamble is also collected as description).
+- **`Topic:`** — Sets the default topic/theme (e.g. `Topic: Molecular Biology`). Mapped to OpenOLAT `<ns4:topic>`.
+- **`Keywords:`** or **`Tags:`** — Comma-separated or YAML list of keywords (e.g. `Keywords: cell, genetics, biology`). Mapped to OpenOLAT `<imsmd:keyword>` tags.
+- **`Additional_Info:`** — Explicit text for OpenOLAT *Zusatzinformationen* (`<ns4:additionalInformations>`).
+- **`Title:`** — Alternative way to declare the quiz title (standard is `# Title`).
+- **`Description:`** — Explicit single-line description (regular preamble paragraphs are also collected as description).
 - **`# Title`** — Standard Markdown Level 1 heading for the quiz title.
 
 **Way A: Top-Level Header Metadata**
@@ -139,6 +144,8 @@ In the preamble section before the first `## Question`, the following keywords a
 # Cellular Biology Quiz
 Version: 1.2.0
 Language: en
+Topic: Cell Biology
+Keywords: cell, organelle, biology
 
 This is an introductory test covering cell structures.
 ```
@@ -149,22 +156,30 @@ This is an introductory test covering cell structures.
 title: Cellular Biology Quiz
 version: 1.2.0
 language: en
+topic: Cell Biology
+keywords: [cell, organelle, biology]
 ---
 
 This is an introductory test covering cell structures.
 ```
 *(If both frontmatter and header metadata are specified, they must be consistent; contradictory values will produce a warning diagnostic).*
 
-### 9. Question-Level Metadata & Post-Submission Feedback
+### 9. Question-Level Metadata, Local Overrides & Post-Submission Feedback
 Question metadata lines are optional and case-insensitive. They can be placed **before or after** the choices:
 - `Points: <number>` — Sets the question point value (default: `1`).
 - `Feedback: <text>` — Adds post-submission modal feedback shown to learners in OpenOLAT after the test is completed. Full Markdown and LaTeX math (`$...$`) are supported in feedback text.
+- `Topic: <topic>` — Overrides the quiz default topic for this question in OpenOLAT.
+- `Keywords: <kw1, kw2>` — Overrides quiz keywords for this question in OpenOLAT.
+- `Additional_Info: <text>` — Custom text for OpenOLAT *Zusatzinformationen*.
+- `Language: <lang>` — Overrides language code for this question.
 - `Type: <type>` — Explicit override if you wish to bypass inference (e.g. `Type: multiple-choice`).
 - `Identifier: <id>` — Custom QTI item identifier (default: auto-generated `item_xxxxxxxx`).
 
 #### Example: Feedback after choices (recommended)
 ```markdown
 ## What is the capital of France?
+Topic: Geography
+Keywords: europe, france, capitals
 - [ ] Berlin
 - [X] Paris
 - [ ] Rome
@@ -175,6 +190,8 @@ Feedback: Paris has been the capital since 508 AD.
 ```markdown
 ## Calculus: Integration by Parts
 Points: 2
+Topic: Calculus
+Keywords: math, calculus, integration
 Feedback: Use $\int u \, dv = uv - \int v \, du$ with $u = x$ and $dv = e^x dx$.
 - [ ] $(x + 1)e^x + C$
 - [X] $(x - 1)e^x + C$

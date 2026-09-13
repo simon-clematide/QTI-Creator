@@ -353,6 +353,48 @@ version: 1.0.0
         self.assertEqual(len(warnings), 1)
         self.assertEqual(quiz.title, "Header Title")
 
+    def test_quiz_and_question_metadata_inheritance_and_override(self):
+        text = """---
+topic: General Science
+keywords: [science, intro]
+---
+# Science Quiz
+Version: 1.2.3
+Language: de
+
+## Question 1 (Inherits quiz metadata)
+- [X] Correct
+- [ ] Wrong
+
+## Question 2 (Overrides topic, keywords, language, version)
+Topic: Quantum Physics
+Keywords: physics, quantum, subatomic
+Language: en
+Version: 2.0.0
+- [X] Quantum
+- [ ] Classical
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.topic, "General Science")
+        self.assertEqual(quiz.keywords, ["science", "intro"])
+        self.assertEqual(quiz.version, "1.2.3")
+        self.assertEqual(quiz.language, "de")
+
+        # Q1 inherited
+        q1 = quiz.questions[0]
+        self.assertEqual(q1.topic, "General Science")
+        self.assertEqual(q1.keywords, ["science", "intro"])
+        self.assertEqual(q1.language, "de")
+        self.assertEqual(q1.additional_info, "Version: 1.2.3")
+
+        # Q2 overridden
+        q2 = quiz.questions[1]
+        self.assertEqual(q2.topic, "Quantum Physics")
+        self.assertEqual(q2.keywords, ["physics", "quantum", "subatomic"])
+        self.assertEqual(q2.language, "en")
+        self.assertEqual(q2.additional_info, "Version: 2.0.0")
+
     def test_all_registered_examples_parse_and_package(self):
         from src.examples import EXAMPLES
         from src.packager import create_qti_package_bytes

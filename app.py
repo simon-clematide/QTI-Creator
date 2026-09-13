@@ -195,13 +195,15 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ---
 
                 ### Quiz Metadata & Versioning
-                You can specify quiz-level version, language, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
+                You can specify quiz-level version, language, topic, keywords, or title using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
 
                 **Way A: Top-Level Header Metadata**
                 ```markdown
                 # Biology Exam
                 Version: 1.2.0
                 Language: en
+                Topic: Molecular Biology
+                Keywords: cells, genetics, dna
                 ```
 
                 **Way B: YAML Frontmatter**
@@ -210,23 +212,32 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 title: Biology Exam
                 version: 1.2.0
                 language: en
+                topic: Molecular Biology
+                keywords: [cells, genetics, dna]
                 ---
                 ```
-                *(If both are provided, they must be consistent; contradictory values will trigger a warning diagnostic).*
+                *(Quiz-level metadata acts as defaults that automatically inherit to every question unless locally overridden).*
 
                 ---
 
-                ### Question Metadata & Feedback
+                ### Question Metadata & Local Overrides
                 Question metadata can be placed **before or after** choices/statements (case-insensitive):
                 - `Points: 3` (default: 1)
                 - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
-                - `Type: multiple-choice` (optional override)
+                - `Topic: Genetics` (overrides quiz-level Topic in OpenOLAT)
+                - `Keywords: rna, translation` (overrides quiz-level Keywords in OpenOLAT)
+                - `Additional_Info: Custom note` (overrides OpenOLAT Zusatzinformationen)
+                - `Language: en` (overrides question language)
+                - `Type: multiple-choice` (optional type override)
                 - `Identifier: custom_id` (optional, default: auto-generated)
 
                 ```markdown
                 ## What is the capital of France?
+                Topic: Geography
+                Keywords: europe, capitals
                 - [ ] Berlin
                 - [X] Paris
+                - [ ] Rome
                 Feedback: Paris has been the capital since 508 AD.
                 ```
                 """

@@ -66,11 +66,44 @@ def generate_manifest_xml(quiz: Quiz) -> str:
         item_filename = f"{q.identifier}.xml"
         interaction_type = _get_qti_interaction_type(q)
         oo_question_type = _get_openolat_question_type(q)
+        q_lang = html.escape(q.language or quiz.language)
+
+        # Build imsmd:general if keywords or language/context are present
+        general_parts = []
+        for kw in q.keywords:
+            general_parts.append(
+                f"""          <imsmd:keyword>
+            <imsmd:langstring xml:lang="{q_lang}">{html.escape(kw)}</imsmd:langstring>
+          </imsmd:keyword>"""
+            )
+        general_parts.append(
+            f"""          <imsmd:coverage>
+            <imsmd:langstring xml:lang="{q_lang}"></imsmd:langstring>
+          </imsmd:coverage>"""
+        )
+        general_parts.append(
+            f"""          <imsmd:context xsi:type="imsmd:stringType" xml:lang="{q_lang}">{q_lang}</imsmd:context>"""
+        )
+        general_block = f"""        <imsmd:general>
+{chr(10).join(general_parts)}
+        </imsmd:general>"""
+
+        # Build ns4:ooMetadata
+        oo_parts = [f"          <ns4:questionType>{oo_question_type}</ns4:questionType>"]
+        if q.topic:
+            oo_parts.append(f"          <ns4:topic>{html.escape(q.topic)}</ns4:topic>")
+        if q.additional_info:
+            oo_parts.append(f"          <ns4:additionalInformations>{html.escape(q.additional_info)}</ns4:additionalInformations>")
+
+        oo_block = f"""        <ns4:ooMetadata>
+{chr(10).join(oo_parts)}
+        </ns4:ooMetadata>"""
 
         item_dependencies.append(f'      <dependency identifierref="{item_res_id}"/>')
         item_resources.append(f"""    <resource identifier="{item_res_id}" type="imsqti_item_xmlv2p1" href="{item_filename}">
       <metadata>
         <imsmd:lom>
+{general_block}
           <imsmd:technical>
             <imsmd:format>text/x-imsqti-item-xml</imsmd:format>
           </imsmd:technical>
@@ -79,9 +112,7 @@ def generate_manifest_xml(quiz: Quiz) -> str:
         <imsqti:qtiMetadata>
           <imsqti:interactionType>{interaction_type}</imsqti:interactionType>
         </imsqti:qtiMetadata>
-        <ns4:ooMetadata>
-          <ns4:questionType>{oo_question_type}</ns4:questionType>
-        </ns4:ooMetadata>
+{oo_block}
       </metadata>
       <file href="{item_filename}"/>
     </resource>""")

@@ -144,10 +144,13 @@ def square(n):
         self.assertIn("simpleAssociableChoice", xml_str)
 
     def test_manifest_and_test_xml(self):
-        quiz = Quiz(title="Swiss Test", version="1.3.5", language="fr")
+        quiz = Quiz(title="Swiss Test", version="1.3.5", language="fr", topic="Geography")
         q = SingleChoiceQuestion(
             prompt="Capital?",
             choices=[Choice("Bern", True), Choice("Zurich", False)],
+            keywords=["geography", "swiss"],
+            additional_info="Version: 1.3.5",
+            topic="Geography",
         )
         quiz.questions.append(q)
 
@@ -157,6 +160,11 @@ def square(n):
         self.assertEqual(m_root.attrib.get("version"), "1.3.5")
         self.assertIn("<imsmd:version>", manifest_xml)
         self.assertIn('<imsmd:langstring xml:lang="fr">1.3.5</imsmd:langstring>', manifest_xml)
+        self.assertIn("<ns4:topic>Geography</ns4:topic>", manifest_xml)
+        self.assertIn("<ns4:additionalInformations>Version: 1.3.5</ns4:additionalInformations>", manifest_xml)
+        self.assertIn('<imsmd:langstring xml:lang="fr">geography</imsmd:langstring>', manifest_xml)
+        self.assertIn('<imsmd:langstring xml:lang="fr">swiss</imsmd:langstring>', manifest_xml)
+        self.assertIn('<imsmd:context xsi:type="imsmd:stringType" xml:lang="fr">fr</imsmd:context>', manifest_xml)
 
         test_xml = generate_test_xml(quiz)
         t_root = ET.fromstring(test_xml)

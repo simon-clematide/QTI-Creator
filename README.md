@@ -155,11 +155,30 @@ This is an introductory test covering cell structures.
 ```
 *(If both frontmatter and header metadata are specified, they must be consistent; contradictory values will produce a warning diagnostic).*
 
-### 9. Question-Level Metadata
-Question-level metadata is optional and case-insensitive:
+### 9. Question-Level Metadata & Post-Submission Feedback
+Question metadata lines are optional and case-insensitive. They can be placed **before or after** the choices:
 - `Points: <number>` — Sets the question point value (default: `1`).
-- `Feedback: <text>` — Adds feedback shown to learners after submission.
+- `Feedback: <text>` — Adds post-submission modal feedback shown to learners in OpenOLAT after the test is completed. Full Markdown and LaTeX math (`$...$`) are supported in feedback text.
 - `Type: <type>` — Explicit override if you wish to bypass inference (e.g. `Type: multiple-choice`).
+- `Identifier: <id>` — Custom QTI item identifier (default: auto-generated `item_xxxxxxxx`).
+
+#### Example: Feedback after choices (recommended)
+```markdown
+## What is the capital of France?
+- [ ] Berlin
+- [X] Paris
+- [ ] Rome
+Feedback: Paris has been the capital since 508 AD.
+```
+
+#### Example: Metadata before choices with LaTeX math
+```markdown
+## Calculus: Integration by Parts
+Points: 2
+Feedback: Use $\int u \, dv = uv - \int v \, du$ with $u = x$ and $dv = e^x dx$.
+- [ ] $(x + 1)e^x + C$
+- [X] $(x - 1)e^x + C$
+```
 
 ### 10. Code Snippets (Inline & Multiline Fenced Blocks)
 Both inline code and multiline fenced code blocks are supported in prompts and choices:

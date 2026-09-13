@@ -216,13 +216,18 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
                 ---
 
-                ### Question Metadata
-                Question metadata is only needed when changing defaults (default is 1 point, auto ID):
+                ### Question Metadata & Feedback
+                Question metadata can be placed **before or after** choices/statements (case-insensitive):
+                - `Points: 3` (default: 1)
+                - `Feedback: Explanatory text shown to learners after submission` (supports Markdown & LaTeX math `$x^2$`)
+                - `Type: multiple-choice` (optional override)
+                - `Identifier: custom_id` (optional, default: auto-generated)
+
                 ```markdown
-                ## Question Title
-                Points: 3
-                Feedback: Good job!
-                Type: multiple-choice
+                ## What is the capital of France?
+                - [ ] Berlin
+                - [X] Paris
+                Feedback: Paris has been the capital since 508 AD.
                 ```
                 """
             )

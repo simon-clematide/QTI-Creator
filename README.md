@@ -159,45 +159,76 @@ Shuffle: no
 Shuffle: no
 ```
 
-### 6. Preamble Metadata & Frontmatter Space
-Quiz-level metadata acts as defaults that inherit down to every individual question in OpenOLAT:
+### 6. Quiz Metadata & Shuffling
+You can specify quiz-level settings using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
 
+**Way A: Top-Level Header Metadata**
+```markdown
+# Biology Exam
+Version: 1.2.0
+Language: en
+Shuffle: yes
+Topic: Molecular Biology
+Keywords: cells, genetics, dna
+Scoring: partial
+Additional_Info: Final Exam - Section A
+Description: Comprehensive exam covering cell structure and genetics.
+```
+
+**Way B: YAML Frontmatter**
 ```markdown
 ---
-title: Cellular Biology Quiz
+title: Biology Exam
 version: 1.2.0
 language: en
 shuffle: yes
-topic: Cell Biology
-keywords: [cell, organelle, biology]
+topic: Molecular Biology
+keywords: [cells, genetics, dna]
+scoring: partial
+additional_info: Final Exam - Section A
+description: |
+  Comprehensive exam covering cell structure and genetics.
 ---
 ```
-*(Or via top-level headers `Version: 1.2.0`, `Language: en`, `Topic: Cell Biology`, `Keywords: cell, organelle, biology`).*
 
-- **`Version:`** Encoded into `<manifest version="...">` and inherited to question `<ns4:additionalInformations>Version: ...</ns4:additionalInformations>`.
+Quiz-level metadata acts as defaults that automatically inherit down to every individual question in OpenOLAT:
+- **`Title:`** Sets the assessment title (or use `# Heading 1`).
+- **`Version:`** Encoded into `<manifest version="...">` and inherited to questions as `<ns4:additionalInformations>Version: ...</ns4:additionalInformations>`.
+- **`Language:`** Sets the ISO language code for LOM metadata and QTI items (default: `en`).
 - **`Topic:`** Mapped to OpenOLAT's native `<ns4:topic>`.
-- **`Keywords:`** / **`Tags:`** Mapped to `<imsmd:keyword><imsmd:langstring ...>`.
-- **`Language:`** Sets the ISO language code for LOM and QTI items.
+- **`Keywords:`** / **`Tags:`** Comma-separated or YAML list, mapped to `<imsmd:keyword><imsmd:langstring ...>`.
+- **`Shuffle:`** `yes` / `no` (or `true` / `false`, `1` / `0`). Controls answer option randomization (default: `yes`).
+- **`Scoring:`** `partial` or `all-correct`. Default scoring model for Multiple Choice questions across the quiz (default: `partial`).
+- **`Additional_Info:`** Mapped to OpenOLAT *Zusatzinformationen* (`<ns4:additionalInformations>`).
+- **`Description:`** Quiz description or introductory text.
 
-### 7. Question-Level Metadata, Hints & Feedback
-Metadata lines can appear **before or after** choices:
-- `Points: <number>` (default: 1)
-- `Hint: <text>`: Pre-submission hint displayed during test-taking in OpenOLAT (supports Markdown and math).
-- `Feedback: <text>`: Post-submission feedback displayed after test completion in OpenOLAT (supports Markdown and math).
-- `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
-- `Shuffle: <bool>`: Overrides quiz shuffling.
-- `Topic: <text>`: Overrides question topic in OpenOLAT.
-- `Keywords: <kw1, kw2>`: Overrides question keywords.
-- `Additional_Info: <text>`: Overrides OpenOLAT *Zusatzinformationen*.
+---
+
+### 7. Question Metadata & Local Overrides
+Question metadata can be placed **before or after** choices/statements (case-insensitive):
+- `Points: <number>` (default: 1) — Point weight for the question.
+- `Hint: <text>` — Pre-submission hint displayed during test-taking in OpenOLAT (supports Markdown and math).
+- `Feedback: <text>` — Post-submission explanation displayed after test completion in OpenOLAT (supports Markdown and math).
+- `Scoring: partial` or `all-correct` — Scoring model for Multiple Choice questions (default: `partial`).
+- `Shuffle: yes / no` — Controls answer scrambling for this question (default: `yes`).
+- `Topic: <text>` — Overrides quiz-level Topic in OpenOLAT.
+- `Keywords: <kw1, kw2>` — Overrides quiz-level Keywords/Tags in OpenOLAT.
+- `Additional_Info: <text>` — Overrides OpenOLAT *Zusatzinformationen*.
+- `Language: <iso-code>` — Overrides question language (e.g. `en`, `de`, `fr`).
+- `Type: <type-name>` — Optional explicit question type override (e.g. `single_choice`, `multiple_choice`, `kprim`, `gap_fill`, `numerical`, `order`, `essay`).
+- `Identifier: <custom_id>` — Custom QTI item identifier (optional, default: auto-generated `item_...`).
 
 ```markdown
-## What is the capital of France?
-Topic: European Capitals
-Keywords: france, geography
-- [ ] Berlin
-- [X] Paris
-- [ ] Rome
-Feedback: Paris has been the capital since 508 AD.
+## Order the biological taxonomy ranks
+Points: 2
+Topic: Taxonomy
+Keywords: biology, classification
+Additional_Info: Source: General Biology Curriculum
+1. [ ] Domain
+1. [ ] Kingdom
+1. [ ] Phylum
+1. [ ] Class
+Feedback: Remember "Dear King Philip Came Over For Good Soup".
 ```
 
 ### 8. Full Configuration & Metadata Example

@@ -18,7 +18,7 @@ from src.model import (
 
 
 from typing import Dict, Optional
-from src.markdown import markdown_to_qti_xhtml
+from src.markdown import contains_markdown, markdown_to_qti_xhtml
 
 
 def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) -> str:
@@ -90,13 +90,23 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
                 if sec.description
                 else ""
             )
+
+            # Check if section title contains unrendered Markdown syntax
+            md_warning_badge = ""
+            if contains_markdown(sec.title):
+                md_warning_badge = (
+                    f"<span title=\"Section titles do not support Markdown formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(sec.title)}')\" "
+                    f"style=\"display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;\">"
+                    f"⚠️ Markdown syntax in title</span>"
+                )
+
             sec_header = f"""
 <div class="quiz-section-container" style="margin-top: {('20px' if s_idx > 1 else '6px')}; margin-bottom: 16px; padding: 14px 16px 8px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
   <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
-    <h4 style="margin: 0; color: #1e293b; font-size: 1.1em; display: flex; align-items: center; gap: 6px;">
-      <span>📁</span> {html.escape(sec.title)}
+    <h4 style="margin: 0; color: #1e293b; font-size: 1.1em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <span>📁</span> <span>{html.escape(sec.title)}</span> {md_warning_badge}
     </h4>
-    <span style="color: #64748b; font-size: 0.85em; font-weight: 500;">{len(sec.questions)} Qs &bull; {sec_points} pt</span>
+    <span style="color: #64748b; font-size: 0.85em; font-weight: 500; white-space: nowrap; margin-left: 12px;">{len(sec.questions)} Qs &bull; {sec_points} pt</span>
   </div>
   {desc_html}
   {''.join(sec_cards)}
@@ -142,10 +152,14 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
 <div style="font-family: system-ui, -apple-system, sans-serif;">
   <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
     <div>
-      <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
+        {f'<span title="Test and section titles do not support Markdown formatting and will display as raw syntax in OpenOLAT" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;">⚠️ Markdown syntax in title</span>' if contains_markdown(quiz.title) and not has_multiple_sections else ''}
+      </div>
       <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed{f" across {len(quiz.sections)} section(s)" if len(quiz.sections) > 1 else ""}</span>
     </div>
     <div>
+
       <button type="button" class="quiz-expand-btn" onclick="
         var cards = document.querySelectorAll('.quiz-question-card');
         var anyClosed = Array.from(cards).some(c => !c.open);

@@ -230,8 +230,18 @@ class Section:
     line_number: Optional[int] = None
 
     def validate(self) -> List[Diagnostic]:
-        """Validate all questions within this section."""
+        """Validate this section and all questions within it."""
         diagnostics: List[Diagnostic] = []
+        if self.title:
+            from src.markdown import contains_markdown
+            if contains_markdown(self.title):
+                diagnostics.append(
+                    Diagnostic(
+                        f"Section title '{self.title}' contains Markdown syntax. OpenOLAT does not format Markdown in section titles; it will be displayed as raw text.",
+                        Severity.WARNING,
+                        self.line_number,
+                    )
+                )
         for idx, q in enumerate(self.questions):
             try:
                 q.validate()

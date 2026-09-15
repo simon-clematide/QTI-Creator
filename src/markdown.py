@@ -253,3 +253,16 @@ def _format_inlines(text: str, asset_map: Optional[Dict[str, str]] = None) -> st
         s = s.replace(key, val)
 
     return s
+
+
+# Patterns that indicate presence of Markdown formatting or math in a single-line title
+RE_MARKDOWN_SYNTAX = re.compile(
+    r"(\*\*|__|(?<!\w)\*[^*\n]+?\*(?!\w)|(?<!\w)_[^_\n]+?_(?!\w)|`[^`\n]+`|\$[^$\n]+\$|!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|~~.*?~~)"
+)
+
+
+def contains_markdown(text: str) -> bool:
+    """Return True if text contains Markdown formatting syntax (bold, italic, code, math, links, images)."""
+    if not text:
+        return False
+    return bool(RE_MARKDOWN_SYNTAX.search(text))

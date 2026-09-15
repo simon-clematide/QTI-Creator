@@ -157,6 +157,30 @@ class TestModelInvariants(unittest.TestCase):
         diags = quiz.validate()
         self.assertEqual(len(diags), 0)
 
+    def test_section_markdown_title_warning(self):
+        from src.model import Section
+        from src.markdown import contains_markdown
+        from src.validation import Severity
+
+        # Test contains_markdown directly
+        self.assertTrue(contains_markdown("**Bold Section**"))
+        self.assertTrue(contains_markdown("*Italic Section*"))
+        self.assertTrue(contains_markdown("`code snippet`"))
+        self.assertTrue(contains_markdown("$O(n)$"))
+        self.assertTrue(contains_markdown("[link](https://example.com)"))
+        self.assertTrue(contains_markdown("![img](pic.png)"))
+        self.assertFalse(contains_markdown("Plain Section Title: 1.2 & 3 - A / B"))
+
+        # Test Section.validate emits warning
+        sec = Section(title="**Bold** & *Italic* Section", questions=[])
+        diags = sec.validate()
+        self.assertEqual(len(diags), 1)
+        self.assertEqual(diags[0].severity, Severity.WARNING)
+        self.assertIn("contains Markdown syntax", diags[0].message)
+        self.assertIn("OpenOLAT does not format Markdown in section titles", diags[0].message)
+
 
 if __name__ == "__main__":
     unittest.main()
+
+

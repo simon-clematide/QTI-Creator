@@ -82,6 +82,61 @@ Instructions for Part A
         self.assertIn("`Part A`: **Math**", html_out)
         self.assertNotIn("<code>Part A</code>", html_out)
 
+    def test_preview_prompt_not_repeated_when_same_as_title(self):
+        text = """## Capital of France?
+- [ ] Berlin
+- [X] Paris
+
+## Question with distinct prompt
+This is a detailed prompt describing what needs to be answered.
+- [X] Option 1
+- [ ] Option 2
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # First question: title is "Capital of France?", prompt is identical -> prompt should not be repeated in expanded block
+        # Check that "<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>" only appears for the second question
+        self.assertEqual(html_out.count("margin-bottom: 12px; line-height: 1.5;"), 1)
+        self.assertIn("This is a detailed prompt describing what needs to be answered.", html_out)
+
+    def test_preview_status_badges(self):
+        text = """## Q1 Hint only
+Hint: Here is a helpful hint.
+- [X] A
+- [ ] B
+
+## Q2 Feedback only
+Feedback: Good job if you got this right!
+- [X] A
+- [ ] B
+
+## Q3 Both hint and feedback
+Hint: A hint
+Feedback: Some feedback
+- [X] A
+- [ ] B
+
+## Q4 Neither
+- [X] A
+- [ ] B
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # In summary header:
+        # Q1 has 💡 but not 💬
+        self.assertIn('Q1 Hint only</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
+        # Q2 has 💬 but not 💡
+        self.assertIn('Q2 Feedback only</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        # Q3 has both in order 💡 💬
+        self.assertIn('Q3 Both hint and feedback</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        # Q4 has neither badge
+        self.assertIn('4. Q4 Neither</span>\n      \n    </div>', html_out)
+        self.assertNotIn('4. Q4 Neither</span>\n      <span style=\'display: inline-flex;', html_out)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,7 +43,12 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
             type_name = _get_type_label(q)
             badge_color = _get_badge_color(q)
 
-            prompt_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+            has_distinct_prompt = bool(q.prompt and q.prompt.strip() and q.prompt.strip() != q.title.strip())
+            prompt_html = (
+                f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)}</div>"
+                if has_distinct_prompt
+                else ""
+            )
             body_html = _render_question_body(q, asset_map=asset_map)
             hint_html = (
                 f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
@@ -59,12 +64,24 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
                 else ""
             )
 
+            status_badges = []
+            if q.hint and q.hint.strip():
+                status_badges.append('<span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span>')
+            if q.feedback and q.feedback.strip():
+                status_badges.append('<span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span>')
+            status_badges_html = (
+                f"<span style='display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;'>{' '.join(status_badges)}</span>"
+                if status_badges
+                else ""
+            )
+
             card = f"""
 <details class="quiz-question-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
   <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
     <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
       <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
+      {status_badges_html}
     </div>
     <div style="flex-shrink: 0; margin-left: 12px;">
       <span style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px;">{type_name}</span>
@@ -72,7 +89,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
     </div>
   </summary>
   <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
-    <div style="color: #334155; margin-bottom: 12px; line-height: 1.5;">{prompt_html}</div>
+    {prompt_html}
     {body_html}
     {hint_html}
     {feedback_html}

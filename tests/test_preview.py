@@ -128,13 +128,13 @@ Feedback: Some feedback
 
         # In summary header:
         # Q1 has 💡 but not 💬
-        self.assertIn('Q1 Hint only</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
         # Q2 has 💬 but not 💡
-        self.assertIn('Q2 Feedback only</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
         # Q3 has both in order 💡 💬
-        self.assertIn('Q3 Both hint and feedback</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
         # Q4 has neither badge
-        self.assertIn('4. Q4 Neither</span>\n      \n    </div>', html_out)
+        self.assertIn('4. Q4 Neither</span>\n    </div>\n    <div style="display: flex; align-items: center; flex-shrink: 0; margin-left: 12px;">\n      \n      <span style="background: #3b82f6;', html_out)
         self.assertNotIn('4. Q4 Neither</span>\n      <span style=\'display: inline-flex;', html_out)
 
 

@@ -70,7 +70,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
             if q.feedback and q.feedback.strip():
                 status_badges.append('<span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span>')
             status_badges_html = (
-                f"<span style='display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; flex-shrink: 0;'>{' '.join(status_badges)}</span>"
+                f"<span style='display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;'>{' '.join(status_badges)}</span>"
                 if status_badges
                 else ""
             )
@@ -81,9 +81,9 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
     <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
       <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
-      {status_badges_html}
     </div>
-    <div style="flex-shrink: 0; margin-left: 12px;">
+    <div style="display: flex; align-items: center; flex-shrink: 0; margin-left: 12px;">
+      {status_badges_html}
       <span style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px;">{type_name}</span>
       <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">{q.points} pt</span>
     </div>

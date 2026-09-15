@@ -298,8 +298,56 @@ The administrative headquarters and principal seat of the European Commission is
 Feedback: Brussels, Belgium serves as the de facto capital of the European Union.
 """
 
+SAMPLE_MULTI_SECTION = """---
+title: Comprehensive Computer Science Exam
+version: 2.0.0
+language: en
+shuffle: yes
+topic: Computer Science
+---
+
+# Section 1: Algorithms & Data Structures
+This section assesses asymptotic complexity, binary search, and elementary data structures. Calculators are not permitted.
+
+## Binary Search Complexity
+What is the worst-case time complexity of binary search on a sorted array of $n$ elements?
+- [ ] $O(1)$
+- [X] $O(\\log n)$
+- [ ] $O(n)$
+- [ ] $O(n \\log n)$
+Feedback: Binary search halves the search interval at each step, taking logarithmic time.
+
+## Binary Search Tree Invariants
+Points: 2
+- [+] The left subtree contains keys strictly less than the node's key.
+- [+] The right subtree contains keys strictly greater than the node's key.
+- [-] An in-order traversal of a BST yields values in descending order.
+- [-] Any binary search tree guarantees $O(\\log n)$ lookup regardless of insertion order.
+Feedback: In-order traversal yields ascending order. Unbalanced trees can degrade to $O(n)$.
+
+# Section 2: Systems & Networking
+Questions in this section cover memory hierarchies, process management, and protocols.
+
+## Memory Hierarchy
+Points: 2
+Arrange storage media from fastest access speed to slowest:
+1. [ ] CPU Registers
+1. [ ] L1 / L2 Cache
+1. [ ] Main Memory (RAM)
+1. [ ] Solid State Drive (SSD)
+
+## Transport Layer Protocols
+Which protocol provides connection-oriented, reliable byte-stream transmission?
+- [X] TCP
+- [ ] UDP
+- [ ] IP
+- [ ] ICMP
+Feedback: TCP provides connection setup, retransmission, and flow control.
+"""
+
 EXAMPLES = {
     "All Question Types (Showcase)": SAMPLE_ALL_TYPES,
+    "Multi-Section Exam (Sections & Rubrics)": SAMPLE_MULTI_SECTION,
     "Full Configuration & Metadata Showcase": SAMPLE_CONFIG_SHOWCASE,
     "Astronomy & Science (Images Showcase)": SAMPLE_MEDIA,
     "Mathematics & LaTeX Typesetting": SAMPLE_MATH,

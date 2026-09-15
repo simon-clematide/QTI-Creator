@@ -221,11 +221,33 @@ class OrderQuestion(Question):
 
 
 @dataclass
+class Section:
+    """An assessment section within a Quiz (<assessmentSection>)."""
+    title: str = ""
+    description: Optional[str] = None
+    questions: List[Question] = field(default_factory=list)
+    identifier: str = field(default_factory=lambda: generate_id("section"))
+    line_number: Optional[int] = None
+
+    def validate(self) -> List[Diagnostic]:
+        """Validate all questions within this section."""
+        diagnostics: List[Diagnostic] = []
+        for idx, q in enumerate(self.questions):
+            try:
+                q.validate()
+            except QuizValidationError as e:
+                for diag in e.diagnostics:
+                    diag.question_index = idx
+                    diagnostics.append(diag)
+        return diagnostics
+
+
+@dataclass
 class Quiz:
     """Top-level Quiz container."""
     title: str = field(default_factory=lambda: DEFAULTS["quiz_title"])
     description: Optional[str] = None
-    questions: List[Question] = field(default_factory=list)
+    sections: List[Section] = field(default_factory=list)
     identifier: str = field(default_factory=lambda: generate_id("quiz"))
     language: str = field(default_factory=lambda: DEFAULTS["language"])
     version: str = field(default_factory=lambda: DEFAULTS["quiz_version"])
@@ -235,16 +257,69 @@ class Quiz:
     shuffle: bool = True
     mc_scoring: str = field(default_factory=lambda: DEFAULTS["mc_scoring"])
 
+    def __init__(
+        self,
+        title: str = field(default_factory=lambda: DEFAULTS["quiz_title"]),
+        description: Optional[str] = None,
+        questions: Optional[List[Question]] = None,
+        sections: Optional[List[Section]] = None,
+        identifier: Optional[str] = None,
+        language: Optional[str] = None,
+        version: Optional[str] = None,
+        topic: Optional[str] = None,
+        keywords: Optional[List[str]] = None,
+        additional_info: Optional[str] = None,
+        shuffle: bool = True,
+        mc_scoring: Optional[str] = None,
+    ):
+        self.title = title or DEFAULTS["quiz_title"]
+        self.description = description
+        self.identifier = identifier or generate_id("quiz")
+        self.language = language or DEFAULTS["language"]
+        self.version = version or DEFAULTS["quiz_version"]
+        self.topic = topic
+        self.keywords = keywords or []
+        self.additional_info = additional_info
+        self.shuffle = shuffle
+        self.mc_scoring = mc_scoring or DEFAULTS["mc_scoring"]
+
+        if sections is not None:
+            self.sections = list(sections)
+            if questions:
+                # If both provided, append loose questions to last section or create default
+                if not self.sections:
+                    self.sections.append(Section(title=self.title, questions=list(questions)))
+                else:
+                    self.sections[-1].questions.extend(questions)
+        elif questions is not None:
+            self.sections = [Section(title=self.title, questions=list(questions))]
+        else:
+            # Default to one section with the quiz title so quiz.questions.append(...) works directly
+            self.sections = [Section(title=self.title, questions=[])]
+
+    @property
+    def questions(self) -> List[Question]:
+        """List of questions in the primary section, or flattened if multiple sections."""
+        if len(self.sections) == 1:
+            return self.sections[0].questions
+        all_q: List[Question] = []
+        for s in self.sections:
+            all_q.extend(s.questions)
+        return all_q
+
+    @questions.setter
+    def questions(self, value: List[Question]) -> None:
+        """Setting questions sets them on the default / primary section."""
+        if not self.sections:
+            self.sections = [Section(title=self.title, questions=list(value))]
+        else:
+            self.sections[0].questions = list(value)
+
     def validate(self) -> List[Diagnostic]:
         """Validate the entire quiz and return all diagnostics."""
         diagnostics: List[Diagnostic] = []
         if not self.questions:
             diagnostics.append(Diagnostic("Quiz contains no questions.", Severity.WARNING))
-        for idx, q in enumerate(self.questions):
-            try:
-                q.validate()
-            except QuizValidationError as e:
-                for diag in e.diagnostics:
-                    diag.question_index = idx
-                    diagnostics.append(diag)
+        for s in self.sections:
+            diagnostics.extend(s.validate())
         return diagnostics

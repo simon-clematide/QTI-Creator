@@ -46,7 +46,7 @@ def create_qti_package(
         zf.writestr("imsmanifest.xml", manifest_xml.encode("utf-8"))
 
         # 2. Root-level Test.xml
-        test_xml = generate_test_xml(quiz)
+        test_xml = generate_test_xml(quiz, asset_map=asset_map)
         zf.writestr("Test.xml", test_xml.encode("utf-8"))
 
         # 3. Root-level OpenOLAT QTI21PackageConfig.xml

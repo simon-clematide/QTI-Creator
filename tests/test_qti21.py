@@ -295,5 +295,41 @@ def square(n):
                 self.assertFalse(name.startswith("/") or name.startswith("quiz/"))
 
 
+    def test_multi_section_test_xml(self):
+        text = """---
+title: Final Exam
+---
+# Part A
+Section instructions for candidate.
+
+## Q1
+- [X] Yes
+- [ ] No
+
+# Part B
+## Q2
+- [X] True
+- [ ] False
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        self.assertEqual(len(quiz.sections), 2)
+
+        test_xml = generate_test_xml(quiz)
+        root = ET.fromstring(test_xml)
+        self.assertIn("assessmentTest", root.tag)
+
+        # Verify multiple assessmentSection elements
+        sections = root.findall(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}assessmentSection")
+        self.assertEqual(len(sections), 2)
+        self.assertEqual(sections[0].attrib.get("title"), "Part A")
+        self.assertEqual(sections[1].attrib.get("title"), "Part B")
+
+        # Verify rubricBlock in section 1
+        rubric = sections[0].find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}rubricBlock")
+        self.assertIsNotNone(rubric)
+        self.assertIn("Section instructions for candidate.", test_xml)
+
+
 if __name__ == "__main__":
     unittest.main()

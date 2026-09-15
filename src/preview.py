@@ -30,33 +30,41 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
 
-    cards = []
-    for idx, q in enumerate(quiz.questions, start=1):
-        type_name = _get_type_label(q)
-        badge_color = _get_badge_color(q)
+    has_multiple_sections = len(quiz.sections) > 1 or (
+        len(quiz.sections) == 1 and bool(quiz.sections[0].description)
+    )
 
-        prompt_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
-        body_html = _render_question_body(q, asset_map=asset_map)
-        hint_html = (
-            f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
-            f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
-            f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map)}</div></details>"
-            if q.hint
-            else ""
-        )
-        feedback_html = (
-            f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
-            f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map)}</div>"
-            if q.feedback
-            else ""
-        )
+    sections_html = []
+    global_idx = 1
 
-        card = f"""
+    for s_idx, sec in enumerate(quiz.sections, start=1):
+        sec_cards = []
+        for q in sec.questions:
+            type_name = _get_type_label(q)
+            badge_color = _get_badge_color(q)
+
+            prompt_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+            body_html = _render_question_body(q, asset_map=asset_map)
+            hint_html = (
+                f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
+                f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
+                f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map)}</div></details>"
+                if q.hint
+                else ""
+            )
+            feedback_html = (
+                f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
+                f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map)}</div>"
+                if q.feedback
+                else ""
+            )
+
+            card = f"""
 <details class="quiz-question-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
   <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
     <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
-      <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{idx}. {html.escape(q.title)}</span>
+      <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
     </div>
     <div style="flex-shrink: 0; margin-left: 12px;">
       <span style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px;">{type_name}</span>
@@ -71,7 +79,32 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
   </div>
 </details>
 """
-        cards.append(card)
+            sec_cards.append(card)
+            global_idx += 1
+
+        sec_header = ""
+        if has_multiple_sections:
+            sec_points = sum(q.points for q in sec.questions)
+            desc_html = (
+                f"<div style='color: #475569; font-size: 0.92em; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map)}</div>"
+                if sec.description
+                else ""
+            )
+            sec_header = f"""
+<div class="quiz-section-container" style="margin-top: {('20px' if s_idx > 1 else '6px')}; margin-bottom: 16px; padding: 14px 16px 8px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
+    <h4 style="margin: 0; color: #1e293b; font-size: 1.1em; display: flex; align-items: center; gap: 6px;">
+      <span>📁</span> {html.escape(sec.title)}
+    </h4>
+    <span style="color: #64748b; font-size: 0.85em; font-weight: 500;">{len(sec.questions)} Qs &bull; {sec_points} pt</span>
+  </div>
+  {desc_html}
+  {''.join(sec_cards)}
+</div>
+"""
+            sections_html.append(sec_header)
+        else:
+            sections_html.extend(sec_cards)
 
     return f"""
 <style>
@@ -110,7 +143,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
   <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
     <div>
       <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
-      <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed</span>
+      <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed{f" across {len(quiz.sections)} section(s)" if len(quiz.sections) > 1 else ""}</span>
     </div>
     <div>
       <button type="button" class="quiz-expand-btn" onclick="
@@ -121,7 +154,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
       ">▶ Expand All</button>
     </div>
   </div>
-  {''.join(cards)}
+  {''.join(sections_html)}
 </div>
 """
 

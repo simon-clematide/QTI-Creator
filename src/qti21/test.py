@@ -1,19 +1,39 @@
 """QTI 2.1 generator for <assessmentTest> XML matching OpenOLAT native structure."""
 
 import html
+from typing import Dict, Optional
+from src.markdown import markdown_to_qti_xhtml
 from src.model import Quiz
 
 
-def generate_test_xml(quiz: Quiz) -> str:
-    """Generate OpenOLAT-native QTI 2.1 Test.xml (<assessmentTest>)."""
+def generate_test_xml(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Generate OpenOLAT-native QTI 2.1 Test.xml (<assessmentTest>) supporting multiple sections."""
     escaped_title = html.escape(quiz.title)
     total_max_score = sum(q.points for q in quiz.questions)
 
-    item_refs = []
-    for q in quiz.questions:
-        item_refs.append(
-            f'        <assessmentItemRef identifier="{q.identifier}" href="{q.identifier}.xml"/>'
-        )
+    sections_xml = []
+    for s_idx, sec in enumerate(quiz.sections, start=1):
+        escaped_sec_title = html.escape(sec.title)
+        item_refs = []
+        for q in sec.questions:
+            item_refs.append(
+                f'        <assessmentItemRef identifier="{q.identifier}" href="{q.identifier}.xml"/>'
+            )
+
+        rubric_xml = ""
+        if sec.description and sec.description.strip():
+            desc_html = markdown_to_qti_xhtml(sec.description, asset_map=asset_map)
+            rubric_xml = f"""      <rubricBlock view="candidate">
+        {desc_html}
+      </rubricBlock>
+"""
+
+        items_joined = ("\n" + "\n".join(item_refs)) if item_refs else ""
+        sec_xml = f"""    <assessmentSection identifier="{sec.identifier}" title="{escaped_sec_title}" visible="true" fixed="true">
+      <itemSessionControl/>
+{rubric_xml}{items_joined}
+    </assessmentSection>"""
+        sections_xml.append(sec_xml)
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <assessmentTest xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
@@ -36,10 +56,7 @@ def generate_test_xml(quiz: Quiz) -> str:
   </outcomeDeclaration>
   <testPart identifier="testPart_1" navigationMode="nonlinear" submissionMode="individual">
     <itemSessionControl maxAttempts="0" showFeedback="false" allowReview="false" showSolution="false" allowComment="true" allowSkipping="false"/>
-    <assessmentSection identifier="section_1" title="{escaped_title}" visible="true" fixed="true">
-      <itemSessionControl/>
-{chr(10).join(item_refs)}
-    </assessmentSection>
+{chr(10).join(sections_xml)}
   </testPart>
   <outcomeProcessing>
     <setOutcomeValue identifier="SCORE">

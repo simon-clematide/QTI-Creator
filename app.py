@@ -301,6 +301,17 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 ```
                 ---
 
+                ### Test Structure & Sections (`#` and `##`)
+                Long tests can be structured into multiple sections, generating OpenOLAT's native hierarchical navigation tree:
+                - **YAML `title:`** defines the overall test title.
+                - **`#` always starts an Assessment Section** (e.g. `# Section 1: Listening Comprehension`).
+                - **`##` always starts an Assessment Question** (e.g. `## Question Title`).
+                - **Section instructions / description**: Any content written between `# Section` and its first `## Question` is rendered as an OpenOLAT candidate rubric (`<rubricBlock>`), presented to the student at the beginning of that section.
+                - **Default fallback**: If no test title is given in YAML, the first `#` section title is automatically used as the test title. If questions appear without any `#` heading, an implicit default section is created.
+                - *Headings are strictly deterministic: `#` is always a section, `##` is always a question.*
+
+                ---
+
                 ### Multiple Choice Scoring Options
                 By default, Multiple Choice questions use OpenOLAT's native **partial credit** (`Scoring: partial`). You can configure alternative scoring methods globally in the quiz header/frontmatter or per question:
 

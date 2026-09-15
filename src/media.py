@@ -158,8 +158,15 @@ def extract_media_references(text: str, question_id: Optional[str] = None) -> Li
 
 
 def extract_quiz_media_references(quiz: Quiz) -> List[MediaReference]:
-    """Scan all questions (prompt, choices/statements, feedback) for media references."""
+    """Scan all questions and section descriptions for media references."""
     all_refs: List[MediaReference] = []
+
+    # Check section descriptions
+    for sec in quiz.sections:
+        if sec.description:
+            sec_refs = extract_media_references(sec.description, question_id=sec.identifier)
+            all_refs.extend(sec_refs)
+
     for q in quiz.questions:
         q_refs = extract_media_references(q.prompt, question_id=q.identifier)
         if q.feedback:

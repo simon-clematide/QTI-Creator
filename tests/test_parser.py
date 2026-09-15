@@ -552,6 +552,82 @@ Explain why the following three principles matter:
                 self.assertGreater(len(pkg), 1000, f"Package too small for {name}")
 
 
+    def test_multi_section_parsing_and_descriptions(self):
+        text = """---
+title: Comprehensive Final Exam
+version: 1.0.0
+---
+
+# Section 1: Mathematics & Logic
+Instructions: Calculators are permitted for this section.
+
+## Simple Arithmetic
+- [X] 4
+- [ ] 5
+
+## Prime Numbers
+- [x] 2
+- [x] 3
+- [ ] 4
+
+# Section 2: Biology & Chemistry
+Instructions: Answer all questions in this section carefully.
+
+## Water Formula
+What is water?
+- [X] H2O
+- [ ] CO2
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.title, "Comprehensive Final Exam")
+        self.assertEqual(len(quiz.sections), 2)
+        self.assertEqual(len(quiz.questions), 3)
+
+        s1 = quiz.sections[0]
+        self.assertEqual(s1.title, "Section 1: Mathematics & Logic")
+        self.assertIn("Calculators are permitted", s1.description)
+        self.assertEqual(len(s1.questions), 2)
+
+        s2 = quiz.sections[1]
+        self.assertEqual(s2.title, "Section 2: Biology & Chemistry")
+        self.assertIn("Answer all questions in this section", s2.description)
+        self.assertEqual(len(s2.questions), 1)
+
+    def test_section_title_used_as_test_title_when_no_yaml_title(self):
+        text = """# First Section As Test Title
+## Question in Section
+- [X] Yes
+- [ ] No
+
+# Second Section
+## Another Question
+- [X] True
+- [ ] False
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(quiz.title, "First Section As Test Title")
+        self.assertEqual(len(quiz.sections), 2)
+        self.assertEqual(quiz.sections[0].title, "First Section As Test Title")
+        self.assertEqual(quiz.sections[1].title, "Second Section")
+
+    def test_implicit_section_when_no_h1_present(self):
+        text = """## Question 1 Without Section
+- [X] A
+- [ ] B
+
+## Question 2 Without Section
+- [X] C
+- [ ] D
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(len(quiz.sections), 1)
+        self.assertEqual(len(quiz.questions), 2)
+        self.assertEqual(quiz.sections[0].questions[0].title, "Question 1 Without Section")
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -204,7 +204,40 @@ Quiz-level metadata acts as defaults that automatically inherit down to every in
 
 ---
 
-### 7. Question Metadata & Local Overrides
+### 7. Test Structure & Sections (`#` and `##`)
+QuizMD uses deterministic heading semantics to model OpenOLAT's native test hierarchy:
+- **YAML `title:`** defines the overall test title.
+- **`#` always starts an Assessment Section** (rendered as `<assessmentSection>` in OpenOLAT).
+- **`##` always starts an Assessment Question** (rendered as `<assessmentItemRef>`).
+- **Section Instructions (`<rubricBlock>`)**: Any text written between a `# Section` heading and its first `## Question` becomes candidate instructions, shown by OpenOLAT at the beginning of that section.
+- **Title Fallback**: If no test title is specified in YAML frontmatter, the first `#` section title is also used as the overall test title. The section itself remains intact.
+- **Sensible Defaults**: If questions appear without any `#` heading, an implicit section is created automatically with default naming.
+- *Headings are strictly deterministic: `#` is always a section, `##` is always a question.*
+
+```markdown
+---
+title: Comprehensive Final Exam
+version: 1.0.0
+---
+
+# Section 1: Mathematics & Logic
+Calculators are permitted for this section. Answer all questions.
+
+## Simple Arithmetic
+- [X] 4
+- [ ] 5
+
+# Section 2: Biology & Chemistry
+Formula sheets are provided in the appendix.
+
+## Water Formula
+- [X] H2O
+- [ ] CO2
+```
+
+---
+
+### 8. Question Metadata & Local Overrides
 Question metadata can be placed **before or after** choices/statements (case-insensitive):
 - `Points: <number>` (default: 1) — Point weight for the question.
 - `Hint: <text>` — Pre-submission hint displayed during test-taking in OpenOLAT (supports Markdown and math).
@@ -231,7 +264,7 @@ Additional_Info: Source: General Biology Curriculum
 Feedback: Remember "Dear King Philip Came Over For Good Soup".
 ```
 
-### 8. Full Configuration & Metadata Example
+### 9. Full Configuration & Metadata Example
 Here is a comprehensive example demonstrating every available global and question-level configuration option in QuizMD:
 
 ```markdown
@@ -314,13 +347,13 @@ Provide a detailed explanation of amortized time complexity.
 Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $O(n)$ worst-case copy steps.
 ```
 
-### 9. Mathematical Formulas & Code Blocks
+### 10. Mathematical Formulas & Code Blocks
 - **Inline LaTeX**: Wrap in `$ ... $`, e.g. `$E = mc^2$`. OpenOLAT renders this natively with MathJax.
 - **Display Math**: Wrap in `$$ ... $$` on its own line.
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
-### 10. Media & Image Support (Remote & Relative Packaging)
+### 11. Media & Image Support (Remote & Relative Packaging)
 Embed images anywhere in questions, choices, or feedback using standard Markdown:
 ```markdown
 ## Plant Biology

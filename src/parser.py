@@ -34,6 +34,7 @@ from src.model import (
     OrderQuestion,
     Question,
     Quiz,
+    Section,
     SingleChoiceQuestion,
     TrueFalseQuestion,
     generate_id,
@@ -53,6 +54,17 @@ RE_NUMERICAL = re.compile(
     r"^=\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:±|\+-|\+/-)\s*(\d+(?:\.\d+)?))?$"
 )
 RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
+
+
+class RawSectionBlock:
+    """Intermediate container for an assessment section and its description/questions."""
+
+    def __init__(self, title: str, start_line: int, is_implicit: bool = False):
+        self.title = title
+        self.start_line = start_line
+        self.is_implicit = is_implicit
+        self.description_lines: List[str] = []
+        self.question_blocks: List["RawQuestionBlock"] = []
 
 
 class RawQuestionBlock:
@@ -174,39 +186,95 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                     break
         break
 
-    h1_title: Optional[str] = None
-    h1_line: Optional[int] = None
+    # Step 1: Document, Section & Question segmentation
+    raw_sections: List[RawSectionBlock] = []
+    current_section: Optional[RawSectionBlock] = None
+    current_question: Optional[RawQuestionBlock] = None
+    preamble_lines: List[str] = []
     top_meta: Dict[str, str] = {}
     top_meta_lines: Dict[str, int] = {}
-    description_lines: List[str] = []
-    question_blocks: List[RawQuestionBlock] = []
-    current_block: Optional[RawQuestionBlock] = None
 
-    # Step 1: Document & question segmentation
+    in_code_block = False
     for line_idx, line in enumerate(lines[content_start_idx:], start=content_start_idx + 1):
         stripped = line.strip()
 
-        # Check Level 2 heading (Question start)
+        # Handle fenced code block toggling
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            if current_question is not None:
+                current_question.raw_lines.append((line_idx, line))
+            elif current_section is not None:
+                current_section.description_lines.append(line)
+            else:
+                preamble_lines.append(line)
+            continue
+
+        # If inside a code block, never treat # or ## or metadata as headings/markers
+        if in_code_block:
+            if current_question is not None:
+                current_question.raw_lines.append((line_idx, line))
+            elif current_section is not None:
+                current_section.description_lines.append(line)
+            else:
+                preamble_lines.append(line)
+            continue
+
+        # Check Level 1 heading (# always starts a section)
+        h1_match = RE_H1.match(stripped)
+        if h1_match:
+            # Finalize any ongoing question
+            if current_question is not None:
+                if current_section is None:
+                    current_section = RawSectionBlock(title="", start_line=current_question.start_line, is_implicit=True)
+                    raw_sections.append(current_section)
+                current_section.question_blocks.append(current_question)
+                current_question = None
+
+            section_title = h1_match.group(1).strip()
+            current_section = RawSectionBlock(title=section_title, start_line=line_idx, is_implicit=False)
+            raw_sections.append(current_section)
+            continue
+
+        # Check Level 2 heading (## always starts a question)
         h2_match = RE_H2.match(stripped)
         if h2_match:
-            if current_block is not None:
-                question_blocks.append(current_block)
-            current_block = RawQuestionBlock(
+            # Finalize previous question
+            if current_question is not None:
+                if current_section is None:
+                    current_section = RawSectionBlock(title="", start_line=current_question.start_line, is_implicit=True)
+                    raw_sections.append(current_section)
+                current_section.question_blocks.append(current_question)
+
+            # Ensure we have an active section; if none, create implicit section
+            if current_section is None:
+                current_section = RawSectionBlock(title="", start_line=line_idx, is_implicit=True)
+                raw_sections.append(current_section)
+
+            current_question = RawQuestionBlock(
                 title=h2_match.group(1).strip(),
                 start_line=line_idx,
             )
             continue
 
-        if current_block is not None:
-            current_block.raw_lines.append((line_idx, line))
-        else:
-            # Preamble section (before any question)
-            h1_match = RE_H1.match(stripped)
-            if h1_match and h1_title is None:
-                h1_title = h1_match.group(1).strip()
-                h1_line = line_idx
-                continue
+        # Accumulate lines depending on context
+        if current_question is not None:
+            current_question.raw_lines.append((line_idx, line))
+        elif current_section is not None:
+            # For the first section before any questions, lines like "Version: 1.2.3" or "Scoring: all-correct"
+            # act as top_meta if not already defined in preamble
+            top_meta_match = RE_TOP_META.match(stripped)
+            if top_meta_match and len(raw_sections) == 1 and not current_section.question_blocks:
+                key = top_meta_match.group(1).lower()
+                val = top_meta_match.group(2).strip()
+                if key not in top_meta:
+                    top_meta[key] = val
+                    top_meta_lines[key] = line_idx
+                    continue
 
+            # Content between # Section heading and its first ## Question is section description/instructions
+            current_section.description_lines.append(line)
+        else:
+            # Preamble before any # section or ## question
             top_meta_match = RE_TOP_META.match(stripped)
             if top_meta_match:
                 key = top_meta_match.group(1).lower()
@@ -214,11 +282,14 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                 top_meta[key] = val
                 top_meta_lines[key] = line_idx
                 continue
+            preamble_lines.append(line)
 
-            description_lines.append(line)
-
-    if current_block is not None:
-        question_blocks.append(current_block)
+    # Finalize trailing question
+    if current_question is not None:
+        if current_section is None:
+            current_section = RawSectionBlock(title="", start_line=current_question.start_line, is_implicit=True)
+            raw_sections.append(current_section)
+        current_section.question_blocks.append(current_question)
 
     # Resolve Quiz-level metadata with consistency checking between Way A & Way B
     # 1. Version
@@ -243,27 +314,61 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     else:
         quiz_version = DEFAULTS["quiz_version"]
 
-    # 2. Title
+    # 2. Title:
+    # Rule: YAML title defines the test title.
+    # If no test title is given in YAML, the first section title is also used as the test title.
+    # If questions occur without any # section, sensible default is used.
     fm_title = frontmatter.get("title")
-    header_title = h1_title or top_meta.get("title")
-    if fm_title is not None and header_title is not None:
-        if fm_title.strip() != header_title.strip():
+    meta_title = top_meta.get("title")
+    first_explicit_section = None
+    for s_blk in raw_sections:
+        if not s_blk.is_implicit and s_blk.title:
+            first_explicit_section = s_blk
+            break
+
+    # If explicit title: was specified in top_meta, compare with frontmatter for warnings
+    if fm_title is not None and meta_title is not None:
+        if fm_title.strip() != meta_title.strip():
             diagnostics.append(
                 Diagnostic(
-                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{header_title.strip()}'. Using header title '{header_title.strip()}'.",
+                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{meta_title.strip()}'. Using header title '{meta_title.strip()}'.",
                     Severity.WARNING,
-                    h1_line or top_meta_lines.get("title"),
+                    top_meta_lines.get("title"),
                 )
             )
-            quiz_title = header_title.strip()
+            quiz_title = meta_title.strip()
         else:
-            quiz_title = header_title.strip()
-    elif header_title is not None:
-        quiz_title = header_title.strip()
+            quiz_title = meta_title.strip()
+    elif fm_title is not None and len([s for s in raw_sections if not s.is_implicit]) == 1:
+        # Single-section quiz where user provided frontmatter title AND # Header Title
+        only_section = [s for s in raw_sections if not s.is_implicit][0]
+        if fm_title.strip() != only_section.title.strip():
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{only_section.title.strip()}'. Using header title '{only_section.title.strip()}'.",
+                    Severity.WARNING,
+                    only_section.start_line,
+                )
+            )
+            quiz_title = only_section.title.strip()
+            only_section.title = quiz_title
+        else:
+            quiz_title = fm_title.strip()
     elif fm_title is not None:
+        # Multi-section quiz: YAML title strictly defines the overall test title
         quiz_title = fm_title.strip()
+    elif meta_title is not None:
+        quiz_title = meta_title.strip()
+    elif first_explicit_section is not None:
+        # If no test title given in YAML/meta, the first section title is also used as test title
+        quiz_title = first_explicit_section.title
     else:
         quiz_title = DEFAULTS["quiz_title"]
+
+    # Ensure implicit sections receive a meaningful title
+    for s_blk in raw_sections:
+        if s_blk.is_implicit or not s_blk.title:
+            s_blk.title = quiz_title
 
     # 3. Language
     fm_lang = frontmatter.get("language")
@@ -401,50 +506,70 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
     # 9. Description
     quiz_description = (
-        "\n".join(description_lines).strip()
+        "\n".join(preamble_lines).strip()
         or top_meta.get("description")
         or frontmatter.get("description")
         or None
     )
 
-    # Step 2: Line classification for each block
-    for block in question_blocks:
-        _classify_block_lines(block)
+    # Step 2: Line classification for each block across sections
+    for s_blk in raw_sections:
+        for block in s_blk.question_blocks:
+            _classify_block_lines(block)
 
-    # Step 3: Type inference and model creation
-    questions: List[Question] = []
-    for q_idx, block in enumerate(question_blocks):
-        try:
-            q = _build_question_from_block(block, q_idx)
-            if q is not None:
-                # Inherit quiz metadata to question if not explicitly overridden at question level
-                if q.topic is None and quiz_topic is not None:
-                    q.topic = quiz_topic
-                if not q.keywords and quiz_keywords:
-                    q.keywords = list(quiz_keywords)
-                if q.language is None and quiz_language is not None:
-                    q.language = quiz_language
-                if q.shuffle is None:
-                    q.shuffle = quiz_shuffle
-                if isinstance(q, MultipleChoiceQuestion) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
-                    if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
-                        q.scoring = quiz_mc_scoring
-                if q.additional_info is None:
-                    if quiz_additional_info is not None:
-                        q.additional_info = quiz_additional_info
-                    elif quiz_version is not None:
-                        q.additional_info = f"Version: {quiz_version}"
+    # Step 3: Type inference and model creation by section
+    sections: List[Section] = []
+    global_q_idx = 0
 
-                questions.append(q)
-        except QuizValidationError as e:
-            for d in e.diagnostics:
-                d.question_index = q_idx
-                diagnostics.append(d)
+    for s_blk in raw_sections:
+        sec_questions: List[Question] = []
+        for block in s_blk.question_blocks:
+            try:
+                q = _build_question_from_block(block, global_q_idx)
+                if q is not None:
+                    # Inherit quiz metadata to question if not explicitly overridden at question level
+                    if q.topic is None and quiz_topic is not None:
+                        q.topic = quiz_topic
+                    if not q.keywords and quiz_keywords:
+                        q.keywords = list(quiz_keywords)
+                    if q.language is None and quiz_language is not None:
+                        q.language = quiz_language
+                    if q.shuffle is None:
+                        q.shuffle = quiz_shuffle
+                    if isinstance(q, MultipleChoiceQuestion) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
+                        if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
+                            q.scoring = quiz_mc_scoring
+                    if q.additional_info is None:
+                        if quiz_additional_info is not None:
+                            q.additional_info = quiz_additional_info
+                        elif quiz_version is not None:
+                            q.additional_info = f"Version: {quiz_version}"
+
+                    sec_questions.append(q)
+            except QuizValidationError as e:
+                for d in e.diagnostics:
+                    d.question_index = global_q_idx
+                    diagnostics.append(d)
+            global_q_idx += 1
+
+        sec_desc = "\n".join(s_blk.description_lines).strip() or None
+        sections.append(
+            Section(
+                title=s_blk.title,
+                description=sec_desc,
+                questions=sec_questions,
+                line_number=s_blk.start_line,
+            )
+        )
+
+    # If no sections were produced (e.g. empty document), initialize with default section
+    if not sections:
+        sections = [Section(title=quiz_title, questions=[])]
 
     quiz = Quiz(
         title=quiz_title,
         description=quiz_description,
-        questions=questions,
+        sections=sections,
         language=quiz_language,
         version=quiz_version,
         topic=quiz_topic,

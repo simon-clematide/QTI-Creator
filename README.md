@@ -11,7 +11,9 @@ license: mit
 
 # 📝 QTI-Creator: Markdown to OpenOLAT QTI 2.1
 
-A lightweight tool for writing quizzes in natural **Markdown** and converting them into standardized **IMS QTI 2.1 Content Packages (`.zip`)** ready for direct import into **OpenOLAT**.
+Write quizzes in natural Markdown. No XML or complex syntax required. Export standardized 1EdTech Question & Test Interoperability (QTI) 2.1 ZIP packages ready for direct import into OpenOLAT.
+
+Learn more: [QTI 2.1 specification](https://www.imsglobal.org/question/qtiv2p1/index.html) · [OpenOLAT eTesting](https://www.openolat.com/etesting)
 
 ---
 

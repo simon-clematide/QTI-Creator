@@ -128,14 +128,15 @@ Feedback: Some feedback
 
         # In summary header:
         # Q1 has 💡 but not 💬
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
         # Q2 has 💬 but not 💡
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
         # Q3 has both in order 💡 💬
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
+        # Verify sequence: Single Choice (type), then status badges, then points
+        self.assertIn('Single Choice</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>\n      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">1.0 pt</span>', html_out)
         # Q4 has neither badge
-        self.assertIn('4. Q4 Neither</span>\n    </div>\n    <div style="display: flex; align-items: center; flex-shrink: 0; margin-left: 12px;">\n      \n      <span style="background: #3b82f6;', html_out)
-        self.assertNotIn('4. Q4 Neither</span>\n      <span style=\'display: inline-flex;', html_out)
+        self.assertIn('Single Choice</span>\n      \n      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">1.0 pt</span>', html_out)
 
 
 if __name__ == "__main__":

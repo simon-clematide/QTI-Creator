@@ -74,6 +74,22 @@ class TestModelInvariants(unittest.TestCase):
                 scoring="unsupported-scoring",
             )
 
+    def test_multiple_choice_scoring_aliases_normalized(self):
+        choices = [Choice("2", True), Choice("3", True), Choice("4", False)]
+        
+        for alias in ("all-correct", "all_correct", "allcorrect", " ALL-CORRECT "):
+            q = MultipleChoiceQuestion(prompt="P", choices=choices, scoring=alias)
+            self.assertEqual(q.scoring, "all-correct")
+
+        for alias in ("per-answer", "per_answer", "points-per-answer", "points_per_answer", "PER-ANSWER"):
+            q = MultipleChoiceQuestion(prompt="P", choices=choices, scoring=alias)
+            self.assertEqual(q.scoring, "per-answer")
+
+        for alias in ("partial", "PARTIAL", ""):
+            q = MultipleChoiceQuestion(prompt="P", choices=choices, scoring=alias)
+            self.assertEqual(q.scoring, "partial")
+
+
     def test_true_false_valid(self):
         q = TrueFalseQuestion(
             prompt="Sky is blue.",

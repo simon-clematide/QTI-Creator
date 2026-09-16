@@ -1,6 +1,10 @@
+"""Assessment item XML envelope builder for QTI 2.1."""
+
 import html
 from typing import Dict, Optional
+
 from src.markdown import markdown_to_qti_xhtml
+
 
 
 def wrap_assessment_item(

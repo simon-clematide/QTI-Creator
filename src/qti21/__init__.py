@@ -1,6 +1,8 @@
 """QTI 2.1 generation package for OpenOLAT."""
 
-from typing import Dict
+from typing import Dict, Optional
+
+
 from src.model import (
     EssayQuestion,
     FillBlankQuestion,
@@ -13,8 +15,6 @@ from src.model import (
     TrueFalseQuestion,
 )
 
-
-from typing import Dict, Optional
 
 
 def generate_item_xml(question: Question, asset_map: Optional[Dict[str, str]] = None) -> str:

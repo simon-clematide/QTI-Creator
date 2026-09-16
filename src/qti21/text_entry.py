@@ -1,10 +1,13 @@
-from typing import Dict, Optional
-import re
+"""QTI 2.1 generator for Fill-in-the-Blank (Text Entry) questions."""
+
 import html
-from src.markdown import markdown_to_qti_xhtml
+import re
+from typing import Dict, Optional
+
+from src.markdown import RE_GAP, markdown_to_qti_xhtml
 from src.model import FillBlankQuestion
-from src.parser import RE_GAP
 from src.qti21.item import wrap_assessment_item
+
 
 
 def generate_fill_blank_xml(q: FillBlankQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

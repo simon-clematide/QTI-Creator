@@ -1,8 +1,13 @@
-from typing import Dict, Optional
+"""QTI 2.1 generator for Order questions."""
+
 import html
+from typing import Dict, Optional
+
+from src.defaults import DEFAULTS
 from src.markdown import markdown_to_qti_xhtml
 from src.model import OrderQuestion
 from src.qti21.item import wrap_assessment_item
+
 
 
 def generate_order_xml(q: OrderQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
@@ -25,10 +30,14 @@ def generate_order_xml(q: OrderQuestion, asset_map: Optional[Dict[str, str]] = N
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
     item_body = f"""    {prompt_xhtml}
-    <orderInteraction responseIdentifier="RESPONSE" shuffle="true">
+    <orderInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}">
+
 {chr(10).join(choices_xml)}
     </orderInteraction>"""
+
 
     response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"/>"""
 

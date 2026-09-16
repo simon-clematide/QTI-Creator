@@ -224,6 +224,36 @@ def square(n):
         values = [elem.text for elem in root.findall(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}correctResponse/{http://www.imsglobal.org/xsd/imsqti_v2p1}value")]
         self.assertEqual(values, [it.identifier for it in q.items])
 
+    def test_order_xml_no_shuffle(self):
+        q = OrderQuestion(
+            prompt="Order the following steps:",
+            items=[
+                OrderItem("Step 1"),
+                OrderItem("Step 2"),
+            ],
+            shuffle=False,
+        )
+        xml_str = generate_item_xml(q)
+        self.assertIn('shuffle="false"', xml_str)
+
+    def test_multiple_choice_per_answer_alias_xml(self):
+        # Test that 'per_answer' alias generates mapping correctly
+        q = MultipleChoiceQuestion(
+            prompt="Select primes:",
+            choices=[
+                Choice("2", True),
+                Choice("3", True),
+                Choice("4", False),
+            ],
+            points=2.0,
+            scoring="per_answer",
+        )
+        xml_str = generate_item_xml(q)
+        self.assertIn('<mapping defaultValue="0.0"', xml_str)
+        self.assertIn('mappedValue="1.0"', xml_str)
+        self.assertIn('mappedValue="-2.0"', xml_str)
+
+
     def test_gap_alternatives_xml(self):
         q = FillBlankQuestion(
             prompt="The color is {{gray | grey}}.",

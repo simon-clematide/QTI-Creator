@@ -1,15 +1,16 @@
 """QTI 2.1 generator for Single Choice, Multiple Choice, and True/False questions."""
 
 import html
+from typing import Dict, Optional
+
+from src.defaults import DEFAULTS
 from src.markdown import markdown_to_qti_xhtml
 from src.model import MultipleChoiceQuestion, SingleChoiceQuestion, TrueFalseQuestion
 from src.qti21.item import wrap_assessment_item
 
 
-from typing import Dict, Optional
-
-
 def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
+
     """Generate QTI 2.1 XML for a Single Choice question."""
     correct_choice = next(c for c in q.choices if c.is_correct)
 
@@ -30,9 +31,11 @@ def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
-    shuffle_str = "true" if q.shuffle else "false"
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
     item_body = f"""    {prompt_xhtml}
     <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="1">
+
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
 
@@ -70,11 +73,13 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
         )
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
-    shuffle_str = "true" if q.shuffle else "false"
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
     item_body = f"""    {prompt_xhtml}
     <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="0">
 {chr(10).join(choices_xml)}
     </choiceInteraction>"""
+
 
     scoring_mode = q.scoring.lower() if q.scoring else "partial"
 
@@ -98,7 +103,7 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
             asset_map=asset_map,
         )
 
-    elif scoring_mode in ("points-per-answer", "per-answer", "points_per_answer"):
+    elif scoring_mode in ("points-per-answer", "per-answer", "points_per_answer", "per_answer"):
         # Explicit mapping per choice
         pos_val = round(q.points / n_correct, 4) if n_correct > 0 else 0.0
         neg_val = round(-(q.points / n_incorrect), 4) if n_incorrect > 0 else 0.0

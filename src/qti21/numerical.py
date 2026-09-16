@@ -1,7 +1,11 @@
+"""QTI 2.1 generator for Numerical questions."""
+
 from typing import Dict, Optional
+
 from src.markdown import markdown_to_qti_xhtml
 from src.model import NumericalQuestion
 from src.qti21.item import wrap_assessment_item
+
 
 
 def generate_numerical_xml(q: NumericalQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

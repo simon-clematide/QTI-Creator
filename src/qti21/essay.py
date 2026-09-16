@@ -1,7 +1,11 @@
+"""QTI 2.1 generator for Essay (Extended Text) questions."""
+
 from typing import Dict, Optional
+
 from src.markdown import markdown_to_qti_xhtml
 from src.model import EssayQuestion
 from src.qti21.item import wrap_assessment_item
+
 
 
 def generate_essay_xml(q: EssayQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

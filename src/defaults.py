@@ -30,5 +30,5 @@ DEFAULTS: Dict[str, Any] = {
     
     # Numerical tolerance defaults
     "tolerance": 0.0,
-    "tolerance_mode": "absolute",  # 'absolute' or 'relative'
 }
+

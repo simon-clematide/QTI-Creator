@@ -13,6 +13,7 @@ from src.qti21 import generate_item_xml
 from src.qti21.manifest import generate_manifest_xml
 from src.qti21.package_config import generate_package_config_xml
 from src.qti21.test import generate_test_xml
+from src.validation import QuizValidationError, Severity
 
 
 def create_qti_package(
@@ -23,15 +24,14 @@ def create_qti_package(
     """Package a Quiz into a standard OpenOLAT-compatible QTI 2.1 ZIP archive."""
     # Ensure quiz has no fatal errors
     diagnostics = quiz.validate()
-    fatal_errors = [d for d in diagnostics if d.severity.value == "error"]
+    fatal_errors = [d for d in diagnostics if d.severity == Severity.ERROR]
     if fatal_errors:
-        from src.validation import QuizValidationError
         raise QuizValidationError("Cannot build package with validation errors.", fatal_errors)
 
     if media_preflight and media_preflight.include_media and media_preflight.has_errors:
-        from src.validation import QuizValidationError
-        media_errors = [d for d in media_preflight.diagnostics if d.severity.value == "error"]
+        media_errors = [d for d in media_preflight.diagnostics if d.severity == Severity.ERROR]
         raise QuizValidationError("Cannot build package with media preflight errors.", media_errors)
+
 
     asset_map: Optional[dict] = None
     question_asset_map: Optional[dict] = None

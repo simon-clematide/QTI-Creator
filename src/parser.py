@@ -39,7 +39,10 @@ from src.model import (
     TrueFalseQuestion,
     generate_id,
 )
+
+from src.markdown import RE_GAP
 from src.validation import Diagnostic, QuizValidationError, Severity
+
 
 
 # Regex patterns
@@ -53,7 +56,7 @@ RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
 RE_NUMERICAL = re.compile(
     r"^=\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:±|\+-|\+/-)\s*(\d+(?:\.\d+)?))?$"
 )
-RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
+
 
 
 class RawSectionBlock:
@@ -155,7 +158,43 @@ def _split_keywords(val: Any) -> List[str]:
     return []
 
 
+def _resolve_meta_field(
+    name: str,
+    fm_val: Any,
+    meta_val: Any,
+    default: Any,
+    diagnostics: List[Diagnostic],
+    line_number: Optional[int] = None,
+    transform=None,
+    equality_fn=None,
+) -> Any:
+    """Resolve a metadata field between YAML frontmatter and header metadata.
+
+    If both exist and differ, logs a warning and prefers header metadata (Way A).
+    """
+    val_fm = transform(fm_val) if (fm_val is not None and transform) else fm_val
+    val_meta = transform(meta_val) if (meta_val is not None and transform) else meta_val
+
+    if val_fm is not None and val_meta is not None:
+        is_equal = equality_fn(val_fm, val_meta) if equality_fn else (val_fm == val_meta)
+        if not is_equal:
+            diagnostics.append(
+                Diagnostic(
+                    f"Inconsistent {name}: frontmatter specifies '{val_fm}' but header metadata specifies '{val_meta}'. Using header metadata.",
+                    Severity.WARNING,
+                    line_number,
+                )
+            )
+        return val_meta
+    elif val_meta is not None:
+        return val_meta
+    elif val_fm is not None:
+        return val_fm
+    return default
+
+
 def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
+
     """Parse a QuizMD Markdown string into a typed Quiz and diagnostic messages."""
     diagnostics: List[Diagnostic] = []
     lines = text.splitlines()
@@ -293,26 +332,15 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
     # Resolve Quiz-level metadata with consistency checking between Way A & Way B
     # 1. Version
-    fm_ver = frontmatter.get("version")
-    meta_ver = top_meta.get("version")
-    if fm_ver is not None and meta_ver is not None:
-        if fm_ver.strip() != meta_ver.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent version: frontmatter specifies '{fm_ver.strip()}' but header metadata specifies '{meta_ver.strip()}'. Using header metadata '{meta_ver.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("version"),
-                )
-            )
-            quiz_version = meta_ver.strip()
-        else:
-            quiz_version = meta_ver.strip()
-    elif meta_ver is not None:
-        quiz_version = meta_ver.strip()
-    elif fm_ver is not None:
-        quiz_version = fm_ver.strip()
-    else:
-        quiz_version = DEFAULTS["quiz_version"]
+    quiz_version = _resolve_meta_field(
+        "version",
+        frontmatter.get("version"),
+        top_meta.get("version"),
+        default=DEFAULTS["quiz_version"],
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("version"),
+        transform=lambda v: str(v).strip(),
+    )
 
     # 2. Title:
     # Rule: YAML title defines the test title.
@@ -326,19 +354,16 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
             first_explicit_section = s_blk
             break
 
-    # If explicit title: was specified in top_meta, compare with frontmatter for warnings
     if fm_title is not None and meta_title is not None:
-        if fm_title.strip() != meta_title.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{meta_title.strip()}'. Using header title '{meta_title.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("title"),
-                )
-            )
-            quiz_title = meta_title.strip()
-        else:
-            quiz_title = meta_title.strip()
+        quiz_title = _resolve_meta_field(
+            "title",
+            fm_title,
+            meta_title,
+            default=DEFAULTS["quiz_title"],
+            diagnostics=diagnostics,
+            line_number=top_meta_lines.get("title"),
+            transform=lambda v: str(v).strip(),
+        )
     elif fm_title is not None and len([s for s in raw_sections if not s.is_implicit]) == 1:
         # Single-section quiz where user provided frontmatter title AND # Header Title
         only_section = [s for s in raw_sections if not s.is_implicit][0]
@@ -371,138 +396,71 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
             s_blk.title = quiz_title
 
     # 3. Language
-    fm_lang = frontmatter.get("language")
-    meta_lang = top_meta.get("language")
-    if fm_lang is not None and meta_lang is not None:
-        if fm_lang.strip() != meta_lang.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent language: frontmatter specifies '{fm_lang.strip()}' but header metadata specifies '{meta_lang.strip()}'. Using header metadata '{meta_lang.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("language"),
-                )
-            )
-            quiz_language = meta_lang.strip()
-        else:
-            quiz_language = meta_lang.strip()
-    elif meta_lang is not None:
-        quiz_language = meta_lang.strip()
-    elif fm_lang is not None:
-        quiz_language = fm_lang.strip()
-    else:
-        quiz_language = DEFAULTS["language"]
+    quiz_language = _resolve_meta_field(
+        "language",
+        frontmatter.get("language"),
+        top_meta.get("language"),
+        default=DEFAULTS["language"],
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("language"),
+        transform=lambda v: str(v).strip(),
+    )
 
     # 4. Topic
-    fm_topic = frontmatter.get("topic")
-    meta_topic = top_meta.get("topic")
-    if fm_topic is not None and meta_topic is not None:
-        if str(fm_topic).strip() != meta_topic.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent topic: frontmatter specifies '{fm_topic}' but header metadata specifies '{meta_topic.strip()}'. Using header metadata '{meta_topic.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("topic"),
-                )
-            )
-            quiz_topic = meta_topic.strip()
-        else:
-            quiz_topic = meta_topic.strip()
-    elif meta_topic is not None:
-        quiz_topic = meta_topic.strip()
-    elif fm_topic is not None:
-        quiz_topic = str(fm_topic).strip()
-    else:
-        quiz_topic = None
+    quiz_topic = _resolve_meta_field(
+        "topic",
+        frontmatter.get("topic"),
+        top_meta.get("topic"),
+        default=None,
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("topic"),
+        transform=lambda v: str(v).strip(),
+    )
 
     # 5. Keywords / Tags
     fm_kw = frontmatter.get("keywords") or frontmatter.get("tags")
     meta_kw = top_meta.get("keywords") or top_meta.get("tags")
-    parsed_meta_kw = _split_keywords(meta_kw) if meta_kw else []
-    parsed_fm_kw = _split_keywords(fm_kw) if fm_kw else []
-    if parsed_fm_kw and parsed_meta_kw:
-        if parsed_fm_kw != parsed_meta_kw:
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent keywords: frontmatter specifies '{parsed_fm_kw}' but header metadata specifies '{parsed_meta_kw}'. Using header metadata.",
-                    Severity.WARNING,
-                    top_meta_lines.get("keywords") or top_meta_lines.get("tags"),
-                )
-            )
-            quiz_keywords = parsed_meta_kw
-        else:
-            quiz_keywords = parsed_meta_kw
-    elif parsed_meta_kw:
-        quiz_keywords = parsed_meta_kw
-    elif parsed_fm_kw:
-        quiz_keywords = parsed_fm_kw
-    else:
-        quiz_keywords = []
+    quiz_keywords = _resolve_meta_field(
+        "keywords",
+        _split_keywords(fm_kw) if fm_kw else None,
+        _split_keywords(meta_kw) if meta_kw else None,
+        default=[],
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("keywords") or top_meta_lines.get("tags"),
+    )
 
     # 6. Additional Info
-    fm_info = frontmatter.get("additional_info") or frontmatter.get("additionalinformations")
-    meta_info = top_meta.get("additional_info") or top_meta.get("additionalinformations")
-    if fm_info is not None and meta_info is not None:
-        if str(fm_info).strip() != meta_info.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent additional_info: frontmatter specifies '{fm_info}' but header metadata specifies '{meta_info.strip()}'. Using header metadata '{meta_info.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("additional_info") or top_meta_lines.get("additionalinformations"),
-                )
-            )
-            quiz_additional_info = meta_info.strip()
-        else:
-            quiz_additional_info = meta_info.strip()
-    elif meta_info is not None:
-        quiz_additional_info = meta_info.strip()
-    elif fm_info is not None:
-        quiz_additional_info = str(fm_info).strip()
-    else:
-        quiz_additional_info = None
+    quiz_additional_info = _resolve_meta_field(
+        "additional_info",
+        frontmatter.get("additional_info") or frontmatter.get("additionalinformations"),
+        top_meta.get("additional_info") or top_meta.get("additionalinformations"),
+        default=None,
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("additional_info") or top_meta_lines.get("additionalinformations"),
+        transform=lambda v: str(v).strip(),
+    )
 
     # 7. Shuffle
-    fm_shuffle = _parse_bool(frontmatter.get("shuffle"))
-    meta_shuffle = _parse_bool(top_meta.get("shuffle"))
-    if fm_shuffle is not None and meta_shuffle is not None:
-        if fm_shuffle != meta_shuffle:
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent shuffle: frontmatter specifies '{fm_shuffle}' but header metadata specifies '{meta_shuffle}'. Using header metadata.",
-                    Severity.WARNING,
-                    top_meta_lines.get("shuffle"),
-                )
-            )
-            quiz_shuffle = meta_shuffle
-        else:
-            quiz_shuffle = meta_shuffle
-    elif meta_shuffle is not None:
-        quiz_shuffle = meta_shuffle
-    elif fm_shuffle is not None:
-        quiz_shuffle = fm_shuffle
-    else:
-        quiz_shuffle = DEFAULTS["shuffle"]
+    quiz_shuffle = _resolve_meta_field(
+        "shuffle",
+        _parse_bool(frontmatter.get("shuffle")),
+        _parse_bool(top_meta.get("shuffle")),
+        default=DEFAULTS["shuffle"],
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("shuffle"),
+    )
 
     # 8. MC Scoring
-    fm_scoring = frontmatter.get("scoring")
-    meta_scoring = top_meta.get("scoring")
-    if fm_scoring is not None and meta_scoring is not None:
-        if str(fm_scoring).strip().lower() != str(meta_scoring).strip().lower():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent scoring: frontmatter specifies '{fm_scoring}' but header metadata specifies '{meta_scoring.strip()}'. Using header metadata '{meta_scoring.strip()}'.",
-                    Severity.WARNING,
-                    top_meta_lines.get("scoring"),
-                )
-            )
-            quiz_mc_scoring = meta_scoring.strip().lower()
-        else:
-            quiz_mc_scoring = meta_scoring.strip().lower()
-    elif meta_scoring is not None:
-        quiz_mc_scoring = meta_scoring.strip().lower()
-    elif fm_scoring is not None:
-        quiz_mc_scoring = str(fm_scoring).strip().lower()
-    else:
-        quiz_mc_scoring = DEFAULTS["mc_scoring"]
+    quiz_mc_scoring = _resolve_meta_field(
+        "scoring",
+        frontmatter.get("scoring"),
+        top_meta.get("scoring"),
+        default=DEFAULTS["mc_scoring"],
+        diagnostics=diagnostics,
+        line_number=top_meta_lines.get("scoring"),
+        transform=lambda v: str(v).strip().lower(),
+    )
+
 
     # 9. Description
     quiz_description = (

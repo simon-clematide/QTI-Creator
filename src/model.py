@@ -115,11 +115,19 @@ class MultipleChoiceQuestion(Question):
                 "Multiple Choice requires at least 1 correct answer marked.",
                 [Diagnostic("Multiple Choice requires at least 1 correct answer marked.", Severity.ERROR, self.line_number)],
             )
-        if self.scoring not in ("partial", "all-correct", "all_correct", "allcorrect", "per-answer", "per_answer", "points-per-answer", "points_per_answer"):
+        scoring_raw = (self.scoring or "").strip().lower()
+        if scoring_raw in ("all-correct", "all_correct", "allcorrect"):
+            self.scoring = "all-correct"
+        elif scoring_raw in ("points-per-answer", "per-answer", "points_per_answer", "per_answer"):
+            self.scoring = "per-answer"
+        elif scoring_raw in ("partial", ""):
+            self.scoring = "partial"
+        else:
             raise QuizValidationError(
                 f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct', 'per-answer'.",
                 [Diagnostic(f"Invalid scoring method '{self.scoring}' for Multiple Choice. Supported: 'partial', 'all-correct', 'per-answer'.", Severity.ERROR, self.line_number)],
             )
+
 
 
 @dataclass
@@ -252,24 +260,12 @@ class Section:
         return diagnostics
 
 
-@dataclass
 class Quiz:
     """Top-level Quiz container."""
-    title: str = field(default_factory=lambda: DEFAULTS["quiz_title"])
-    description: Optional[str] = None
-    sections: List[Section] = field(default_factory=list)
-    identifier: str = field(default_factory=lambda: generate_id("quiz"))
-    language: str = field(default_factory=lambda: DEFAULTS["language"])
-    version: str = field(default_factory=lambda: DEFAULTS["quiz_version"])
-    topic: Optional[str] = None
-    keywords: List[str] = field(default_factory=list)
-    additional_info: Optional[str] = None
-    shuffle: bool = True
-    mc_scoring: str = field(default_factory=lambda: DEFAULTS["mc_scoring"])
 
     def __init__(
         self,
-        title: str = field(default_factory=lambda: DEFAULTS["quiz_title"]),
+        title: Optional[str] = None,
         description: Optional[str] = None,
         questions: Optional[List[Question]] = None,
         sections: Optional[List[Section]] = None,
@@ -282,6 +278,7 @@ class Quiz:
         shuffle: bool = True,
         mc_scoring: Optional[str] = None,
     ):
+
         self.title = title or DEFAULTS["quiz_title"]
         self.description = description
         self.identifier = identifier or generate_id("quiz")

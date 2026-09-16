@@ -182,6 +182,12 @@ def extract_quiz_media_references(quiz: Quiz) -> List[MediaReference]:
         elif isinstance(q, OrderQuestion):
             for item in q.items:
                 q_refs.extend(extract_media_references(item.text, question_id=q.identifier))
+        elif isinstance(q, FillBlankQuestion):
+            for g in q.gaps:
+                q_refs.extend(extract_media_references(g.expected_value, question_id=q.identifier))
+                for alt in g.alternatives:
+                    q_refs.extend(extract_media_references(alt, question_id=q.identifier))
+
 
         all_refs.extend(q_refs)
     return all_refs

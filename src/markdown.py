@@ -15,6 +15,9 @@ import re
 import urllib.parse
 from typing import Dict, List, Optional
 
+# Shared pattern for fill-in-the-blank gaps: {{answer}} or {{answer|alt1|alt2}}
+RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
+
 
 def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Convert a Markdown text string into well-formed XHTML suitable for <itemBody>.
@@ -122,10 +125,18 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
         i += 1
         while i < len(lines):
             next_line = lines[i].strip()
-            if not next_line or next_line.startswith("```") or next_line.startswith("$$") or next_line.startswith(">") or re.match(r"^[-*]\s+", next_line) or re.match(r"^\d+\.\s+", next_line):
+            if (
+                not next_line
+                or next_line.startswith("```")
+                or next_line.startswith("$$")
+                or next_line.startswith(">")
+                or re.match(r"^[-*]\s+", next_line)
+                or re.match(r"^\d+\.\s+", next_line)
+            ):
                 break
             para_lines.append(next_line)
             i += 1
+
 
         para_text = " ".join(para_lines)
         output_blocks.append(f"<p>{_format_inlines(para_text, asset_map=asset_map)}</p>")

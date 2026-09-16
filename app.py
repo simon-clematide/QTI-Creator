@@ -2,7 +2,14 @@
 
 Author quizzes in clean, natural Markdown and download OpenOLAT-compatible
 IMS QTI 2.1 packages.
+
+Architecture overview:
+- Gradio Web UI with dual-pane layout: editor/controls on the left, live preview on the right.
+- Staged parsing pipeline (`src.parser`) converting QuizMD into typed model structures (`src.model`).
+- Media resolution and preflight packaging (`src.media`) for web and embedded assets.
+- Standardized IMS QTI 2.1 packaging (`src.packager`, `src.qti21`) for OpenOLAT import.
 """
+
 
 import os
 import tempfile

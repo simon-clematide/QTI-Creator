@@ -1,5 +1,9 @@
-from typing import Dict, Optional
+"""QTI 2.1 generator for Kprim questions."""
+
 import html
+from typing import Dict, Optional
+
+from src.defaults import DEFAULTS
 from src.markdown import markdown_to_qti_xhtml
 from src.model import KprimQuestion
 from src.qti21.item import wrap_assessment_item
@@ -7,6 +11,11 @@ from src.qti21.item import wrap_assessment_item
 
 def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
     """Generate QTI 2.1 XML for a Kprim question with 4/4, 3/4, <=2/4 scoring."""
+    num_stmts = DEFAULTS["kprim_num_statements"]
+    half_points_ratio = DEFAULTS["kprim_half_points"]
+    full_threshold = float(num_stmts)
+    half_threshold = float(num_stmts - 1)
+
     correct_values = []
     map_entries = []
     associable_choices = []
@@ -34,25 +43,27 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
   </responseDeclaration>"""
 
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
-    shuffle_str = "true" if q.shuffle else "false"
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
     item_body = f"""    {prompt_xhtml}
-    <matchInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxAssociations="4">
+    <matchInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxAssociations="{num_stmts}">
+
       <simpleMatchSet>
 {chr(10).join(associable_choices)}
       </simpleMatchSet>
       <simpleMatchSet>
-        <simpleAssociableChoice identifier="correct" matchMax="4">+</simpleAssociableChoice>
-        <simpleAssociableChoice identifier="wrong" matchMax="4">-</simpleAssociableChoice>
+        <simpleAssociableChoice identifier="correct" matchMax="{num_stmts}">+</simpleAssociableChoice>
+        <simpleAssociableChoice identifier="wrong" matchMax="{num_stmts}">-</simpleAssociableChoice>
       </simpleMatchSet>
     </matchInteraction>"""
 
-    half_pts = q.points * 0.5
+    half_pts = q.points * half_points_ratio
     response_proc = f"""  <responseProcessing>
     <responseCondition>
       <responseIf>
         <gte>
           <mapResponse identifier="RESPONSE"/>
-          <baseValue baseType="float">4.0</baseValue>
+          <baseValue baseType="float">{full_threshold}</baseValue>
         </gte>
         <setOutcomeValue identifier="SCORE">
           <baseValue baseType="float">{q.points}</baseValue>
@@ -61,7 +72,7 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
       <responseElseIf>
         <gte>
           <mapResponse identifier="RESPONSE"/>
-          <baseValue baseType="float">3.0</baseValue>
+          <baseValue baseType="float">{half_threshold}</baseValue>
         </gte>
         <setOutcomeValue identifier="SCORE">
           <baseValue baseType="float">{half_pts}</baseValue>
@@ -74,6 +85,7 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
       </responseElse>
     </responseCondition>
   </responseProcessing>"""
+
 
     return wrap_assessment_item(
         identifier=q.identifier,

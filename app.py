@@ -68,15 +68,15 @@ def update_preview_and_validate(
 
     msg_lines = []
     if errors:
-        msg_lines.append("⚠️ **Validation Errors:**")
+        msg_lines.append("### ⚠️ Validation")
         for err in errors:
             msg_lines.append(f"- {str(err)}")
     elif warnings:
-        msg_lines.append(f"✅ **{len(quiz.questions)} question(s) parsed.** (With warnings:)\n")
+        msg_lines.append(f"### ⚠️ Validation\n\n{len(quiz.questions)} question(s) parsed with warnings:")
         for warn in warnings:
             msg_lines.append(f"- {str(warn)}")
     else:
-        msg_lines.append(f"✅ **{len(quiz.questions)} question(s) successfully parsed with zero errors.**")
+        msg_lines.append(f"### ✅ Validation\n\n{len(quiz.questions)} question(s) parsed with zero issues.")
 
     media_summary = media_res.summary_text()
     if media_summary:
@@ -201,14 +201,15 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                             scale=2,
                         )
 
+                    gr.Markdown("### 📝 QuizMD Source")
                     quiz_input = gr.Textbox(
                         value=SAMPLE_ALL_TYPES,
-                        label="QuizMD Source",
+                        show_label=False,
                         placeholder="Write your quiz here in Markdown...",
                         lines=22,
                     )
 
-                    with gr.Accordion("🖼️ Media & Image Packaging (Optional)", open=False):
+                    with gr.Accordion("🖼️ Media Packaging", open=False):
                         include_media_cb = gr.Checkbox(
                             value=False,
                             label="Include media in QTI package",
@@ -220,10 +221,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                             info="Extract and display images referenced by relative paths from the uploaded Media ZIP.",
                         )
                         media_zip_upload = gr.File(
-                            label="Media ZIP (Required when including images referenced by relative paths)",
+                            label="Media ZIP",
                             file_types=[".zip"],
                             type="filepath",
                         )
+                        gr.Markdown("<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>")
 
                     with gr.Row():
                         btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
@@ -237,7 +239,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                         interactive=False,
                     )
                     with gr.Row():
-                        gr.Markdown("### 👁️ Question Preview")
+                        gr.Markdown("### 👁️ Preview")
                     render_math_cb = gr.Checkbox(
                         value=True,
                         label="Render math with MathJax (matches OpenOLAT)",

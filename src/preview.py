@@ -31,8 +31,9 @@ def render_quiz_preview_html(
 
     If asset_map is provided (mapping relative image source -> data URI or resolved path),
     images in prompts, choices, hints, and feedback are rewritten to display them in preview.
-    If render_math is True (default), MathJax 3 is included and processes $...$ and $$...$$ formulas.
-    If render_math is False, formulas are displayed as raw source code.
+    If render_math is True (default), math delimiters ($...$ and $$...$$) are preserved in the
+    output so that MathJax — loaded globally by the host application — can render them after
+    the HTML is injected into the DOM. If render_math is False, formulas are shown as raw code.
     """
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
@@ -174,24 +175,7 @@ def render_quiz_preview_html(
         else:
             sections_html.extend(sec_cards)
 
-    mathjax_block = """
-<script>
-window.MathJax = {
-  tex: {
-    inlineMath: [['$', '$']],
-    displayMath: [['$$', '$$']]
-  },
-  options: {
-    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-  },
-  svg: { fontCache: 'global' }
-};
-</script>
-<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-""" if render_math else ""
-
     return f"""
-{mathjax_block}
 <style>
   pre {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; margin: 8px 0; }}
   code {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; color: #0f172a; }}

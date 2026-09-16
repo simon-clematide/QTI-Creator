@@ -151,7 +151,27 @@ theme = gr.themes.Soft(
     ],
 )
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
+_MATHJAX_HEAD = """
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+"""
+
+# JS called after each preview update to re-typeset the newly injected HTML.
+# MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
+_MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
+
+with gr.Blocks(title="QTI-Creator for OpenOLAT", head=_MATHJAX_HEAD) as demo:
     gr.Markdown(
         """
         # 📝 QTI-Creator: Markdown to OpenOLAT QTI 2.1
@@ -245,28 +265,28 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name="preview",
-            )
+            ).then(js=_MATHJAX_TYPESET_JS)
 
             show_relative_images_cb.change(
                 fn=update_preview_and_validate,
                 inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
-            )
+            ).then(js=_MATHJAX_TYPESET_JS)
 
             media_zip_upload.change(
                 fn=update_preview_and_validate,
                 inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
-            )
+            ).then(js=_MATHJAX_TYPESET_JS)
 
             render_math_cb.change(
                 fn=update_preview_and_validate,
                 inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
-            )
+            ).then(js=_MATHJAX_TYPESET_JS)
 
             btn_convert.click(
                 fn=convert_and_download,
@@ -281,12 +301,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
-            )
+            ).then(js=_MATHJAX_TYPESET_JS)
 
         # TAB 2: Syntax Cheat Sheet
         with gr.TabItem("📖 Syntax Cheat Sheet"):
             gr.Markdown(
-                """
+                r"""
                 ### QuizMD Cheat Sheet
                 QuizMD uses standard Markdown whenever possible. Question types are detected automatically from the syntax:
 

@@ -138,6 +138,38 @@ Feedback: Some feedback
         # Q4 has neither badge
         self.assertIn('Single Choice</span>\n      \n      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">1.0 pt</span>', html_out)
 
+    def test_preview_section_summary_counts(self):
+        text = """---
+title: Test Exam
+---
+
+# Section 1
+Instructions for section 1.
+
+## Q1
+Hint: Look closely
+- [X] A
+- [ ] B
+
+## Q2
+Feedback: Great work!
+- [X] C
+- [ ] D
+
+# Section 2
+## Q3
+- [X] E
+- [ ] F
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Section 1 has 2 Qs, 1 Hint, 1 Feedback, 2.0 pt in sequence Qs &bull; 💡 &bull; 💬 &bull; pt
+        self.assertIn("2 Qs &bull; 💡 1 &bull; 💬 1 &bull; 2.0 pt", html_out)
+        # Section 2 has 1 Qs, 0 hints, 0 feedbacks -> 1 Qs &bull; 1.0 pt
+        self.assertIn("1 Qs &bull; 1.0 pt", html_out)
+
 
 if __name__ == "__main__":
     unittest.main()

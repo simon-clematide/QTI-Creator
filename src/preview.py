@@ -102,6 +102,17 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
         sec_header = ""
         if has_multiple_sections:
             sec_points = sum(q.points for q in sec.questions)
+            sec_hints = sum(1 for q in sec.questions if q.hint and q.hint.strip())
+            sec_feedbacks = sum(1 for q in sec.questions if q.feedback and q.feedback.strip())
+
+            sec_summary_parts = [f"{len(sec.questions)} Qs"]
+            if sec_hints > 0:
+                sec_summary_parts.append(f"💡 {sec_hints}")
+            if sec_feedbacks > 0:
+                sec_summary_parts.append(f"💬 {sec_feedbacks}")
+            sec_summary_parts.append(f"{sec_points} pt")
+            sec_summary_text = " &bull; ".join(sec_summary_parts)
+
             desc_html = (
                 f"<div style='color: #475569; font-size: 0.92em; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map)}</div>"
                 if sec.description
@@ -123,7 +134,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
     <h4 style="margin: 0; color: #1e293b; font-size: 1.1em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <span>📁</span> <span>{html.escape(sec.title)}</span> {md_warning_badge}
     </h4>
-    <span style="color: #64748b; font-size: 0.85em; font-weight: 500; white-space: nowrap; margin-left: 12px;">{len(sec.questions)} Qs &bull; {sec_points} pt</span>
+    <span style="color: #64748b; font-size: 0.85em; font-weight: 500; white-space: nowrap; margin-left: 12px;">{sec_summary_text}</span>
   </div>
   {desc_html}
   {''.join(sec_cards)}

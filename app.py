@@ -171,7 +171,7 @@ window.MathJax = {
 # MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
 _MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT", head=_MATHJAX_HEAD) as demo:
+with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
     gr.Markdown(
         """
         # 📝 QTI-Creator: Markdown to OpenOLAT QTI 2.1
@@ -483,4 +483,4 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT", head=_MATHJAX_HEAD) as demo:
             )
 
 if __name__ == "__main__":
-    demo.launch(theme=theme)
+    demo.launch(theme=theme, head=_MATHJAX_HEAD)

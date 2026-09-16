@@ -89,13 +89,13 @@ def update_preview_and_validate(
 def convert_and_download(text: str, include_media: bool, media_zip_file):
     """Generate the QTI 2.1 ZIP package and return the temporary file path for download."""
     if not text or not text.strip():
-        return None, "❌ Cannot generate package: text is empty."
+        return gr.update(visible=False), "❌ Cannot generate package: text is empty.", gr.update(visible=False), False
 
     quiz, diagnostics = parse_quizmd(text)
     errors = [d for d in diagnostics if d.severity == Severity.ERROR]
     if errors:
         error_details = "\n".join(f"- {str(e)}" for e in errors)
-        return None, f"❌ **Fix errors before downloading:**\n{error_details}"
+        return gr.update(visible=False), f"❌ **Fix errors before downloading:**\n{error_details}", gr.update(visible=False), False
 
     media_zip_bytes = None
     if media_zip_file is not None:
@@ -103,14 +103,14 @@ def convert_and_download(text: str, include_media: bool, media_zip_file):
             with open(media_zip_file.name, "rb") as f:
                 media_zip_bytes = f.read()
         except Exception as e:
-            return None, f"❌ **Cannot read uploaded Media ZIP:** {e}"
+            return gr.update(visible=False), f"❌ **Cannot read uploaded Media ZIP:** {e}", gr.update(visible=False), False
 
     # Perform media preflight (passive if include_media is False, active if True)
     media_res = preflight_media(quiz, include_media=include_media, media_zip_bytes=media_zip_bytes)
     if include_media and media_res.has_errors:
         media_errors = [d for d in media_res.diagnostics if d.severity == Severity.ERROR]
         error_details = "\n".join(f"- {str(e)}" for e in media_errors)
-        return None, f"❌ **Media Preflight Failed:**\n{error_details}"
+        return gr.update(visible=False), f"❌ **Media Preflight Failed:**\n{error_details}", gr.update(visible=False), False
 
     # Create temporary zip file
     safe_name = "".join(c if c.isalnum() else "_" for c in quiz.title).strip("_") or "qti_quiz"
@@ -120,7 +120,12 @@ def convert_and_download(text: str, include_media: bool, media_zip_file):
     create_qti_package(quiz, zip_path, media_preflight=media_res)
     
     media_info = f"\n{media_res.summary_text()}" if media_res.summary_text() else ""
-    return zip_path, f"🎉 **Success!** Download your OpenOLAT QTI package below.{media_info}"
+    return (
+        gr.update(value=zip_path, visible=True),
+        f"🎉 **Success!** Download your OpenOLAT QTI package below.{media_info}",
+        gr.update(visible=False),
+        True,
+    )
 
 
 def load_example(example_name: str):
@@ -197,6 +202,16 @@ APP_CSS = """
 }
 .svelte-8prmba {
   min-height: 85px !important;
+}
+
+/* Outdated package banner styling */
+.outdated-banner {
+  background-color: #fefce8 !important;
+  border: 1px solid #fde047 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  color: #854d0e !important;
+  margin-bottom: 8px !important;
 }
 """
 
@@ -278,9 +293,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                 # RIGHT COLUMN: Preview & Download
                 with gr.Column(scale=5):
                     status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
+                    has_package_state = gr.State(value=False)
+                    outdated_warning = gr.Markdown(
+                        "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
+                        visible=False,
+                        elem_classes=["no-scroll-block", "outdated-banner"],
+                    )
                     download_output = gr.File(
                         label="Download QTI 2.1 ZIP Package",
                         interactive=False,
+                        visible=False,
                     )
                     with gr.Row():
                         gr.Markdown("### 👁️ Preview", scale=2, elem_classes=["no-scroll-block"])
@@ -290,6 +312,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                             scale=3,
                         )
                     preview_display = gr.HTML()
+
+            def on_source_or_media_changed(has_pkg: bool):
+                """Show outdated warning if a package was previously generated."""
+                if has_pkg:
+                    return gr.update(visible=True)
+                return gr.update(visible=False)
 
             # Event wiring
             example_dropdown.change(
@@ -305,6 +333,20 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                 outputs=[quiz_input],
                 api_name=False,
             )
+
+            # Changes to quiz source or media invalidate previously generated package
+            for trigger in (
+                quiz_input.change,
+                include_media_cb.change,
+                show_relative_images_cb.change,
+                media_zip_upload.change,
+            ):
+                trigger(
+                    fn=on_source_or_media_changed,
+                    inputs=[has_package_state],
+                    outputs=[outdated_warning],
+                    api_name=False,
+                )
 
             btn_preview.click(
                 fn=update_preview_and_validate,
@@ -337,7 +379,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
             btn_convert.click(
                 fn=convert_and_download,
                 inputs=[quiz_input, include_media_cb, media_zip_upload],
-                outputs=[download_output, status_box],
+                outputs=[download_output, status_box, outdated_warning, has_package_state],
                 api_name="convert",
             )
 

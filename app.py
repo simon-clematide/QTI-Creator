@@ -165,19 +165,47 @@ window.MathJax = {
 };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style>
+/* Prevent unnecessary scrollbars on markdown headings and containers */
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  overflow: visible !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+.prose {
+  overflow: visible !important;
+}
+/* Compact upload field styling: reduce font size and padding */
+.svelte-1vmd51o {
+  font-size: 0.85rem !important;
+}
+.svelte-1vmd51o .icon-wrap {
+  width: 28px !important;
+  height: 28px !important;
+}
+.svelte-8prmba {
+  min-height: 85px !important;
+}
+</style>
 """
 
 # JS called after each preview update to re-typeset the newly injected HTML.
 # MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
 _MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
+with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
     gr.Markdown(
         """
-        # 📝 QTI-Creator: Markdown to OpenOLAT QTI 2.1
-        Write quizzes in natural Markdown. No XML or complex syntax required. Export standardized 1EdTech Question & Test Interoperability (QTI) 2.1 ZIP packages ready for direct import into OpenOLAT.
+        # QTI-Creator: Markdown to OpenOLAT QTI 2.1 (Beta)
+        Write quizzes in natural Markdown. No XML or complex syntax required. Create QTI 2.1 import files for OpenOLAT.
 
-        Learn more: [QTI 2.1 specification](https://www.imsglobal.org/question/qtiv2p1/index.html) · [OpenOLAT eTesting](https://www.openolat.com/etesting)
+        <details style="margin-top: 8px; color: #475569; font-size: 0.95em;">
+          <summary style="cursor: pointer; font-weight: 500; color: #4338ca;">ℹ️ Learn more about QTI 2.1 & OpenOLAT</summary>
+          <div style="margin-top: 6px; line-height: 1.5;">
+            Export standardized 1EdTech Question & Test Interoperability (QTI) 2.1 ZIP packages ready for direct import into the OpenOLAT Question Bank or Course Tests.<br>
+            Specifications & Guides: <a href="https://www.imsglobal.org/question/qtiv2p1/index.html" target="_blank" style="color: #2563eb; text-decoration: underline;">1EdTech QTI 2.1 specification</a> · <a href="https://www.openolat.com/etesting" target="_blank" style="color: #2563eb; text-decoration: underline;">OpenOLAT eTesting</a>
+          </div>
+        </details>
         """
     )
 
@@ -199,6 +227,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                             file_types=[".md", ".txt"],
                             type="filepath",
                             scale=2,
+                            height=105,
                         )
 
                     gr.Markdown("### 📝 QuizMD Source")
@@ -239,11 +268,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                         interactive=False,
                     )
                     with gr.Row():
-                        gr.Markdown("### 👁️ Preview")
-                    render_math_cb = gr.Checkbox(
-                        value=True,
-                        label="Render math with MathJax (matches OpenOLAT)",
-                    )
+                        gr.Markdown("### 👁️ Preview", scale=2)
+                        render_math_cb = gr.Checkbox(
+                            value=True,
+                            label="Render math with MathJax (matches OpenOLAT)",
+                            scale=3,
+                        )
                     preview_display = gr.HTML()
 
             # Event wiring

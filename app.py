@@ -165,16 +165,28 @@ window.MathJax = {
 };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-<style>
-/* Prevent unnecessary scrollbars on markdown headings and containers */
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+"""
+
+APP_CSS = """
+/* Surgical override for static Gradio markdown/header blocks to eliminate thin spurious scrollbar gutters */
+.no-scroll-block,
+.no-scroll-block > div,
+.no-scroll-block .prose {
+  overflow: visible !important;
+  overflow-y: visible !important;
+}
+
+.no-scroll-block h1,
+.no-scroll-block h2,
+.no-scroll-block h3,
+.no-scroll-block h4,
+.no-scroll-block h5,
+.no-scroll-block h6 {
   overflow: visible !important;
   margin-top: 0.25rem !important;
   margin-bottom: 0.25rem !important;
 }
-.prose {
-  overflow: visible !important;
-}
+
 /* Compact upload field styling: reduce font size and padding */
 .svelte-1vmd51o {
   font-size: 0.85rem !important;
@@ -186,15 +198,17 @@ window.MathJax = {
 .svelte-8prmba {
   min-height: 85px !important;
 }
-</style>
 """
 
 # JS called after each preview update to re-typeset the newly injected HTML.
 # MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
 _MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
-    gr.Markdown("# QTI-Creator: Markdown to OpenOLAT QTI 2.1 (Beta)")
+with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
+    gr.Markdown(
+        "# QTI-Creator: Markdown to OpenOLAT QTI 2.1 (Beta)",
+        elem_classes=["no-scroll-block"],
+    )
 
     with gr.Accordion("Write quizzes in natural Markdown and export them directly to OpenOLAT.", open=False):
         gr.Markdown(
@@ -228,7 +242,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             height=105,
                         )
 
-                    gr.Markdown("### 📝 QuizMD Source")
+                    gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
                     quiz_input = gr.Textbox(
                         value=SAMPLE_ALL_TYPES,
                         show_label=False,
@@ -252,7 +266,10 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             file_types=[".zip"],
                             type="filepath",
                         )
-                        gr.Markdown("<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>")
+                        gr.Markdown(
+                            "<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>",
+                            elem_classes=["no-scroll-block"],
+                        )
 
                     with gr.Row():
                         btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
@@ -260,13 +277,13 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
 
                 # RIGHT COLUMN: Preview & Download
                 with gr.Column(scale=5):
-                    status_box = gr.Markdown("Ready.")
+                    status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
                     download_output = gr.File(
                         label="Download QTI 2.1 ZIP Package",
                         interactive=False,
                     )
                     with gr.Row():
-                        gr.Markdown("### 👁️ Preview", scale=2)
+                        gr.Markdown("### 👁️ Preview", scale=2, elem_classes=["no-scroll-block"])
                         render_math_cb = gr.Checkbox(
                             value=True,
                             label="Render math with MathJax (matches OpenOLAT)",
@@ -578,4 +595,4 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
             )
 
 if __name__ == "__main__":
-    demo.launch(theme=theme, head=_MATHJAX_HEAD)
+    demo.launch(theme=theme, head=_MATHJAX_HEAD, css=APP_CSS)

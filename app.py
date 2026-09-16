@@ -619,7 +619,191 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     """
                 )
 
-        # TAB 3: OpenOLAT Import Guide
+        # TAB 3: Prompting Markdown Quizzes
+        with gr.TabItem("✨ Prompting Markdown Quizzes"):
+            gr.Markdown(
+                """
+                ## ✨ Prompting Markdown Quizzes
+
+                AI assistants can help you turn existing teaching materials—such as lecture slides, handouts, notes, or textbook excerpts—into a first draft of a QuizMD quiz.
+
+                Upload or provide your source material to an AI assistant, tell it what you want to assess, and ask it to return the questions in the QuizMD format understood by QTI-Creator.
+
+                > **Important:** Treat AI-generated questions as a draft. Check the factual accuracy, difficulty, wording, answer keys, and suitability for your learning objectives before importing them into QTI-Creator.
+
+                ### A simple workflow
+
+                1. **Provide your material** → Upload your slides, notes, or other source material.
+                2. **Describe the quiz** → Specify the audience, topics, number and types of questions, and desired difficulty.
+                3. **Generate QuizMD** → Give the AI the QuizMD prompt below and ask for Markdown only.
+                4. **Review and revise** → Check every question and answer against your teaching material.
+                5. **Copy into QTI-Creator** → Paste the resulting Markdown into the QuizMD Source editor and use Validation and Preview before generating the QTI package.
+                """
+            )
+
+            with gr.Accordion("▶ Prompt template for AI assistants", open=False):
+                gr.Markdown(
+                    "Copy this prompt template, fill in your audience and topic requirements, and attach your teaching material in your preferred AI tool:"
+                )
+                ai_prompt_template = (
+                    "You are helping me draft an assessment from teaching material that I provide.\n"
+                    "Create a quiz based on the supplied material. Use the source material as the\n"
+                    "basis for factual questions and answers. Do not invent facts that are not\n"
+                    "supported by the material.\n\n"
+                    "Audience:\n"
+                    "[describe the students/course level]\n\n"
+                    "Learning goals or topics to assess:\n"
+                    "[describe them here]\n\n"
+                    "Quiz requirements:\n"
+                    "[number of questions, desired difficulty, question types, etc.]\n\n"
+                    "Return the quiz as Markdown using the QuizMD conventions below.\n\n"
+                    "QUIZ STRUCTURE\n"
+                    "Use:\n"
+                    "# Quiz title\n"
+                    "Optional introductory text.\n\n"
+                    "Each question starts with:\n"
+                    "## Question text\n\n"
+                    "QUESTION TYPES\n\n"
+                    "Single Choice\n"
+                    "Use uppercase [X] for the one correct answer and [ ] for incorrect answers.\n"
+                    "Example:\n"
+                    "## Which method splits text into smaller units?\n"
+                    "- [ ] Parsing\n"
+                    "- [X] Tokenization\n"
+                    "- [ ] Classification\n"
+                    "- [ ] Generation\n\n"
+                    "Multiple Choice\n"
+                    "Use lowercase [x] for every correct answer and [ ] for incorrect answers.\n"
+                    "There may be one or more correct answers.\n"
+                    "Example:\n"
+                    "## Which of these are common NLP tasks?\n"
+                    "- [x] Tokenization\n"
+                    "- [x] Named entity recognition\n"
+                    "- [ ] Image resizing\n"
+                    "- [x] Part-of-speech tagging\n\n"
+                    "IMPORTANT:\n"
+                    "[X] and [x] are case-sensitive.\n"
+                    "Do not mix uppercase [X] and lowercase [x] within one question.\n\n"
+                    "True / False\n"
+                    "Use Single Choice syntax with exactly True and False.\n"
+                    "Example:\n"
+                    "## A tokenizer always assigns part-of-speech tags.\n"
+                    "- [ ] True\n"
+                    "- [X] False\n\n"
+                    "Kprim\n"
+                    "Write exactly four statements.\n"
+                    "Use [+] for a true/correct statement and [-] for a false/incorrect statement.\n"
+                    "Example:\n"
+                    "## Which statements about language models are correct?\n"
+                    "- [+] They can assign probabilities to sequences.\n"
+                    "- [-] They require every sentence to have the same length.\n"
+                    "- [+] They can be trained on text corpora.\n"
+                    "- [-] They always produce factually correct output.\n\n"
+                    "Fill-in-the-Blank\n"
+                    "Put the expected answer inside double braces.\n"
+                    "Example:\n"
+                    "## Complete the sentence.\n"
+                    "The process of splitting text into units is called {{tokenization}}.\n"
+                    "Alternative accepted answers may be separated with |:\n"
+                    "The spelling may be {{gray | grey}}.\n\n"
+                    "Numerical\n"
+                    "Give the target value with = and optionally a tolerance with ±.\n"
+                    "Example:\n"
+                    "## What is the approximate acceleration due to gravity on Earth?\n"
+                    "= 9.81 ± 0.05\n\n"
+                    "Order / Sequencing\n"
+                    "Use an ordered Markdown task list in the correct order.\n"
+                    "Example:\n"
+                    "## Order these stages.\n"
+                    "1. [ ] Tokenization\n"
+                    "2. [ ] Feature extraction\n"
+                    "3. [ ] Model inference\n"
+                    "4. [ ] Evaluation\n\n"
+                    "Essay / Free Text\n"
+                    "Write the question without an answer specification.\n"
+                    "Example:\n"
+                    "## Explain one limitation of evaluating a language model using accuracy alone.\n\n"
+                    "OPTIONAL QUESTION SETTINGS\n"
+                    "Questions are worth 1 point by default.\n"
+                    "Use this only when a different weight is needed:\n"
+                    "Points: 2\n\n"
+                    "OUTPUT REQUIREMENTS\n"
+                    "- Return only the finished QuizMD Markdown, without commentary before or after it.\n"
+                    "- Use question types appropriate to the material and learning objectives.\n"
+                    "- Write clear, unambiguous questions.\n"
+                    "- For Single Choice, make exactly one answer correct.\n"
+                    "- For Multiple Choice, identify every correct alternative.\n"
+                    "- For Kprim, write exactly four statements.\n"
+                    "- Make distractors plausible but clearly incorrect according to the source material.\n"
+                    "- Avoid trivia unless it is relevant to the learning objectives.\n"
+                    "- Avoid questions that can be answered from superficial wording cues.\n"
+                    "- Do not invent information absent from the supplied teaching material.\n"
+                    "- Do not put the answer into the wording of the question.\n"
+                    "- Check each answer key against the source material before returning the quiz."
+                )
+                prompt_textbox = gr.Textbox(
+                    value=ai_prompt_template,
+                    lines=18,
+                    show_label=False,
+                    interactive=False,
+                )
+                with gr.Row():
+                    btn_copy_prompt = gr.Button("📋 Copy Prompt Template", variant="secondary")
+                    copy_status = gr.Markdown("", elem_classes=["no-scroll-block"])
+
+                btn_copy_prompt.click(
+                    None,
+                    inputs=[prompt_textbox],
+                    outputs=[copy_status],
+                    js="""(val) => {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(val);
+                        }
+                        return "✅ Prompt template copied to clipboard!";
+                    }""",
+                )
+
+            with gr.Accordion("▶ Customize your request", open=False):
+                gr.Markdown(
+                    """
+                    You can append short, focused requirement blocks to the prompt template. Here are two practical examples:
+
+                    **Example 1: Concept-focused linguistics quiz**
+                    ```text
+                    Create 10 questions for first-year linguistics students.
+                    Focus on tokenization, morphology, and part-of-speech tagging.
+                    Use 4 Single Choice, 3 Multiple Choice, 2 True/False, and 1 Essay question.
+                    Prefer conceptual understanding over memorizing terminology.
+                    ```
+
+                    **Example 2: Formative quiz from lecture slides**
+                    ```text
+                    Create a short formative quiz from the attached lecture slides.
+                    Use 6 questions with mixed question types.
+                    Target concepts students commonly misunderstand.
+                    Keep the difficulty appropriate for a second-year university course.
+                    ```
+                    """
+                )
+
+            with gr.Accordion("▶ Reviewing AI-generated quizzes", open=False):
+                gr.Markdown(
+                    """
+                    Before using the quiz in an assessment or course, check:
+
+                    - **Source accuracy:** Are all questions and answers actually supported by your supplied teaching material?
+                    - **Correct answer keys:** Are the designated correct answers factually and pedagogically accurate?
+                    - **Single vs. Multiple Choice:** Is each Single Choice (`[X]`) unambiguously single-answer? Does each Multiple Choice (`[x]`) identify all correct alternatives?
+                    - **Plausible distractors:** Are distractors plausible without being unfairly misleading or ambiguous?
+                    - **Learning alignment:** Does the quiz assess your intended learning objectives rather than incidental trivia?
+                    - **Difficulty & tone:** Is the difficulty appropriate for your students?
+                    - **Validation check:** When pasted into QTI-Creator, does the **Validation** panel report zero issues?
+
+                    *AI can accelerate drafting, but the instructor remains responsible for the assessment content.*
+                    """
+                )
+
+        # TAB 4: OpenOLAT Import Guide
         with gr.TabItem("🚀 How to Import into OpenOLAT"):
             gr.Markdown(
                 """

@@ -241,7 +241,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT", head=_MATHJAX_HEAD) as demo:
                     render_math_cb = gr.Checkbox(
                         value=True,
                         label="Render math with MathJax (matches OpenOLAT)",
-                        info="Renders $...$ and $$...$$ formulas using MathJax 3, the same engine OpenOLAT uses.",
                     )
                     preview_display = gr.HTML()
 

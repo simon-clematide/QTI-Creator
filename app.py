@@ -23,8 +23,13 @@ from src.preview import render_quiz_preview_html
 from src.validation import Severity
 
 
-def update_preview_and_validate(text: str, show_relative_images: bool = False, media_zip_file = None):
-    """Parse the text, resolve images if requested, render preview, and format status."""
+def update_preview_and_validate(
+    text: str,
+    show_relative_images: bool,
+    media_zip_file,
+    render_math: bool = True,
+):
+    """Run parsing and media validation, returning preview HTML and diagnostics Markdown."""
     if not text or not text.strip():
         return (
             "<p style='color: #64748b; font-style: italic;'>Enter questions or load an example to begin.</p>",
@@ -51,7 +56,11 @@ def update_preview_and_validate(text: str, show_relative_images: bool = False, m
     else:
         media_res = preflight_media(quiz, include_media=False)
 
-    preview_html = render_quiz_preview_html(quiz, asset_map=asset_map)
+    preview_html = render_quiz_preview_html(
+        quiz,
+        asset_map=asset_map,
+        render_math=render_math,
+    )
     diagnostics.extend(media_res.diagnostics)
 
     errors = [d for d in diagnostics if d.severity == Severity.ERROR]
@@ -207,7 +216,13 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                         label="Download QTI 2.1 ZIP Package",
                         interactive=False,
                     )
-                    gr.Markdown("### 👁️ Question Preview")
+                    with gr.Row():
+                        gr.Markdown("### 👁️ Question Preview")
+                    render_math_cb = gr.Checkbox(
+                        value=True,
+                        label="Render math with MathJax (matches OpenOLAT)",
+                        info="Renders $...$ and $$...$$ formulas using MathJax 3, the same engine OpenOLAT uses.",
+                    )
                     preview_display = gr.HTML()
 
             # Event wiring
@@ -227,21 +242,28 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
 
             btn_preview.click(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name="preview",
             )
 
             show_relative_images_cb.change(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
             )
 
             media_zip_upload.change(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
+                outputs=[preview_display, status_box],
+                api_name=False,
+            )
+
+            render_math_cb.change(
+                fn=update_preview_and_validate,
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
             )
@@ -256,7 +278,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
             # Initial preview load
             demo.load(
                 fn=update_preview_and_validate,
-                inputs=[quiz_input, show_relative_images_cb, media_zip_upload],
+                inputs=[quiz_input, show_relative_images_cb, media_zip_upload, render_math_cb],
                 outputs=[preview_display, status_box],
                 api_name=False,
             )
@@ -366,7 +388,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT") as demo:
                 - Write the prompt without any answer markers. OpenOLAT creates an open text response area for manual grading.
 
                 #### 7. Formulas & Code Blocks
-                - **Inline Math**: `$E = mc^2$` (rendered natively via MathJax in OpenOLAT).
+                - **Math Formulas**: Use MathJax-compatible TeX syntax — e.g. `$E = mc^2$`, `$$\frac{a}{b}$$`, `\sum`, `\text{...}`. OpenOLAT renders math natively via MathJax 3 (OpenOLAT ≥ 16.2). Arbitrary LaTeX packages and document-level commands are not supported.
                 - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                 - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
 

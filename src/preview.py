@@ -6,6 +6,7 @@ from src.model import (
     Choice,
     EssayQuestion,
     FillBlankQuestion,
+    InvalidQuestion,
     KprimQuestion,
     MultipleChoiceQuestion,
     NumericalQuestion,
@@ -21,11 +22,17 @@ from typing import Dict, Optional
 from src.markdown import contains_markdown, markdown_to_qti_xhtml
 
 
-def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) -> str:
+def render_quiz_preview_html(
+    quiz: Quiz,
+    asset_map: Optional[Dict[str, str]] = None,
+    render_math: bool = True,
+) -> str:
     """Generate clean collapsible HTML cards to visually preview parsed questions.
 
     If asset_map is provided (mapping relative image source -> data URI or resolved path),
     images in prompts, choices, hints, and feedback are rewritten to display them in preview.
+    If render_math is True (default), MathJax 3 is included and processes $...$ and $$...$$ formulas.
+    If render_math is False, formulas are displayed as raw source code.
     """
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
@@ -43,28 +50,49 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
             type_name = _get_type_label(q)
             badge_color = _get_badge_color(q)
 
+            is_invalid = isinstance(q, InvalidQuestion) or bool(getattr(q, "errors", None))
             has_distinct_prompt = bool(q.prompt and q.prompt.strip() and q.prompt.strip() != q.title.strip())
+
+            # For invalid questions, display an alert box listing all validation errors at the top of the body
+            validation_alert_html = ""
+            if is_invalid:
+                q_errors = getattr(q, "errors", [])
+                error_items = "".join(
+                    f"<li style='margin-bottom: 4px;'>{html.escape(d.message)}</li>"
+                    for d in q_errors
+                ) or "<li>Validation error detected in question structure.</li>"
+                validation_alert_html = f"""
+<div style="background: #fef2f2; border: 1px solid #f87171; border-left: 4px solid #ef4444; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; color: #991b1b; font-size: 0.9em;">
+  <div style="font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: #b91c1c;">
+    <span>⚠️ Validation Errors:</span>
+  </div>
+  <ul style="margin: 0; padding-left: 18px; line-height: 1.4;">{error_items}</ul>
+</div>
+"""
+
             prompt_html = (
-                f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)}</div>"
-                if has_distinct_prompt
+                f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)}</div>"
+                if (has_distinct_prompt or is_invalid)
                 else ""
             )
-            body_html = _render_question_body(q, asset_map=asset_map)
+            body_html = _render_question_body(q, asset_map=asset_map, render_math=render_math)
             hint_html = (
                 f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
                 f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
-                f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map)}</div></details>"
+                f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map, render_math=render_math)}</div></details>"
                 if q.hint
                 else ""
             )
             feedback_html = (
                 f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
-                f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map)}</div>"
+                f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map, render_math=render_math)}</div>"
                 if q.feedback
                 else ""
             )
 
             status_badges = []
+            if is_invalid:
+                status_badges.append('<span title="Validation error" style="cursor: help; font-size: 0.95em;">⚠️</span>')
             if q.hint and q.hint.strip():
                 status_badges.append('<span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span>')
             if q.feedback and q.feedback.strip():
@@ -75,10 +103,11 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
                 else ""
             )
 
+            card_border_style = "border: 1px solid #f87171;" if is_invalid else "border: 1px solid #e2e8f0;"
             card = f"""
-<details class="quiz-question-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
+<details class="quiz-question-card" style="background: white; {card_border_style} border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
   <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
-    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+    <div style="display: flex; align-items: center; gap: 8px; flex-1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
       <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
     </div>
@@ -89,6 +118,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
     </div>
   </summary>
   <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
+    {validation_alert_html}
     {prompt_html}
     {body_html}
     {hint_html}
@@ -114,7 +144,7 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
             sec_summary_text = " &bull; ".join(sec_summary_parts)
 
             desc_html = (
-                f"<div style='color: #475569; font-size: 0.92em; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map)}</div>"
+                f"<div style='color: #475569; font-size: 0.92em; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map, render_math=render_math)}</div>"
                 if sec.description
                 else ""
             )
@@ -144,7 +174,24 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
         else:
             sections_html.extend(sec_cards)
 
+    mathjax_block = """
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+""" if render_math else ""
+
     return f"""
+{mathjax_block}
 <style>
   pre {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; margin: 8px 0; }}
   code {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 0.88em; color: #0f172a; }}
@@ -202,7 +249,9 @@ def render_quiz_preview_html(quiz: Quiz, asset_map: Optional[Dict[str, str]] = N
 
 
 def _get_type_label(q: Question) -> str:
-    if isinstance(q, SingleChoiceQuestion):
+    if isinstance(q, InvalidQuestion) or bool(getattr(q, "errors", None)):
+        return "Invalid"
+    elif isinstance(q, SingleChoiceQuestion):
         return "Single Choice"
     elif isinstance(q, MultipleChoiceQuestion):
         return "Multiple Choice"
@@ -222,7 +271,9 @@ def _get_type_label(q: Question) -> str:
 
 
 def _get_badge_color(q: Question) -> str:
-    if isinstance(q, SingleChoiceQuestion):
+    if isinstance(q, InvalidQuestion) or bool(getattr(q, "errors", None)):
+        return "#ef4444"  # Red
+    elif isinstance(q, SingleChoiceQuestion):
         return "#3b82f6"  # Blue
     elif isinstance(q, MultipleChoiceQuestion):
         return "#8b5cf6"  # Purple
@@ -241,8 +292,18 @@ def _get_badge_color(q: Question) -> str:
     return "#64748b"
 
 
-def _render_question_body(q: Question, asset_map: Optional[Dict[str, str]] = None) -> str:
-    if isinstance(q, (SingleChoiceQuestion, MultipleChoiceQuestion, TrueFalseQuestion)):
+def _render_question_body(
+    q: Question,
+    asset_map: Optional[Dict[str, str]] = None,
+    render_math: bool = True,
+) -> str:
+    if isinstance(q, InvalidQuestion):
+        # If there is raw block text available, display it as code for debugging
+        if q.raw_text:
+            return f"<details style='margin-top: 6px; font-size: 0.88em;'><summary style='color: #64748b; cursor: pointer;'>View raw question source</summary><pre style='margin-top: 6px;'>{html.escape(q.raw_text)}</pre></details>"
+        return ""
+
+    elif isinstance(q, (SingleChoiceQuestion, MultipleChoiceQuestion, TrueFalseQuestion)):
         is_single = isinstance(q, (SingleChoiceQuestion, TrueFalseQuestion))
         bullet = "○" if is_single else "□"
         checked_bullet = "●" if is_single else "■"
@@ -251,7 +312,7 @@ def _render_question_body(q: Question, asset_map: Optional[Dict[str, str]] = Non
             icon = checked_bullet if c.is_correct else bullet
             style = "color: #16a34a; font-weight: 600;" if c.is_correct else "color: #475569;"
             tag = " (Correct)" if c.is_correct else ""
-            choice_html = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
+            choice_html = markdown_to_qti_xhtml(c.text, asset_map=asset_map, render_math=render_math)
             # Remove enclosing <p>...</p> tags if present to keep inline list layout
             if choice_html.startswith("<p>") and choice_html.endswith("</p>"):
                 choice_html = choice_html[3:-4]
@@ -276,7 +337,7 @@ def _render_question_body(q: Question, asset_map: Optional[Dict[str, str]] = Non
         rows = []
         for stmt in q.statements:
             symbol = "<span style='color: #16a34a; font-weight: bold;'>[+] True</span>" if stmt.is_correct else "<span style='color: #dc2626; font-weight: bold;'>[-] False</span>"
-            stmt_html = markdown_to_qti_xhtml(stmt.text, asset_map=asset_map)
+            stmt_html = markdown_to_qti_xhtml(stmt.text, asset_map=asset_map, render_math=render_math)
             if stmt_html.startswith("<p>") and stmt_html.endswith("</p>"):
                 stmt_html = stmt_html[3:-4]
             rows.append(f"<tr><td style='padding: 6px 12px; border: 1px solid #e2e8f0;'>{stmt_html}</td><td style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: center;'>{symbol}</td></tr>")
@@ -285,7 +346,7 @@ def _render_question_body(q: Question, asset_map: Optional[Dict[str, str]] = Non
     elif isinstance(q, OrderQuestion):
         items = []
         for it in q.items:
-            it_html = markdown_to_qti_xhtml(it.text, asset_map=asset_map)
+            it_html = markdown_to_qti_xhtml(it.text, asset_map=asset_map, render_math=render_math)
             if it_html.startswith("<p>") and it_html.endswith("</p>"):
                 it_html = it_html[3:-4]
             items.append(f"<li>{it_html}</li>")

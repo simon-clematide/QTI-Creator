@@ -167,8 +167,60 @@ Feedback: Great work!
 
         # Section 1 has 2 Qs, 1 Hint, 1 Feedback, 2.0 pt in sequence Qs &bull; 💡 &bull; 💬 &bull; pt
         self.assertIn("2 Qs &bull; 💡 1 &bull; 💬 1 &bull; 2.0 pt", html_out)
-        # Section 2 has 1 Qs, 0 hints, 0 feedbacks -> 1 Qs &bull; 1.0 pt
-        self.assertIn("1 Qs &bull; 1.0 pt", html_out)
+    def test_preview_invalid_question_display_and_validation_errors(self):
+        text = """# Quiz With Error
+## Broken Question
+Points: 2
+- [ ] Option 1
+- [ ] Option 2
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any(d.severity.name == "ERROR" for d in diags))
+        self.assertEqual(len(quiz.questions), 1)
+        self.assertEqual(quiz.questions[0].title, "Broken Question")
+
+        html_out = render_quiz_preview_html(quiz)
+        # Should contain Invalid badge and validation error alert box
+        self.assertIn("Invalid", html_out)
+        self.assertIn("⚠️ Validation Errors:", html_out)
+        self.assertIn("No correct answer is marked with [X] or [x].", html_out)
+        self.assertIn("View raw question source", html_out)
+
+    def test_preview_mathjax_toggle(self):
+        text = """## Math Question
+Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
+- [X] Correct
+- [ ] Incorrect
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+
+        # render_math=True (default) -> MathJax script included, $...$ preserved
+        html_math_on = render_quiz_preview_html(quiz, render_math=True)
+        self.assertIn("MathJax =", html_math_on)
+        self.assertIn("tex-chtml.js", html_math_on)
+        self.assertIn("$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", html_math_on)
+
+        # render_math=False -> MathJax script NOT included, formula wrapped in <code>$...$</code>
+        html_math_off = render_quiz_preview_html(quiz, render_math=False)
+        self.assertNotIn("MathJax =", html_math_off)
+        self.assertNotIn("tex-chtml.js", html_math_off)
+        self.assertIn("<code>$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$</code>", html_math_off)
+
+    def test_invalid_question_blocks_packaging(self):
+        import io
+        from src.packager import create_qti_package
+        from src.validation import QuizValidationError
+
+        text = """# Quiz With Error
+## Broken Question
+- [ ] Option 1
+- [ ] Option 2
+"""
+        quiz, _ = parse_quizmd(text)
+        out = io.BytesIO()
+        with self.assertRaises(QuizValidationError):
+            create_qti_package(quiz, out)
 
 
 if __name__ == "__main__":

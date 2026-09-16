@@ -7,7 +7,7 @@ Initial support:
 - lists (<ul>, <ol>, <li>)
 - inline code (<code>) and fenced code (<pre><code>)
 - block quotes (<blockquote>)
-- math notation ($...$ and $$...$$)
+- math notation ($...$ and $$...$$, MathJax-compatible TeX)
 """
 
 import html
@@ -19,11 +19,18 @@ from typing import Dict, List, Optional
 RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
 
 
-def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None) -> str:
+def markdown_to_qti_xhtml(
+    text: str,
+    asset_map: Optional[Dict[str, str]] = None,
+    render_math: bool = True,
+) -> str:
     """Convert a Markdown text string into well-formed XHTML suitable for <itemBody>.
     
     If asset_map is provided (mapping original source -> packaged relative path),
     image src attributes are rewritten accordingly.
+    When render_math is True (default), MathJax-compatible TeX formulas are preserved
+    with delimiters ($...$ and $$...$$).
+    When render_math is False, formulas are displayed literally as code.
     """
     if not text:
         return ""
@@ -86,7 +93,10 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
                         math_lines.append(end_line[:-2])
                         i += 1
                     math_text = "\n".join(math_lines).strip()
-            output_blocks.append(f"<p>$${html.escape(math_text, quote=False)}$$</p>")
+            if render_math:
+                output_blocks.append(f"<p>$${html.escape(math_text, quote=False)}$$</p>")
+            else:
+                output_blocks.append(f"<pre class='math-raw'>$${html.escape(math_text)}$$</pre>")
             continue
 
         # Blockquote: > text
@@ -95,7 +105,11 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
             while i < len(lines) and lines[i].strip().startswith(">"):
                 quote_lines.append(lines[i].strip()[1:].strip())
                 i += 1
-            quote_body = markdown_to_qti_xhtml("\n".join(quote_lines), asset_map=asset_map)
+            quote_body = markdown_to_qti_xhtml(
+                "\n".join(quote_lines),
+                asset_map=asset_map,
+                render_math=render_math,
+            )
             output_blocks.append(f"<blockquote>{quote_body}</blockquote>")
             continue
 
@@ -105,7 +119,7 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
             items = []
             while i < len(lines) and re.match(choice_prefix, lines[i].strip()):
                 item_text = re.sub(r"^[-*]\s+", "", lines[i].strip())
-                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map)}</li>")
+                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map, render_math=render_math)}</li>")
                 i += 1
             output_blocks.append(f"<ul>{''.join(items)}</ul>")
             continue
@@ -115,7 +129,7 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
             items = []
             while i < len(lines) and re.match(r"^\d+\.\s+", lines[i].strip()):
                 item_text = re.sub(r"^\d+\.\s+", "", lines[i].strip())
-                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map)}</li>")
+                items.append(f"<li>{_format_inlines(item_text, asset_map=asset_map, render_math=render_math)}</li>")
                 i += 1
             output_blocks.append(f"<ol>{''.join(items)}</ol>")
             continue
@@ -139,15 +153,20 @@ def markdown_to_qti_xhtml(text: str, asset_map: Optional[Dict[str, str]] = None)
 
 
         para_text = " ".join(para_lines)
-        output_blocks.append(f"<p>{_format_inlines(para_text, asset_map=asset_map)}</p>")
+        output_blocks.append(f"<p>{_format_inlines(para_text, asset_map=asset_map, render_math=render_math)}</p>")
 
     return "\n".join(output_blocks)
 
 
-def _format_inlines(text: str, asset_map: Optional[Dict[str, str]] = None) -> str:
+def _format_inlines(
+    text: str,
+    asset_map: Optional[Dict[str, str]] = None,
+    render_math: bool = True,
+) -> str:
     """Format inline markdown elements while protecting math spans, code spans, and images.
 
-    OpenOLAT natively renders literal $$...$$ (display math) and $...$ (inline math).
+    OpenOLAT renders math via MathJax 3 (OpenOLAT ≥ 16.2). Delimiters $$...$$ and $...$
+    are preserved for MathJax to process.
     Math, code spans, and images are protected before markdown styling so that LaTeX symbols
     and URL characters are preserved verbatim without being misinterpreted as Markdown formatting.
     """
@@ -160,20 +179,26 @@ def _format_inlines(text: str, asset_map: Optional[Dict[str, str]] = None) -> st
         key = f"XXMATHDISP{counter}XX"
         counter += 1
         raw_math = match.group(1)
-        placeholders[key] = f"$${html.escape(raw_math, quote=False)}$$"
+        if render_math:
+            placeholders[key] = f"$${html.escape(raw_math, quote=False)}$$"
+        else:
+            placeholders[key] = f"<pre class='math-raw'>$${html.escape(raw_math)}$$</pre>"
         return key
 
     text = re.sub(r"\$\$(.+?)\$\$", save_display_math, text, flags=re.DOTALL)
 
-    # 2. Protect inline math $...$ -> <span class="math" title="...">raw_latex</span>
+    # 2. Protect inline math $...$
     def save_inline_math(match):
         nonlocal counter
         key = f"XXMATHINL{counter}XX"
         counter += 1
         raw_math = match.group(1)
-        title_val = urllib.parse.quote(raw_math)
-        escaped_latex = html.escape(raw_math, quote=False)
-        placeholders[key] = f'<span class="math" title="{title_val}">{escaped_latex}</span>'
+        if render_math:
+            # Preserve delimiters so MathJax finds them in the DOM
+            placeholders[key] = f"${html.escape(raw_math, quote=False)}$"
+        else:
+            # render_math=False: show raw source literally
+            placeholders[key] = f"<code>${html.escape(raw_math)}$</code>"
         return key
 
     text = re.sub(r"(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)", save_inline_math, text)

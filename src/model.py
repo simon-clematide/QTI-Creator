@@ -229,6 +229,23 @@ class OrderQuestion(Question):
 
 
 @dataclass
+class InvalidQuestion(Question):
+    """Question that failed validation during parsing but is retained for preview."""
+    errors: List[Diagnostic] = field(default_factory=list)
+    raw_text: str = ""
+
+    def __post_init__(self):
+        # Bypass parent points check and validate() at construction time
+        if not self.title:
+            self.title = "⚠️ Invalid Question"
+
+    def validate(self) -> None:
+        """Raise stored diagnostics so Section/Quiz aggregation picks them up."""
+        if self.errors:
+            raise QuizValidationError("Invalid question", self.errors)
+
+
+@dataclass
 class Section:
     """An assessment section within a Quiz (<assessmentSection>)."""
     title: str = ""

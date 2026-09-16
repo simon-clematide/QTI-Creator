@@ -26,6 +26,7 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    InvalidQuestion,
     KprimQuestion,
     KprimStatement,
     MultipleChoiceQuestion,
@@ -505,6 +506,26 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
                     sec_questions.append(q)
             except QuizValidationError as e:
+                # Retain invalid questions for preview with error diagnostics
+                points_val = DEFAULTS["points"]
+                if "points" in block.metadata:
+                    try:
+                        p_cand = float(block.metadata["points"])
+                        if p_cand > 0:
+                            points_val = p_cand
+                    except ValueError:
+                        pass
+                raw_block_text = "\n".join(line for _, line in block.raw_lines)
+                prompt_text = "\n".join(block.prompt_lines).strip()
+                inv_q = InvalidQuestion(
+                    prompt=prompt_text or raw_block_text,
+                    title=block.title or "⚠️ Invalid Question",
+                    points=points_val,
+                    errors=list(e.diagnostics),
+                    raw_text=raw_block_text,
+                    line_number=block.start_line,
+                )
+                sec_questions.append(inv_q)
                 for d in e.diagnostics:
                     d.question_index = global_q_idx
                     diagnostics.append(d)

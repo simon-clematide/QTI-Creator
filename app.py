@@ -273,7 +273,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
 
                     with gr.Row():
                         btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
-                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
+                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="secondary")
 
                 # RIGHT COLUMN: Preview & Download
                 with gr.Column(scale=5):

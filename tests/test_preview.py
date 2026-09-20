@@ -223,6 +223,26 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
         with self.assertRaises(QuizValidationError):
             create_qti_package(quiz, out)
 
+    def test_preview_full_raw_question_title_in_card_body(self):
+        text = """## Very long question title about **thermodynamics** & *fluid mechanics* that exceeds typical widths?
+- [X] Yes
+- [ ] No
+"""
+        quiz, diags = parse_quizmd(text)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Title should appear in full as escaped raw text in the card body, NOT parsed as markdown (no <strong> or <em>)
+        expected_raw_title = "Very long question title about **thermodynamics** &amp; *fluid mechanics* that exceeds typical widths?"
+        self.assertIn(expected_raw_title, html_out)
+        self.assertNotIn("<strong>thermodynamics</strong>", html_out)
+        self.assertNotIn("<em>fluid mechanics</em>", html_out)
+
+        # Check that Markdown warning badge is displayed for the question title
+        self.assertIn("⚠️ Markdown syntax in title", html_out)
+
+        # Verify the question title wrapper in the body
+        self.assertIn("<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>", html_out)
+
 
 if __name__ == "__main__":
     unittest.main()

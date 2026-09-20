@@ -71,6 +71,17 @@ def render_quiz_preview_html(
 </div>
 """
 
+            # Question title: OpenOLAT does not render Markdown in question titles.
+            # Render the raw title in full at the top of the body so users can read the entire title even when truncated in the summary.
+            q_title_warning = ""
+            if contains_markdown(q.title):
+                q_title_warning = (
+                    f" <span title=\"Question titles do not support Markdown formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(q.title)}')\" "
+                    f"style=\"display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;\">"
+                    f"⚠️ Markdown syntax in title</span>"
+                )
+            question_title_html = f"<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>{html.escape(q.title)}{q_title_warning}</div>"
+
             prompt_html = (
                 f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)}</div>"
                 if (has_distinct_prompt or is_invalid)
@@ -120,6 +131,7 @@ def render_quiz_preview_html(
   </summary>
   <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
     {validation_alert_html}
+    {question_title_html}
     {prompt_html}
     {body_html}
     {hint_html}

@@ -243,7 +243,7 @@ Formula sheets are provided in the appendix.
 ### 8. Question Metadata & Local Overrides
 Question metadata can be placed **before or after** choices/statements (case-insensitive):
 - `Points: <number>` (default: 1) — Point weight for the question.
-- `Hint: <text>` — Pre-submission hint displayed during test-taking in OpenOLAT (supports Markdown and math).
+- `Hint: <text>` — Pre-submission interactive hint displayed during test-taking in OpenOLAT (supports Markdown and math). *Note on OpenOLAT layout:* If personal notes are enabled in the test options, OpenOLAT positions the personal notes field directly beneath the question choices, placing it in-between the interactive Hint button and the revealed hint text/modal.
 - `Feedback: <text>` — Post-submission explanation displayed after test completion in OpenOLAT (supports Markdown and math).
 - `Scoring: partial` or `all-correct` — Scoring model for Multiple Choice questions (default: `partial`).
 - `Shuffle: yes / no` — Controls answer scrambling for this question (default: `yes`).

@@ -33,9 +33,9 @@ def wrap_assessment_item(
         hint_body = markdown_to_qti_xhtml(hint, asset_map=asset_map)
         hint_resp_decl = '\n  <responseDeclaration identifier="HINTREQUEST" cardinality="single" baseType="boolean"/>'
         hint_outcome_decl = '\n  <outcomeDeclaration identifier="HINTFEEDBACKMODAL" cardinality="single" baseType="identifier"/>'
-        hint_interaction = '\n    <p><endAttemptInteraction responseIdentifier="HINTREQUEST"/></p>'
+        hint_interaction = '\n    <p><endAttemptInteraction responseIdentifier="HINTREQUEST" title=""/></p>'
         hint_modal = f"""
-  <modalFeedback showHide="show" outcomeIdentifier="HINTFEEDBACKMODAL" identifier="HINT">
+  <modalFeedback showHide="show" outcomeIdentifier="HINTFEEDBACKMODAL" identifier="HINT" title="">
     {hint_body}
   </modalFeedback>"""
         hint_cond = """    <responseCondition>
@@ -129,9 +129,14 @@ def wrap_assessment_item(
                 adaptive="false"
                 timeDependent="false"
                 toolName="OpenOLAT"
-                toolVersion="8.4.0"
+                toolVersion="8.4.1"
                 xsi:schemaLocation="http://www.imsglobal.org/xsd/imsqti_v2p1 http://www.imsglobal.org/xsd/imsqti_v2p1.xsd">
 {response_declarations}{hint_resp_decl}
+  <outcomeDeclaration identifier="FEEDBACKBASIC" cardinality="single" baseType="identifier" view="testConstructor">
+    <defaultValue>
+      <value>none</value>
+    </defaultValue>
+  </outcomeDeclaration>
   <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float">
     <defaultValue>
       <value>0.0</value>

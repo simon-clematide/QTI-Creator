@@ -42,7 +42,7 @@ def generate_test_xml(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) ->
                 identifier="{quiz.identifier}"
                 title="{escaped_title}"
                 toolName="OpenOLAT"
-                toolVersion="8.4.0">
+                toolVersion="8.4.1">
   <outcomeDeclaration identifier="SCORE" cardinality="single" baseType="float"/>
   <outcomeDeclaration identifier="MAXSCORE" cardinality="single" baseType="float">
     <defaultValue>

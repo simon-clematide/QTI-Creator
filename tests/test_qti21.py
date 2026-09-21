@@ -47,9 +47,11 @@ class TestQTI21Generator(unittest.TestCase):
         self.assertIn("Bern", xml_str)
         self.assertIn("Bern is the federal city.", xml_str)
         self.assertNotIn("<rubricBlock", xml_str)
-        self.assertIn('responseIdentifier="HINTREQUEST"', xml_str)
-        self.assertIn('outcomeIdentifier="HINTFEEDBACKMODAL"', xml_str)
+        self.assertIn('responseIdentifier="HINTREQUEST" title=""', xml_str)
+        self.assertIn('outcomeIdentifier="HINTFEEDBACKMODAL" identifier="HINT" title=""', xml_str)
         self.assertIn('endAttemptInteraction', xml_str)
+        self.assertIn('identifier="FEEDBACKBASIC"', xml_str)
+        self.assertIn('toolVersion="8.4.1"', xml_str)
         self.assertIn("Think of the Swiss canton with a bear on its flag.", xml_str)
 
     def test_code_snippets_in_qti_xml(self):

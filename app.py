@@ -222,11 +222,115 @@ APP_CSS = """
   margin: 0 !important;
   padding: 0 !important;
 }
+
+/* Modern monospace font for QuizMD Source Markdown editor */
+.quiz-source-editor textarea,
+.quiz-source-editor textarea:focus {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-size: 0.92rem !important;
+  line-height: 1.55 !important;
+  tab-size: 2 !important;
+}
+
+/* Fullscreen mode for QuizMD Source Editor */
+.quiz-editor-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: #ffffff !important;
+  padding: 16px 24px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.quiz-fullscreen-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.quiz-fullscreen-btn {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+.quiz-fullscreen-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+.quiz-editor-fullscreen .quiz-source-editor {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: calc(100vh - 75px) !important;
+}
+
+.quiz-editor-fullscreen .quiz-source-editor > div,
+.quiz-editor-fullscreen .quiz-source-editor > label {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.quiz-editor-fullscreen .quiz-source-editor textarea {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: calc(100vh - 105px) !important;
+  max-height: none !important;
+  resize: none !important;
+}
 """
 
 # JS called after each preview update to re-typeset the newly injected HTML.
 # MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
 _MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
+
+# JS to toggle fullscreen mode on the QuizMD source editor container
+_TOGGLE_FULLSCREEN_JS = """() => {
+  const container = document.getElementById('quiz_source_container');
+  const btn = document.getElementById('btn_fullscreen_toggle');
+  if (!container) return;
+
+  const isFs = container.classList.toggle('quiz-editor-fullscreen');
+  if (btn) {
+    btn.innerText = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+  }
+
+  // Bind Escape key listener once to exit fullscreen gracefully
+  if (!window._quiz_fs_esc_bound) {
+    window._quiz_fs_esc_bound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const c = document.getElementById('quiz_source_container');
+        const b = document.getElementById('btn_fullscreen_toggle');
+        if (c && c.classList.contains('quiz-editor-fullscreen')) {
+          c.classList.remove('quiz-editor-fullscreen');
+          if (b) b.innerText = '⛶ Fullscreen';
+        }
+      }
+    });
+  }
+}"""
 
 with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
     gr.HTML(
@@ -278,13 +382,22 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                             height=105,
                         )
 
-                    gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
-                    quiz_input = gr.Textbox(
-                        value=SAMPLE_ALL_TYPES,
-                        show_label=False,
-                        placeholder="Write your quiz here in Markdown...",
-                        lines=22,
-                    )
+                    with gr.Column(elem_id="quiz_source_container"):
+                        with gr.Row(elem_classes=["quiz-fullscreen-header"]):
+                            gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
+                            btn_fullscreen = gr.Button(
+                                "⛶ Fullscreen",
+                                size="sm",
+                                elem_id="btn_fullscreen_toggle",
+                                elem_classes=["quiz-fullscreen-btn"],
+                            )
+                        quiz_input = gr.Textbox(
+                            value=SAMPLE_ALL_TYPES,
+                            show_label=False,
+                            placeholder="Write your quiz here in Markdown...",
+                            lines=22,
+                            elem_classes=["quiz-source-editor"],
+                        )
 
                     with gr.Accordion("🖼️ Media Packaging", open=False):
                         include_media_cb = gr.Checkbox(
@@ -402,6 +515,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                 inputs=[quiz_input, include_media_cb, media_zip_upload],
                 outputs=[download_output, status_box, outdated_warning, has_package_state],
                 api_name="convert",
+            )
+
+            btn_fullscreen.click(
+                fn=None,
+                js=_TOGGLE_FULLSCREEN_JS,
+                api_name=False,
             )
 
             # Initial preview load

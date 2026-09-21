@@ -46,8 +46,10 @@ class TestQTI21Generator(unittest.TestCase):
         self.assertIn("assessmentItem", root.tag)
         self.assertIn("Bern", xml_str)
         self.assertIn("Bern is the federal city.", xml_str)
-        self.assertIn("<rubricBlock", xml_str)
-        self.assertIn('view="candidate"', xml_str)
+        self.assertNotIn("<rubricBlock", xml_str)
+        self.assertIn('responseIdentifier="HINTREQUEST"', xml_str)
+        self.assertIn('outcomeIdentifier="HINTFEEDBACKMODAL"', xml_str)
+        self.assertIn('endAttemptInteraction', xml_str)
         self.assertIn("Think of the Swiss canton with a bear on its flag.", xml_str)
 
     def test_code_snippets_in_qti_xml(self):
@@ -209,6 +211,27 @@ def square(n):
         self.assertIn('identifier="correct" fixed="true"', xml_str)
         self.assertIn('identifier="wrong" fixed="true"', xml_str)
         self.assertIn("simpleAssociableChoice", xml_str)
+
+    def test_kprim_xml_with_hint_and_math(self):
+        q = KprimQuestion(
+            prompt="Facts about Swiss geography:",
+            statements=[
+                KprimStatement("Matterhorn is located in Valais", True),
+                KprimStatement("Rhine falls are the largest plain waterfall in Europe", True),
+                KprimStatement("Switzerland borders the Atlantic Ocean", False),
+                KprimStatement("Lake Geneva is completely in France", False),
+            ],
+            points=2.0,
+            hint="Think of $a+b$ and the mountains.",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn('responseIdentifier="HINTREQUEST"', xml_str)
+        self.assertIn('outcomeIdentifier="HINTFEEDBACKMODAL"', xml_str)
+        self.assertIn('<span class="math"', xml_str)
+        self.assertIn('>a+b</span>', xml_str)
+        self.assertIn('<variable identifier="HINTREQUEST"/>', xml_str)
+        self.assertIn('<setOutcomeValue identifier="HINTFEEDBACKMODAL">', xml_str)
 
     def test_order_xml_validity(self):
         q = OrderQuestion(

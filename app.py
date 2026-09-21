@@ -11,6 +11,7 @@ Architecture overview:
 """
 
 
+from datetime import datetime
 import os
 import tempfile
 import gradio as gr
@@ -113,10 +114,11 @@ def convert_and_download(text: str, include_media: bool, media_zip_file):
         error_details = "\n".join(f"- {str(e)}" for e in media_errors)
         return gr.update(visible=False), f"❌ **Media Preflight Failed:**\n{error_details}", gr.update(visible=False), False
 
-    # Create temporary zip file
+    # Create temporary zip file with timestamp (YYYYMMDD_HHMMSS)
     safe_name = "".join(c if c.isalnum() else "_" for c in quiz.title).strip("_") or "qti_quiz"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     tmp_dir = tempfile.mkdtemp()
-    zip_path = os.path.join(tmp_dir, f"{safe_name}_qti21.zip")
+    zip_path = os.path.join(tmp_dir, f"{safe_name}_{timestamp}_qti21.zip")
 
     create_qti_package(quiz, zip_path, media_preflight=media_res)
     

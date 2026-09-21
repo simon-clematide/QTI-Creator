@@ -643,6 +643,29 @@ What is water?
         self.assertEqual(quiz.sections[0].questions[0].title, "Question 1 Without Section")
 
 
+    def test_markdown_table_rendering(self):
+        from src.markdown import markdown_to_qti_xhtml
+        md = """Consider the following table:
+
+| Function | Complexity | Description |
+| :--- | :---: | ---: |
+| `sort()` | $\\mathcal{O}(n \\log n)$ | Quick sort |
+| `find()` | $\\mathcal{O}(n)$ | **Linear** scan |
+
+What is the fastest?
+"""
+        html_out = markdown_to_qti_xhtml(md)
+        self.assertIn('<table class="table table-bordered">', html_out)
+        self.assertIn('<thead>', html_out)
+        self.assertIn('<tbody>', html_out)
+        self.assertIn('<th style="text-align: left;">Function</th>', html_out)
+        self.assertIn('<th style="text-align: center;">Complexity</th>', html_out)
+        self.assertIn('<th style="text-align: right;">Description</th>', html_out)
+        self.assertIn('<code>sort()</code>', html_out)
+        self.assertIn('<strong>Linear</strong>', html_out)
+        self.assertIn('<span class="math"', html_out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

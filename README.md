@@ -357,7 +357,21 @@ Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
-### 11. Media & Image Support (Remote & Relative Packaging)
+### 11. Markdown Tables (GFM Pipe Syntax)
+Standard GitHub Flavored Markdown (GFM) tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles):
+
+```markdown
+| Function | Time Complexity | Space Complexity |
+| :--- | :---: | ---: |
+| `Binary Search` | $\mathcal{O}(\log n)$ | $\mathcal{O}(1)$ |
+| `Merge Sort` | $\mathcal{O}(n \log n)$ | $\mathcal{O}(n)$ |
+```
+
+- **Column Alignments**: Supports left (`:---`), center (`:---:`), and right (`---:`) alignment.
+- **Rich Inlines in Cells**: Cells support math (`$...$`), code spans, bold, italic, and links.
+- **Native OpenOLAT Styling**: Exported with `<table class="table table-bordered">` for native rendering in OpenOLAT and the live preview.
+
+### 12. Media & Image Support (Remote & Relative Packaging)
 Embed images anywhere in questions, choices, or feedback using standard Markdown:
 ```markdown
 ## Plant Biology

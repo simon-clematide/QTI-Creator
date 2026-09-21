@@ -226,6 +226,28 @@ APP_CSS = """
   padding: 0 !important;
 }
 
+/* Markdown table styling in preview and test runner */
+table.table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 12px 0 !important;
+  font-size: 0.92em !important;
+}
+table.table th,
+table.table td {
+  border: 1px solid #cbd5e1 !important;
+  padding: 8px 12px !important;
+  line-height: 1.4 !important;
+}
+table.table th {
+  background-color: #f1f5f9 !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+table.table tbody tr:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+
 /* Modern monospace font for QuizMD Source Markdown editor */
 .quiz-source-editor textarea,
 .quiz-source-editor textarea:focus {
@@ -721,6 +743,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     - **Math Formulas**: Use MathJax-compatible TeX syntax — e.g. `$E = mc^2$`, `$$\frac{a}{b}$$`, `\sum`, `\text{...}`. OpenOLAT renders math natively via MathJax 3 (OpenOLAT ≥ 16.2). Arbitrary LaTeX packages and document-level commands are not supported.
                     - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                     - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
+
+                    #### 8. Markdown Tables (GFM Pipe Syntax)
+                    - Tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles).
+                    - Use standard Markdown pipe syntax:
+                      ```markdown
+                      | Column 1 | Column 2 | Column 3 |
+                      | :--- | :---: | ---: |
+                      | Left | Centered | Right |
+                      ```
+                    - Cells can contain math (`$...$`), code spans, bold, italic, and links.
                     """
                 )
 
@@ -893,6 +925,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     "Write the question without an answer specification.\n"
                     "Example:\n"
                     "## Explain one limitation of evaluating a language model using accuracy alone.\n\n"
+                    "Markdown Tables\n"
+                    "Tables are supported in question prompts, section descriptions, hints, and feedback:\n"
+                    "| Col 1 | Col 2 |\n"
+                    "| :--- | ---: |\n"
+                    "| A | B |\n\n"
                     "OPTIONAL QUESTION SETTINGS\n"
                     "Questions are worth 1 point by default.\n"
                     "Use this only when a different weight is needed:\n"

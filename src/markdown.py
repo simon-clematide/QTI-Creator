@@ -141,6 +141,24 @@ def markdown_to_qti_xhtml(
             output_blocks.append(f"<ol>{''.join(items)}</ol>")
             continue
 
+        # Markdown Table (GFM pipe syntax)
+        if "|" in stripped and i + 1 < len(lines) and _is_table_separator_row(lines[i + 1]):
+            table_lines = [stripped]
+            i += 1
+            # Add separator line
+            table_lines.append(lines[i].strip())
+            i += 1
+            # Accumulate data rows
+            while i < len(lines):
+                row_line = lines[i].strip()
+                if not row_line or not ("|" in row_line):
+                    break
+                table_lines.append(row_line)
+                i += 1
+            table_html = _render_table(table_lines, asset_map=asset_map, render_math=render_math)
+            output_blocks.append(table_html)
+            continue
+
         # Normal paragraph (accumulate consecutive lines)
         para_lines = [stripped]
         i += 1
@@ -154,16 +172,96 @@ def markdown_to_qti_xhtml(
                 or next_line.startswith(">")
                 or re.match(r"^[-*]\s+", next_line)
                 or re.match(r"^\d+\.\s+", next_line)
+                or ("|" in next_line and i + 1 < len(lines) and _is_table_separator_row(lines[i + 1]))
             ):
                 break
             para_lines.append(next_line)
             i += 1
 
-
         para_text = " ".join(para_lines)
         output_blocks.append(f"<p>{_format_inlines(para_text, asset_map=asset_map, render_math=render_math)}</p>")
 
     return "\n".join(output_blocks)
+
+
+def _is_table_separator_row(line: str) -> bool:
+    """Check if line is a valid GFM table separator row e.g. |:---|:---:|---:|."""
+    stripped = line.strip()
+    if not stripped or "|" not in stripped:
+        return False
+    parts = _split_table_row(stripped)
+    if not parts:
+        return False
+    for p in parts:
+        cell = p.strip()
+        if not re.match(r"^:?-+:?$", cell):
+            return False
+    return True
+
+
+def _split_table_row(line: str) -> List[str]:
+    """Split a table row on '|' taking care of optional leading and trailing pipes."""
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    # Note: escaped \| can be handled if needed, standard markdown splits on |
+    # We split on | that is not escaped
+    tokens = re.split(r"(?<!\\)\|", s)
+    return [t.replace(r"\|", "|").strip() for t in tokens]
+
+
+def _render_table(
+    table_lines: List[str],
+    asset_map: Optional[Dict[str, str]] = None,
+    render_math: bool = True,
+) -> str:
+    """Render GFM Markdown table lines into well-formed HTML <table>."""
+    if len(table_lines) < 2:
+        return ""
+
+    header_cols = _split_table_row(table_lines[0])
+    sep_cols = _split_table_row(table_lines[1])
+    num_cols = max(len(header_cols), len(sep_cols))
+
+    alignments = []
+    for i in range(num_cols):
+        align = "left"
+        if i < len(sep_cols):
+            s = sep_cols[i].strip()
+            if s.startswith(":") and s.endswith(":"):
+                align = "center"
+            elif s.endswith(":"):
+                align = "right"
+            elif s.startswith(":"):
+                align = "left"
+        alignments.append(align)
+
+    # Build <thead>
+    thead_cells = []
+    for i in range(num_cols):
+        val = header_cols[i] if i < len(header_cols) else ""
+        cell_html = _format_inlines(val, asset_map=asset_map, render_math=render_math)
+        align_attr = f' style="text-align: {alignments[i]};"'
+        thead_cells.append(f"<th{align_attr}>{cell_html}</th>")
+    thead_html = f"  <thead>\n    <tr>{''.join(thead_cells)}</tr>\n  </thead>"
+
+    # Build <tbody>
+    tbody_rows = []
+    for row_line in table_lines[2:]:
+        row_cols = _split_table_row(row_line)
+        row_cells = []
+        for i in range(num_cols):
+            val = row_cols[i] if i < len(row_cols) else ""
+            cell_html = _format_inlines(val, asset_map=asset_map, render_math=render_math)
+            align_attr = f' style="text-align: {alignments[i]};"'
+            row_cells.append(f"<td{align_attr}>{cell_html}</td>")
+        tbody_rows.append(f"    <tr>{''.join(row_cells)}</tr>")
+
+    tbody_html = f"  <tbody>\n{chr(10).join(tbody_rows)}\n  </tbody>" if tbody_rows else "  <tbody/>"
+
+    return f'<table class="table table-bordered">\n{thead_html}\n{tbody_html}\n</table>'
 
 
 def _format_inlines(

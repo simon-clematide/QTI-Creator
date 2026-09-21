@@ -1,3 +1,5 @@
 """QTI-Creator: Markdown to OpenOLAT QTI 2.1 Package Converter."""
 
-__version__ = "0.1.0"
+from src.version import __version__, __release_date__
+
+__all__ = ["__version__", "__release_date__"]

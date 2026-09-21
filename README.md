@@ -211,7 +211,8 @@ QuizMD uses deterministic heading semantics to model OpenOLAT's native test hier
 - **YAML `title:`** defines the overall test title.
 - **`#` always starts an Assessment Section** (rendered as `<assessmentSection>` in OpenOLAT).
 - **`##` always starts an Assessment Question** (rendered as `<assessmentItemRef>`).
-- **Section Instructions (`<rubricBlock>`)**: Any text written between a `# Section` heading and its first `## Question` becomes candidate instructions, shown by OpenOLAT at the beginning of that section.
+- **Plain Text Headings Only**: The text of `#` and `##` headings must be plain text only. Do not use LaTeX math (`$...$`), Markdown formatting (`**bold**`, `*italic*`, `` `code` ``), or links inside headings. OpenOLAT does not format Markdown or math in title attributes and displays them as raw syntax. Place all formulas, formatted text, and symbols in the question body or section instructions below the heading.
+- **Section Instructions (`<rubricBlock>`)**: Any text written between a `# Section` heading and its first `## Question` becomes candidate instructions, shown by OpenOLAT at the beginning of that section. In the test preview, section descriptions are collapsible.
 - **Title Fallback**: If no test title is specified in YAML frontmatter, the first `#` section title is also used as the overall test title. The section itself remains intact.
 - **Sensible Defaults**: If questions appear without any `#` heading, an implicit section is created automatically with default naming.
 - *Headings are strictly deterministic: `#` is always a section, `##` is always a question.*
@@ -350,8 +351,9 @@ Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $
 ```
 
 ### 10. Mathematical Formulas & Code Blocks
-- **Inline LaTeX**: Wrap in `$ ... $`, e.g. `$E = mc^2$`. OpenOLAT renders this natively with MathJax.
-- **Display Math**: Wrap in `$$ ... $$` on its own line.
+- **Inline LaTeX**: Wrap in `$ ... $`, e.g. `$E = mc^2$`. In generated QTI packages, inline math is wrapped in OpenOLAT-compatible `<span class="math" title="...">$latex$</span>` elements while retaining delimiters so MathJax renders them natively.
+- **Display Math**: Wrap in `$$ ... $$` on its own line (or `\[ ... \]`).
+- **Headings Prohibition**: Do not put mathematical formulas (`$...$`) or code inside `#` or `##` headings. Always put them in the body, choices, hint, or feedback.
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 

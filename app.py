@@ -21,6 +21,7 @@ from src.packager import create_qti_package
 from src.parser import parse_quizmd
 from src.preview import render_quiz_preview_html
 from src.validation import Severity
+from src.version import __version__, __release_date__
 
 
 def update_preview_and_validate(
@@ -228,8 +229,20 @@ APP_CSS = """
 _MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
 
 with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
-    gr.Markdown(
-        "# QTI-Creator: Markdown to OpenOLAT QTI 2.1 (Beta)",
+    gr.HTML(
+        f"""
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
+          <h1 style="margin: 0; font-size: 1.85em; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+            <span>QTI-Creator: Markdown to OpenOLAT QTI 2.1</span>
+            <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.45em; font-weight: 600; padding: 2px 8px; border-radius: 9999px; vertical-align: middle;">Beta</span>
+          </h1>
+          <div style="font-size: 0.82em; color: #64748b; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+            <span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; border: 1px solid #e2e8f0;">v{__version__}</span>
+            <span>&bull;</span>
+            <span>{__release_date__}</span>
+          </div>
+        </div>
+        """,
         elem_classes=["no-scroll-block"],
     )
 
@@ -957,6 +970,14 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     📖 OpenOlat documentation: <a href="https://docs.openolat.org/manual_user/learningresources/Tests_at_course_level/" target="_blank" rel="noopener noreferrer">Tests at course level</a>
                     """
                 )
+
+    gr.HTML(
+        f"""
+        <div style="text-align: center; margin-top: 28px; padding-top: 14px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 0.8em;">
+          <span>QTI-Creator v{__version__} ({__release_date__}) &bull; Standardized OpenOLAT QTI 2.1 Quiz Generator</span>
+        </div>
+        """
+    )
 
 if __name__ == "__main__":
     demo.launch(theme=theme, head=_MATHJAX_HEAD, css=APP_CSS)

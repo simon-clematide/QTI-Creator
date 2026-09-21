@@ -244,9 +244,9 @@ def render_quiz_preview_html(
     <div>
 
       <button type="button" class="quiz-expand-btn" onclick="
-        var cards = document.querySelectorAll('.quiz-question-card');
-        var anyClosed = Array.from(cards).some(c => !c.open);
-        cards.forEach(c => c.open = anyClosed);
+        var items = document.querySelectorAll('.quiz-question-card, .quiz-section-desc-details');
+        var anyClosed = Array.from(items).some(c => !c.open);
+        items.forEach(c => c.open = anyClosed);
         this.innerHTML = anyClosed ? '▼ Collapse All' : '▶ Expand All';
       ">▶ Expand All</button>
     </div>

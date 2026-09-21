@@ -186,6 +186,8 @@ Instructions for section 1.
         self.assertIn('<details class="quiz-section-desc-details" open', html_out)
         self.assertIn("Section Description / Instructions", html_out)
         self.assertIn("Instructions for section 1.", html_out)
+        # Verify Expand All button toggles both cards and section descriptions
+        self.assertIn(".quiz-question-card, .quiz-section-desc-details", html_out)
 
     def test_preview_invalid_question_display_and_validation_errors(self):
         text = """# Quiz With Error

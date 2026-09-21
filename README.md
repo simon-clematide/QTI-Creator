@@ -351,8 +351,8 @@ Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $
 ```
 
 ### 10. Mathematical Formulas & Code Blocks
-- **Inline LaTeX**: Wrap in `$ ... $`, e.g. `$E = mc^2$`. In generated QTI packages, inline math is wrapped in OpenOLAT-compatible `<span class="math" title="...">$latex$</span>` elements while retaining delimiters so MathJax renders them natively.
-- **Display Math**: Wrap in `$$ ... $$` on its own line (or `\[ ... \]`).
+- **Inline LaTeX**: Wrap in `$ ... $` or `\( ... \)`. In generated QTI packages, inline math is wrapped in OpenOLAT-compatible `<span class="math" title="URL_ENCODED">latex</span>` elements (without delimiters inside the span).
+- **Display Math**: Wrap in `$$ ... $$` or `\[ ... \]`. In generated QTI packages, display math is formatted as a centered paragraph `<p style="text-align:center"><span class="math" title="URL_ENCODED">latex</span></p>` matching OpenOLAT's native editor.
 - **Headings Prohibition**: Do not put mathematical formulas (`$...$`) or code inside `#` or `##` headings. Always put them in the body, choices, hint, or feedback.
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.

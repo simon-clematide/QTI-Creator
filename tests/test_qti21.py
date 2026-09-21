@@ -202,7 +202,12 @@ def square(n):
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
         self.assertIn("matchInteraction", xml_str)
+        self.assertIn('class="match_krpim"', xml_str)
+        self.assertIn('responseIdentifier="KPRIM_RESPONSE_1"', xml_str)
         self.assertIn('shuffle="true"', xml_str)
+        self.assertIn('matchMax="1" matchMin="1"', xml_str)
+        self.assertIn('identifier="correct" fixed="true"', xml_str)
+        self.assertIn('identifier="wrong" fixed="true"', xml_str)
         self.assertIn("simpleAssociableChoice", xml_str)
 
     def test_order_xml_validity(self):
@@ -383,12 +388,12 @@ Hint: Recall that $x^2 = x \\cdot x$.
         self.assertNotIn("<span", item_title)
         self.assertNotIn("class=\"math\"", item_title)
 
-        # 2. Check item body content contract: inline math is wrapped in <span class="math" title="...">$formula$</span>
-        self.assertIn('<span class="math" title="f%28x%29%20%3D%20x%5E2">$f(x) = x^2$</span>', xml_str)
-        self.assertIn('<span class="math" title="f%283%29">$f(3)$</span>', xml_str)
-        self.assertIn('<span class="math" title="9">$9$</span>', xml_str)
-        self.assertIn('<span class="math" title="3%5E2%20%3D%209">$3^2 = 9$</span>', xml_str)
-        self.assertIn('<span class="math" title="x%5E2%20%3D%20x%20%5Ccdot%20x">$x^2 = x \\cdot x$</span>', xml_str)
+        # 2. Check item body content contract: inline math is wrapped in <span class="math" title="...">formula</span> (no dollar signs)
+        self.assertIn('<span class="math" title="f%28x%29%20%3D%20x%5E2">f(x) = x^2</span>', xml_str)
+        self.assertIn('<span class="math" title="f%283%29">f(3)</span>', xml_str)
+        self.assertIn('<span class="math" title="9">9</span>', xml_str)
+        self.assertIn('<span class="math" title="3%5E2%20%3D%209">3^2 = 9</span>', xml_str)
+        self.assertIn('<span class="math" title="x%5E2%20%3D%20x%20%5Ccdot%20x">x^2 = x \\cdot x</span>', xml_str)
 
         # 3. Check section title in Test.xml contract: plain text
         test_xml = generate_test_xml(quiz)

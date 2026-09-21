@@ -30,10 +30,10 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
 
         stmt_xhtml = markdown_to_qti_xhtml(stmt.text, asset_map=asset_map)
         associable_choices.append(
-            f'        <simpleAssociableChoice identifier="{stmt_id}" matchMax="1">{stmt_xhtml}</simpleAssociableChoice>'
+            f'        <simpleAssociableChoice identifier="{stmt_id}" matchMax="1" matchMin="1">{stmt_xhtml}</simpleAssociableChoice>'
         )
 
-    response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="directedPair">
+    response_decl = f"""  <responseDeclaration identifier="KPRIM_RESPONSE_1" cardinality="multiple" baseType="directedPair">
     <correctResponse>
 {chr(10).join(correct_values)}
     </correctResponse>
@@ -46,14 +46,13 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
     shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
     shuffle_str = "true" if shuffle_bool else "false"
     item_body = f"""    {prompt_xhtml}
-    <matchInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxAssociations="{num_stmts}">
-
+    <matchInteraction class="match_krpim" responseIdentifier="KPRIM_RESPONSE_1" shuffle="{shuffle_str}" maxAssociations="{num_stmts}">
       <simpleMatchSet>
 {chr(10).join(associable_choices)}
       </simpleMatchSet>
       <simpleMatchSet>
-        <simpleAssociableChoice identifier="correct" matchMax="{num_stmts}">+</simpleAssociableChoice>
-        <simpleAssociableChoice identifier="wrong" matchMax="{num_stmts}">-</simpleAssociableChoice>
+        <simpleAssociableChoice identifier="correct" fixed="true" matchMax="{num_stmts}">+</simpleAssociableChoice>
+        <simpleAssociableChoice identifier="wrong" fixed="true" matchMax="{num_stmts}">-</simpleAssociableChoice>
       </simpleMatchSet>
     </matchInteraction>"""
 
@@ -62,7 +61,7 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
     <responseCondition>
       <responseIf>
         <gte>
-          <mapResponse identifier="RESPONSE"/>
+          <mapResponse identifier="KPRIM_RESPONSE_1"/>
           <baseValue baseType="float">{full_threshold}</baseValue>
         </gte>
         <setOutcomeValue identifier="SCORE">
@@ -71,7 +70,7 @@ def generate_kprim_xml(q: KprimQuestion, asset_map: Optional[Dict[str, str]] = N
       </responseIf>
       <responseElseIf>
         <gte>
-          <mapResponse identifier="RESPONSE"/>
+          <mapResponse identifier="KPRIM_RESPONSE_1"/>
           <baseValue baseType="float">{half_threshold}</baseValue>
         </gte>
         <setOutcomeValue identifier="SCORE">

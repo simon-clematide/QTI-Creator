@@ -217,12 +217,14 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0)
 
-        # render_math=True -> $...$ delimiters preserved for MathJax (loaded globally by host app)
+        # render_math=True -> OpenOLAT-compatible <span class="math" title="...">formula</span> (no dollar signs inside)
         # MathJax scripts are NOT embedded in the preview HTML string — they live in gr.Blocks(head=...)
         html_math_on = render_quiz_preview_html(quiz, render_math=True)
         self.assertNotIn("MathJax =", html_math_on)      # script no longer in preview HTML
         self.assertNotIn("tex-chtml.js", html_math_on)   # CDN loader not in preview HTML
-        self.assertIn("$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$", html_math_on)  # delimiters preserved
+        self.assertIn('<span class="math"', html_math_on)
+        self.assertIn('title="x%20%3D%20%5Cfrac%7B-b%20%5Cpm%20%5Csqrt%7Bb%5E2%20-%204ac%7D%7D%7B2a%7D"', html_math_on)
+        self.assertIn(">x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}</span>", html_math_on)
 
         # render_math=False -> formula wrapped in <code>$...$</code>, never as bare delimiters
         html_math_off = render_quiz_preview_html(quiz, render_math=False)

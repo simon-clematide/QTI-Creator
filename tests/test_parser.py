@@ -310,32 +310,42 @@ def greet():
     def test_latex_math_preservation_and_protection(self):
         from src.markdown import markdown_to_qti_xhtml
         
-        # Display math block
+        # Display math block ($$ and \[)
         disp_text = "$$\\frac{a}{b}$$"
-        self.assertEqual(markdown_to_qti_xhtml(disp_text), "<p>$$\\frac{a}{b}$$</p>")
+        self.assertEqual(markdown_to_qti_xhtml(disp_text), '<p style="text-align:center"><span class="math" title="%5Cfrac%7Ba%7D%7Bb%7D">\\frac{a}{b}</span></p>')
         self.assertEqual(markdown_to_qti_xhtml(disp_text, render_math=False), "<pre class='math-raw'>$$\\frac{a}{b}$$</pre>")
 
-        # Inline math wrapped in <span class="math" title="...">$latex$</span>
+        bracket_disp_text = "\\[\\frac{c}{d}\\]"
+        self.assertEqual(markdown_to_qti_xhtml(bracket_disp_text), '<p style="text-align:center"><span class="math" title="%5Cfrac%7Bc%7D%7Bd%7D">\\frac{c}{d}</span></p>')
+
+        # Inline math wrapped in <span class="math" title="...">latex</span> (no dollar signs)
         inl_text = "The solution is $x=\\frac{a}{b}$."
         self.assertEqual(
             markdown_to_qti_xhtml(inl_text, render_math=True),
-            '<p>The solution is <span class="math" title="x%3D%5Cfrac%7Ba%7D%7Bb%7D">$x=\\frac{a}{b}$</span>.</p>',
+            '<p>The solution is <span class="math" title="x%3D%5Cfrac%7Ba%7D%7Bb%7D">x=\\frac{a}{b}</span>.</p>',
         )
         self.assertEqual(
             markdown_to_qti_xhtml(inl_text, render_math=False),
             "<p>The solution is <code>$x=\\frac{a}{b}$</code>.</p>",
         )
 
+        # Inline math with \( ... \) delimiters
+        paren_text = "What is \\(AB\\)?"
+        self.assertEqual(
+            markdown_to_qti_xhtml(paren_text, render_math=True),
+            '<p>What is <span class="math" title="AB">AB</span>?</p>',
+        )
+
         # Math symbols (* and _) protected from markdown italics/bold
         formula_text = "Check $x_1 * y_2 * z_3$ and **bold text**."
         xhtml = markdown_to_qti_xhtml(formula_text)
-        self.assertIn('<span class="math" title="x_1%20%2A%20y_2%20%2A%20z_3">$x_1 * y_2 * z_3$</span>', xhtml)
+        self.assertIn('<span class="math" title="x_1%20%2A%20y_2%20%2A%20z_3">x_1 * y_2 * z_3</span>', xhtml)
         self.assertIn("<strong>bold text</strong>", xhtml)
         self.assertNotIn("<em>", xhtml)
 
         # XML-sensitive characters inside math properly escaped for QTI XML
         xml_math = "Condition: $a < b & c > d$."
-        self.assertIn('<span class="math" title="a%20%3C%20b%20%26%20c%20%3E%20d">$a &lt; b &amp; c &gt; d$</span>', markdown_to_qti_xhtml(xml_math))
+        self.assertIn('<span class="math" title="a%20%3C%20b%20%26%20c%20%3E%20d">a &lt; b &amp; c &gt; d</span>', markdown_to_qti_xhtml(xml_math))
 
     def test_quiz_version_from_header_metadata(self):
         text = """# Physics Quiz

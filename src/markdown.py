@@ -66,35 +66,42 @@ def markdown_to_qti_xhtml(
             output_blocks.append(f"<pre><code>{code_content}</code></pre>")
             continue
 
-        # Display math block: $$ ... $$
-        if stripped.startswith("$$"):
+        # Display math block: $$ ... $$ or \[ ... \]
+        if stripped.startswith("$$") or stripped.startswith(r"\["):
+            is_bracket = stripped.startswith(r"\[")
+            close_delim = r"\]" if is_bracket else "$$"
             math_lines = []
-            if stripped == "$$":
+            if stripped in ("$$", r"\["):
                 i += 1
-                while i < len(lines) and not lines[i].strip().startswith("$$"):
+                while i < len(lines) and not lines[i].strip().startswith(close_delim):
                     math_lines.append(lines[i])
                     i += 1
                 if i < len(lines):
-                    i += 1  # Skip closing $$
+                    i += 1  # Skip closing delimiter
                 math_text = "\n".join(math_lines).strip()
             else:
-                m = re.match(r"^\$\$(.*?)\$\$$", stripped)
+                regex_pattern = r"^\\\[(.*?)\\\]$" if is_bracket else r"^\$\$(.*?)\$\$$"
+                m = re.match(regex_pattern, stripped)
                 if m:
                     math_text = m.group(1).strip()
                     i += 1
                 else:
-                    math_lines.append(stripped[2:])
+                    prefix_len = 2
+                    math_lines.append(stripped[prefix_len:])
                     i += 1
-                    while i < len(lines) and not lines[i].strip().endswith("$$"):
+                    while i < len(lines) and not lines[i].strip().endswith(close_delim):
                         math_lines.append(lines[i])
                         i += 1
                     if i < len(lines):
                         end_line = lines[i].strip()
-                        math_lines.append(end_line[:-2])
+                        math_lines.append(end_line[:-len(close_delim)])
                         i += 1
                     math_text = "\n".join(math_lines).strip()
+
             if render_math:
-                output_blocks.append(f"<p>$${html.escape(math_text, quote=False)}$$</p>")
+                title_val = urllib.parse.quote(math_text)
+                escaped_latex = html.escape(math_text, quote=False)
+                output_blocks.append(f'<p style="text-align:center"><span class="math" title="{title_val}">{escaped_latex}</span></p>')
             else:
                 output_blocks.append(f"<pre class='math-raw'>$${html.escape(math_text)}$$</pre>")
             continue
@@ -143,6 +150,7 @@ def markdown_to_qti_xhtml(
                 not next_line
                 or next_line.startswith("```")
                 or next_line.startswith("$$")
+                or next_line.startswith(r"\[")
                 or next_line.startswith(">")
                 or re.match(r"^[-*]\s+", next_line)
                 or re.match(r"^\d+\.\s+", next_line)
@@ -173,35 +181,39 @@ def _format_inlines(
     placeholders = {}
     counter = 0
 
-    # 1. Protect display math $$...$$
+    # 1. Protect display math $$...$$ and \[...\]
     def save_display_math(match):
         nonlocal counter
         key = f"XXMATHDISP{counter}XX"
         counter += 1
-        raw_math = match.group(1)
+        raw_math = match.group(1).strip()
         if render_math:
-            placeholders[key] = f"$${html.escape(raw_math, quote=False)}$$"
+            title_val = urllib.parse.quote(raw_math)
+            escaped_latex = html.escape(raw_math, quote=False)
+            placeholders[key] = f'<span class="math" title="{title_val}">{escaped_latex}</span>'
         else:
             placeholders[key] = f"<pre class='math-raw'>$${html.escape(raw_math)}$$</pre>"
         return key
 
     text = re.sub(r"\$\$(.+?)\$\$", save_display_math, text, flags=re.DOTALL)
+    text = re.sub(r"\\\[([\s\S]+?)\\\]", save_display_math, text)
 
-    # 2. Protect inline math $...$ -> <span class="math" title="...">$raw_latex$</span>
+    # 2. Protect inline math $...$ and \(...\) -> <span class="math" title="...">raw_latex</span>
     def save_inline_math(match):
         nonlocal counter
         key = f"XXMATHINL{counter}XX"
         counter += 1
-        raw_math = match.group(1)
+        raw_math = match.group(1).strip()
         if render_math:
             title_val = urllib.parse.quote(raw_math)
             escaped_latex = html.escape(raw_math, quote=False)
-            placeholders[key] = f'<span class="math" title="{title_val}">${escaped_latex}$</span>'
+            placeholders[key] = f'<span class="math" title="{title_val}">{escaped_latex}</span>'
         else:
             # render_math=False: show raw source literally
             placeholders[key] = f"<code>${html.escape(raw_math)}$</code>"
         return key
 
+    text = re.sub(r"\\\((.+?)\\\)", save_inline_math, text)
     text = re.sub(r"(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)", save_inline_math, text)
 
     # 3. Protect inline code `...`

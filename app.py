@@ -161,8 +161,9 @@ _MATHJAX_HEAD = """
 <script>
 window.MathJax = {
   tex: {
-    inlineMath: [['$', '$']],
-    displayMath: [['$$', '$$']]
+    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+    displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+    processEscapes: true
   },
   options: {
     skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
@@ -302,8 +303,26 @@ APP_CSS = """
 """
 
 # JS called after each preview update to re-typeset the newly injected HTML.
-# MathJax.typesetPromise() re-scans the DOM for $...$ and $$...$$ after innerHTML changes.
-_MATHJAX_TYPESET_JS = "() => { if (window.MathJax && window.MathJax.typesetPromise) { window.MathJax.typesetPromise(); } }"
+# OpenOLAT stores formulas in <span class="math" title="URL_ENCODED">latex</span> without delimiters.
+# This typesetter checks span.math elements and uses MathJax to render them cleanly.
+_MATHJAX_TYPESET_JS = """() => {
+  if (!window.MathJax) return;
+  // Ensure un-rendered span.math elements are prepared for MathJax
+  const mathSpans = document.querySelectorAll('span.math:not([data-mathjax-typeset])');
+  mathSpans.forEach(span => {
+    span.setAttribute('data-mathjax-typeset', 'true');
+    const isDisplay = span.closest('p') && span.closest('p').style.textAlign === 'center';
+    const rawLatex = span.getAttribute('title') ? decodeURIComponent(span.getAttribute('title')) : span.textContent;
+    if (isDisplay) {
+      span.innerHTML = '$$' + rawLatex + '$$';
+    } else {
+      span.innerHTML = '\\\\(' + rawLatex + '\\\\)';
+    }
+  });
+  if (window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise();
+  }
+}"""
 
 # JS to toggle fullscreen mode on the QuizMD source editor container
 _TOGGLE_FULLSCREEN_JS = """() => {

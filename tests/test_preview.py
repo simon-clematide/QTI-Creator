@@ -53,7 +53,7 @@ class TestPreview(unittest.TestCase):
         quiz, diags = parse_quizmd(text)
         self.assertTrue(any("contains Markdown syntax" in d.message for d in diags))
         html_out = render_quiz_preview_html(quiz)
-        self.assertIn("⚠️ Markdown syntax in title", html_out)
+        self.assertIn("⚠️ Markdown/Math in title", html_out)
         self.assertIn("**Section 1**: *Calculus*", html_out)
         # Ensure it does not render formatted HTML like <strong> or <em> in section title
         self.assertNotIn("<strong>Section 1</strong>", html_out)
@@ -78,7 +78,7 @@ Instructions for Part A
         quiz, diags = parse_quizmd(text)
         self.assertTrue(any("contains Markdown syntax" in d.message for d in diags))
         html_out = render_quiz_preview_html(quiz)
-        self.assertIn("⚠️ Markdown syntax in title", html_out)
+        self.assertIn("⚠️ Markdown/Math in title", html_out)
         self.assertIn("`Part A`: **Math**", html_out)
         self.assertNotIn("<code>Part A</code>", html_out)
 
@@ -167,6 +167,26 @@ Feedback: Great work!
 
         # Section 1 has 2 Qs, 1 Hint, 1 Feedback, 2.0 pt in sequence Qs &bull; 💡 &bull; 💬 &bull; pt
         self.assertIn("2 Qs &bull; 💡 1 &bull; 💬 1 &bull; 2.0 pt", html_out)
+
+    def test_preview_section_description_collapsible(self):
+        text = """# Test Exam
+
+# Section 1
+Instructions for section 1.
+
+## Q1
+- [X] A
+- [ ] B
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Check that description is wrapped in collapsible details
+        self.assertIn('<details class="quiz-section-desc-details" open', html_out)
+        self.assertIn("Section Description / Instructions", html_out)
+        self.assertIn("Instructions for section 1.", html_out)
+
     def test_preview_invalid_question_display_and_validation_errors(self):
         text = """# Quiz With Error
 ## Broken Question
@@ -237,11 +257,29 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
         self.assertNotIn("<strong>thermodynamics</strong>", html_out)
         self.assertNotIn("<em>fluid mechanics</em>", html_out)
 
-        # Check that Markdown warning badge is displayed for the question title
-        self.assertIn("⚠️ Markdown syntax in title", html_out)
+        # Check that Markdown/Math warning badge is displayed for the question title
+        self.assertIn("⚠️ Markdown/Math in title", html_out)
 
         # Verify the question title wrapper in the body
         self.assertIn("<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>", html_out)
+
+    def test_preview_question_math_in_title_warning(self):
+        text = """## Solve for $x$: $2x + 5 = 15$
+What is $x$?
+- [X] 5
+- [ ] 10
+"""
+        quiz, diags = parse_quizmd(text)
+        # Should have a warning diagnostic for question title
+        self.assertTrue(any("contains Markdown or math syntax" in d.message for d in diags))
+        html_out = render_quiz_preview_html(quiz)
+
+        # Title should appear in full as escaped raw text in the card body
+        self.assertIn("Solve for $x$: $2x + 5 = 15$", html_out)
+        # Warning badge should be present in card body
+        self.assertIn("⚠️ Markdown/Math in title", html_out)
+        # Warning icon badge should also be in summary status badges
+        self.assertIn('title="Question title contains Markdown or math syntax"', html_out)
 
 
 if __name__ == "__main__":

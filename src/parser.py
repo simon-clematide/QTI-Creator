@@ -155,7 +155,10 @@ def _split_keywords(val: Any) -> List[str]:
     if isinstance(val, list):
         return [str(k).strip() for k in val if str(k).strip()]
     if isinstance(val, str):
-        return [k.strip() for k in val.split(",") if k.strip()]
+        cleaned = val.strip()
+        if cleaned.startswith("[") and cleaned.endswith("]"):
+            cleaned = cleaned[1:-1]
+        return [k.strip().strip("'\"") for k in cleaned.split(",") if k.strip().strip("'\"")]
     return []
 
 

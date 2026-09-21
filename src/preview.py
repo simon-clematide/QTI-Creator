@@ -71,14 +71,15 @@ def render_quiz_preview_html(
 </div>
 """
 
-            # Question title: OpenOLAT does not render Markdown in question titles.
+            # Question title: OpenOLAT does not render Markdown or math in question titles.
             # Render the raw title in full at the top of the body so users can read the entire title even when truncated in the summary.
+            has_title_md = contains_markdown(q.title)
             q_title_warning = ""
-            if contains_markdown(q.title):
+            if has_title_md:
                 q_title_warning = (
-                    f" <span title=\"Question titles do not support Markdown formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(q.title)}')\" "
+                    f" <span title=\"Question titles do not support Markdown or math formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(q.title)}')\" "
                     f"style=\"display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;\">"
-                    f"⚠️ Markdown syntax in title</span>"
+                    f"⚠️ Markdown/Math in title</span>"
                 )
             question_title_html = f"<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>{html.escape(q.title)}{q_title_warning}</div>"
 
@@ -105,6 +106,8 @@ def render_quiz_preview_html(
             status_badges = []
             if is_invalid:
                 status_badges.append('<span title="Validation error" style="cursor: help; font-size: 0.95em;">⚠️</span>')
+            elif has_title_md:
+                status_badges.append(f'<span title="Question title contains Markdown or math syntax" style="cursor: help; font-size: 0.95em;">⚠️</span>')
             if q.hint and q.hint.strip():
                 status_badges.append('<span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span>')
             if q.feedback and q.feedback.strip():
@@ -157,18 +160,24 @@ def render_quiz_preview_html(
             sec_summary_text = " &bull; ".join(sec_summary_parts)
 
             desc_html = (
-                f"<div style='color: #475569; font-size: 0.92em; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map, render_math=render_math)}</div>"
+                f"<details class=\"quiz-section-desc-details\" open style=\"margin-bottom: 12px;\">"
+                f"<summary style=\"display: inline-flex; align-items: center; gap: 6px; font-size: 0.85em; font-weight: 600; color: #475569; cursor: pointer; user-select: none; margin-bottom: 6px; list-style: none; outline: none;\">"
+                f"<span class=\"quiz-desc-chevron\" style=\"display: inline-block; font-size: 0.75em; color: #94a3b8; transition: transform 0.2s;\">▼</span>"
+                f"<span>Section Description / Instructions</span>"
+                f"</summary>"
+                f"<div style='color: #475569; font-size: 0.92em; line-height: 1.5; padding: 6px 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 2px;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map, render_math=render_math)}</div>"
+                f"</details>"
                 if sec.description
                 else ""
             )
 
-            # Check if section title contains unrendered Markdown syntax
+            # Check if section title contains unrendered Markdown or math syntax
             md_warning_badge = ""
             if contains_markdown(sec.title):
                 md_warning_badge = (
-                    f"<span title=\"Section titles do not support Markdown formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(sec.title)}')\" "
+                    f"<span title=\"Section titles do not support Markdown or math formatting and will display as raw syntax in OpenOLAT (e.g. '{html.escape(sec.title)}')\" "
                     f"style=\"display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;\">"
-                    f"⚠️ Markdown syntax in title</span>"
+                    f"⚠️ Markdown/Math in title</span>"
                 )
 
             sec_header = f"""
@@ -200,6 +209,9 @@ def render_quiz_preview_html(
   .quiz-question-card summary::-webkit-details-marker {{ display: none; }}
   .quiz-question-card[open] {{ border-color: #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.06); }}
   .quiz-question-card[open] > summary .quiz-chevron {{ transform: rotate(90deg); }}
+  .quiz-section-desc-details summary::-webkit-details-marker {{ display: none; }}
+  .quiz-section-desc-details:not([open]) > summary .quiz-desc-chevron {{ transform: rotate(-90deg); }}
+  .quiz-section-desc-details > summary:hover {{ color: #1e293b; }}
   .quiz-expand-btn {{
     background: #f8fafc;
     border: 1px solid #cbd5e1;
@@ -225,7 +237,7 @@ def render_quiz_preview_html(
     <div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
         <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
-        {f'<span title="Test and section titles do not support Markdown formatting and will display as raw syntax in OpenOLAT" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;">⚠️ Markdown syntax in title</span>' if contains_markdown(quiz.title) and not has_multiple_sections else ''}
+        {f'<span title="Test and section titles do not support Markdown or math formatting and will display as raw syntax in OpenOLAT" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;">⚠️ Markdown/Math in title</span>' if contains_markdown(quiz.title) and not has_multiple_sections else ''}
       </div>
       <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed{f" across {len(quiz.sections)} section(s)" if len(quiz.sections) > 1 else ""}</span>
     </div>

@@ -268,6 +268,15 @@ class Section:
                     )
                 )
         for idx, q in enumerate(self.questions):
+            if q.title and contains_markdown(q.title):
+                diagnostics.append(
+                    Diagnostic(
+                        f"Question title '{q.title}' contains Markdown or math syntax. OpenOLAT does not format Markdown or math in question titles; it will be displayed as raw text.",
+                        Severity.WARNING,
+                        q.line_number,
+                        question_index=idx,
+                    )
+                )
             try:
                 q.validate()
             except QuizValidationError as e:

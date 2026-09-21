@@ -360,6 +360,43 @@ Section instructions for candidate.
         self.assertIsNotNone(rubric)
         self.assertIn("Section instructions for candidate.", test_xml)
 
+    def test_inline_math_in_qti_xml_and_title_plain_text(self):
+        text = """# Math Quiz
+## Calculating the output of $f(x) = x^2$
+Given the function $f(x) = x^2$, what is $f(3)$?
+- [X] $9$
+- [ ] $6$
+Feedback: Since $3^2 = 9$, the answer is $9$.
+Hint: Recall that $x^2 = x \\cdot x$.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 1)
+        self.assertIn("contains Markdown or math syntax", diags[0].message)
+        q = quiz.questions[0]
+
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+
+        # 1. Check title attribute contract: plain text, NEVER contains <span or HTML tags
+        item_title = root.attrib.get("title", "")
+        self.assertEqual(item_title, "Calculating the output of $f(x) = x^2$")
+        self.assertNotIn("<span", item_title)
+        self.assertNotIn("class=\"math\"", item_title)
+
+        # 2. Check item body content contract: inline math is wrapped in <span class="math" title="...">$formula$</span>
+        self.assertIn('<span class="math" title="f%28x%29%20%3D%20x%5E2">$f(x) = x^2$</span>', xml_str)
+        self.assertIn('<span class="math" title="f%283%29">$f(3)$</span>', xml_str)
+        self.assertIn('<span class="math" title="9">$9$</span>', xml_str)
+        self.assertIn('<span class="math" title="3%5E2%20%3D%209">$3^2 = 9$</span>', xml_str)
+        self.assertIn('<span class="math" title="x%5E2%20%3D%20x%20%5Ccdot%20x">$x^2 = x \\cdot x$</span>', xml_str)
+
+        # 3. Check section title in Test.xml contract: plain text
+        test_xml = generate_test_xml(quiz)
+        test_root = ET.fromstring(test_xml)
+        sec = test_root.find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}assessmentSection")
+        self.assertIsNotNone(sec)
+        self.assertNotIn("<span", sec.attrib.get("title", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

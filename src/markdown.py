@@ -187,15 +187,16 @@ def _format_inlines(
 
     text = re.sub(r"\$\$(.+?)\$\$", save_display_math, text, flags=re.DOTALL)
 
-    # 2. Protect inline math $...$
+    # 2. Protect inline math $...$ -> <span class="math" title="...">$raw_latex$</span>
     def save_inline_math(match):
         nonlocal counter
         key = f"XXMATHINL{counter}XX"
         counter += 1
         raw_math = match.group(1)
         if render_math:
-            # Preserve delimiters so MathJax finds them in the DOM
-            placeholders[key] = f"${html.escape(raw_math, quote=False)}$"
+            title_val = urllib.parse.quote(raw_math)
+            escaped_latex = html.escape(raw_math, quote=False)
+            placeholders[key] = f'<span class="math" title="{title_val}">${escaped_latex}$</span>'
         else:
             # render_math=False: show raw source literally
             placeholders[key] = f"<code>${html.escape(raw_math)}$</code>"
@@ -293,12 +294,12 @@ def _format_inlines(
 
 # Patterns that indicate presence of Markdown formatting or math in a single-line title
 RE_MARKDOWN_SYNTAX = re.compile(
-    r"(\*\*|__|(?<!\w)\*[^*\n]+?\*(?!\w)|(?<!\w)_[^_\n]+?_(?!\w)|`[^`\n]+`|\$[^$\n]+\$|!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|~~.*?~~)"
+    r"(\*\*|__|(?<!\w)\*[^*\n]+?\*(?!\w)|(?<!\w)_[^_\n]+?_(?!\w)|`[^`\n]+`|\$[^$\n]+\$|\$\$[\s\S]+?\$\$|\\\(.*?\\\)|\\\[[\s\S]*?\\\]|!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|~~.*?~~)"
 )
 
 
 def contains_markdown(text: str) -> bool:
-    """Return True if text contains Markdown formatting syntax (bold, italic, code, math, links, images)."""
+    """Return True if text contains Markdown formatting syntax or math (bold, italic, code, math, links, images)."""
     if not text:
         return False
     return bool(RE_MARKDOWN_SYNTAX.search(text))

@@ -315,11 +315,11 @@ def greet():
         self.assertEqual(markdown_to_qti_xhtml(disp_text), "<p>$$\\frac{a}{b}$$</p>")
         self.assertEqual(markdown_to_qti_xhtml(disp_text, render_math=False), "<pre class='math-raw'>$$\\frac{a}{b}$$</pre>")
 
-        # Inline math preserves $ delimiters for MathJax 3 when render_math=True
+        # Inline math wrapped in <span class="math" title="...">$latex$</span>
         inl_text = "The solution is $x=\\frac{a}{b}$."
         self.assertEqual(
             markdown_to_qti_xhtml(inl_text, render_math=True),
-            "<p>The solution is $x=\\frac{a}{b}$.</p>",
+            '<p>The solution is <span class="math" title="x%3D%5Cfrac%7Ba%7D%7Bb%7D">$x=\\frac{a}{b}$</span>.</p>',
         )
         self.assertEqual(
             markdown_to_qti_xhtml(inl_text, render_math=False),
@@ -329,13 +329,13 @@ def greet():
         # Math symbols (* and _) protected from markdown italics/bold
         formula_text = "Check $x_1 * y_2 * z_3$ and **bold text**."
         xhtml = markdown_to_qti_xhtml(formula_text)
-        self.assertIn("$x_1 * y_2 * z_3$", xhtml)
+        self.assertIn('<span class="math" title="x_1%20%2A%20y_2%20%2A%20z_3">$x_1 * y_2 * z_3$</span>', xhtml)
         self.assertIn("<strong>bold text</strong>", xhtml)
         self.assertNotIn("<em>", xhtml)
 
         # XML-sensitive characters inside math properly escaped for QTI XML
         xml_math = "Condition: $a < b & c > d$."
-        self.assertIn("$a &lt; b &amp; c &gt; d$", markdown_to_qti_xhtml(xml_math))
+        self.assertIn('<span class="math" title="a%20%3C%20b%20%26%20c%20%3E%20d">$a &lt; b &amp; c &gt; d$</span>', markdown_to_qti_xhtml(xml_math))
 
     def test_quiz_version_from_header_metadata(self):
         text = """# Physics Quiz

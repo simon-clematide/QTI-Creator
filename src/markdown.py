@@ -261,7 +261,7 @@ def _render_table(
 
     tbody_html = f"  <tbody>\n{chr(10).join(tbody_rows)}\n  </tbody>" if tbody_rows else "  <tbody/>"
 
-    return f'<table class="table table-bordered">\n{thead_html}\n{tbody_html}\n</table>'
+    return f'<table class="b_default" style="border-collapse:collapse;width:100%;">\n{thead_html}\n{tbody_html}\n</table>'
 
 
 def _format_inlines(

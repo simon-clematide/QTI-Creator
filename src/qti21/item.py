@@ -71,7 +71,7 @@ def wrap_assessment_item(
     final_response_proc = response_processing
     if hint:
         rp_stripped = response_processing.strip()
-        if 'template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"' in rp_stripped:
+        if 'template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"' in rp_stripped and rp_stripped.endswith("/>"):
             # Expand map_response inline
             inner = f"""{hint_cond}
     <responseCondition>
@@ -87,7 +87,7 @@ def wrap_assessment_item(
       </responseIf>
     </responseCondition>"""
             final_response_proc = f"  <responseProcessing>\n{inner}\n  </responseProcessing>"
-        elif 'template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"' in rp_stripped:
+        elif 'template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/match_correct"' in rp_stripped and rp_stripped.endswith("/>"):
             # Expand match_correct inline
             inner = f"""{hint_cond}
     <responseCondition>
@@ -113,7 +113,8 @@ def wrap_assessment_item(
             # Prepend hint condition inside existing <responseProcessing ...>
             import re
             def _inject_hint(match):
-                return f"{match.group(1)}\n{hint_cond}"
+                cleaned_tag = re.sub(r'\s+template="[^"]*"', '', match.group(1))
+                return f"{cleaned_tag}\n{hint_cond}"
             final_response_proc = re.sub(
                 r"(<responseProcessing[^>]*>)",
                 _inject_hint,

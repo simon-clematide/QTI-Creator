@@ -89,10 +89,11 @@ Explain the difference between aerobic and anaerobic respiration in 2-3 sentence
 ## 📖 In-Depth Syntax Reference & Advanced Features
 
 ### 1. Choice Questions: Strict Case-Sensitive Markers
-QTI-Creator enforces clear marker families:
+QTI-Creator enforces clear, case-sensitive marker families:
 - **Single Choice**: Exactly one `[X]` (uppercase). If more than 1 `[X]` is used, the parser returns a diagnostic error.
 - **Multiple Choice**: Lowercase `[x]`. Any question with `[x]` is Multiple Choice (even if only 1 option is checked).
 - **Prohibited**: Mixing `[X]` and `[x]` in the same question is forbidden to prevent ambiguity. Legacy `[o]`, `(o)`, or `(*)` are not supported.
+- **Do not post-process with Pandoc or Markdown linters**: Tools like Pandoc or automated formatters normalize Markdown by converting uppercase `[X]` to lowercase `[x]`, escaping Kprim brackets (`\[+\]`), and reflowing metadata lines. Always preserve QuizMD files as pure, unformatted literal Markdown.
 
 ### 2. Native OpenOLAT Partial Scoring for Multiple Choice
 Multiple Choice questions (`- [x]`) use OpenOLAT's native **Partial score** by default:
@@ -369,7 +370,7 @@ Standard GitHub Flavored Markdown (GFM) tables are supported in question prompts
 
 - **Column Alignments**: Supports left (`:---`), center (`:---:`), and right (`---:`) alignment.
 - **Rich Inlines in Cells**: Cells support math (`$...$`), code spans, bold, italic, and links.
-- **Native OpenOLAT Styling**: Exported with `<table class="table table-bordered">` for native rendering in OpenOLAT and the live preview.
+- **Native OpenOLAT Styling**: Exported with `<table class="b_default" style="border-collapse:collapse;width:100%;">` for native rendering in OpenOLAT and the live preview.
 
 ### 12. Media & Image Support (Remote & Relative Packaging)
 Embed images anywhere in questions, choices, or feedback using standard Markdown:

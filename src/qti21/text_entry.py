@@ -56,10 +56,7 @@ def generate_fill_blank_xml(q: FillBlankQuestion, asset_map: Optional[Dict[str, 
 
     item_body = RE_GAP.sub(replace_gap, prompt_xhtml)
 
-    if len(q.gaps) == 1:
-        response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
-    else:
-        response_proc = f"""  <responseProcessing>
+    response_proc = f"""  <responseProcessing>
     <setOutcomeValue identifier="SCORE">
       <sum>
         {' '.join(map_responses)}

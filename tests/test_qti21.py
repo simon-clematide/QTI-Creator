@@ -96,6 +96,30 @@ def square(n):
         self.assertIn("MINSCORE", xml_str)
         self.assertIn("<baseValue baseType=\"integer\">3</baseValue>", xml_str)
         self.assertIn("<baseValue baseType=\"integer\">1</baseValue>", xml_str)
+        self.assertNotIn("template=", xml_str)
+        self.assertNotIn("mapResponse", xml_str)
+
+    def test_multiple_choice_partial_with_hint_preserves_nps_and_no_map_response(self):
+        q = MultipleChoiceQuestion(
+            prompt="Which problems does the long tail of word frequencies create?",
+            choices=[
+                Choice("Rare words have sparse statistics.", True),
+                Choice("Large vocabulary.", True),
+                Choice("All words same frequency.", False),
+            ],
+            points=2.0,
+            scoring="partial",
+            hint="Think about Zipf's law.",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("HINTREQUEST", xml_str)
+        self.assertIn("HINTFEEDBACKMODAL", xml_str)
+        self.assertIn("NPS_NUMCORRECT", xml_str)
+        self.assertIn("NPS_NUMINCORRECT", xml_str)
+        # Crucial: Must NEVER contain mapResponse because responseDeclaration has no mapping
+        self.assertNotIn("mapResponse", xml_str)
+        self.assertNotIn("template=", xml_str)
 
     def test_multiple_choice_all_correct_xml_validity(self):
         q = MultipleChoiceQuestion(
@@ -167,6 +191,8 @@ def square(n):
         elem = root.find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}textEntryInteraction")
         self.assertIsNotNone(elem, "textEntryInteraction must exist as an XML element, not escaped text")
         self.assertEqual(elem.attrib.get("responseIdentifier"), "RESPONSE_0")
+        self.assertIn('<mapResponse identifier="RESPONSE_0"/>', xml_str)
+        self.assertNotIn("template=", xml_str)
 
     def test_fill_blank_escapes_xml_validity(self):
         q = FillBlankQuestion(

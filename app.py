@@ -227,14 +227,17 @@ APP_CSS = """
 }
 
 /* Markdown table styling in preview and test runner */
-table.table {
+table.table,
+table.b_default {
   width: 100% !important;
   border-collapse: collapse !important;
   margin: 12px 0 !important;
   font-size: 0.92em !important;
 }
 table.table th,
-table.table td {
+table.table td,
+table.b_default th,
+table.b_default td {
   border: 1px solid #cbd5e1 !important;
   padding: 8px 12px !important;
   line-height: 1.4 !important;
@@ -815,14 +818,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                 Upload or provide your source material to an AI assistant, tell it what you want to assess, and ask it to return the questions in the QuizMD format understood by QTI-Creator.
 
                 > **Important:** Treat AI-generated questions as a draft. Check the factual accuracy, difficulty, wording, answer keys, and suitability for your learning objectives before importing them into QTI-Creator.
+                > 
+                > **Do not run QuizMD output through Pandoc, Prettier, or Markdown reflow formatters:** Tools like Pandoc normalize Markdown syntax (e.g. converting `[X]` to `[x]`, escaping `[+]` as `\\[+\\]`, and reflowing lines), which breaks QuizMD semantic parsing. Keep the generated Markdown strictly literal.
 
                 ### A simple workflow
 
                 1. **Provide your material** → Upload your slides, notes, or other source material.
                 2. **Describe the quiz** → Specify the audience, topics, number and types of questions, and desired difficulty.
-                3. **Generate QuizMD** → Give the AI the QuizMD prompt below and ask for Markdown only.
+                3. **Generate QuizMD** → Give the AI the QuizMD prompt below and ask for raw literal Markdown only.
                 4. **Review and revise** → Check every question and answer against your teaching material.
-                5. **Copy into QTI-Creator** → Paste the resulting Markdown into the QuizMD Source editor and use Validation and Preview before generating the QTI package.
+                5. **Copy into QTI-Creator** → Paste the resulting Markdown directly into the QuizMD Source editor and use Validation and Preview before generating the QTI package.
                 """
             )
 
@@ -934,6 +939,14 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     "Questions are worth 1 point by default.\n"
                     "Use this only when a different weight is needed:\n"
                     "Points: 2\n\n"
+                    "CRITICAL FORMATTING & SYNTAX INVARIANTS (DO NOT POST-PROCESS OR NORMALIZE):\n"
+                    "- Output pure literal Markdown. Never run the output through Pandoc, Prettier, or any Markdown reflow/linter tool.\n"
+                    "- Single Choice: MUST use uppercase [X] for the single correct choice and [ ] for incorrect choices. NEVER lowercase [x].\n"
+                    "- Multiple Choice: MUST use lowercase [x] for correct choices and [ ] for incorrect choices.\n"
+                    "- Kprim: MUST use exactly four literal unescaped [+] or [-] markers. NEVER escape brackets (do not output \\[+\\] or \\[-\\]).\n"
+                    "- Headings: # is always a section, ## is always a question. Headings MUST be plain text only (never put LaTeX, math, or backticks in headings).\n"
+                    "- Metadata: Key-value lines (Points:, Feedback:, Hint:) MUST remain on their own separate lines, never reflowed into a paragraph.\n"
+                    "- Code blocks: Use standard triple backticks without a space (```python, not ``` python).\n\n"
                     "OUTPUT REQUIREMENTS\n"
                     "- Return only the finished QuizMD Markdown, without commentary before or after it.\n"
                     "- Use question types appropriate to the material and learning objectives.\n"

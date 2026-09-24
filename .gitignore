@@ -5,3 +5,6 @@ __pycache__/
 *.zip
 !test-examples/*.zip
 .DS_Store
+stacktrace*.txt
+Tokenization_*/
+sample_quizzes/

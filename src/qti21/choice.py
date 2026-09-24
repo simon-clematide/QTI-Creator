@@ -149,12 +149,7 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
     </correctResponse>
   </responseDeclaration>"""
 
-        extra_outcomes = """  <outcomeDeclaration identifier="FEEDBACKBASIC" cardinality="single" baseType="identifier" view="testConstructor">
-    <defaultValue>
-      <value>none</value>
-    </defaultValue>
-  </outcomeDeclaration>
-  <outcomeDeclaration identifier="NPS_NUMCORRECT" cardinality="single" baseType="integer" view="testConstructor">
+        extra_outcomes = """  <outcomeDeclaration identifier="NPS_NUMCORRECT" cardinality="single" baseType="integer" view="testConstructor">
     <defaultValue>
       <value>0</value>
     </defaultValue>
@@ -213,7 +208,7 @@ def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[
         else:
             calc_xml = correct_term
 
-        response_proc = f"""  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response">
+        response_proc = f"""  <responseProcessing>
 {conditions_xml}
     <setOutcomeValue identifier="SCORE">
       {calc_xml}

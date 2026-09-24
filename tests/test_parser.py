@@ -655,7 +655,7 @@ What is water?
 What is the fastest?
 """
         html_out = markdown_to_qti_xhtml(md)
-        self.assertIn('<table class="table table-bordered">', html_out)
+        self.assertIn('<table class="b_default" style="border-collapse:collapse;width:100%;">', html_out)
         self.assertIn('<thead>', html_out)
         self.assertIn('<tbody>', html_out)
         self.assertIn('<th style="text-align: left;">Function</th>', html_out)

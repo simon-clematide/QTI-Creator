@@ -168,6 +168,8 @@ theme = gr.themes.Soft(
     block_label_text_weight="600",
     block_label_padding="0px 0px 4px 0px",
     block_label_margin="0px",
+    section_header_text_size="1.05rem",
+    section_header_text_weight="600",
 )
 
 _MATHJAX_HEAD = """
@@ -245,7 +247,7 @@ window.quizJumpToLine = function(lineNo, title) {
 """
 
 APP_CSS = """
-/* Surgical override for static Gradio markdown/header blocks to eliminate thin spurious scrollbar gutters */
+/* No-scroll overrides for static markdown blocks */
 .no-scroll-block,
 .no-scroll-block > div,
 .no-scroll-block .prose {
@@ -253,68 +255,63 @@ APP_CSS = """
   overflow-y: visible !important;
 }
 
-.no-scroll-block h1,
-.no-scroll-block h2,
-.no-scroll-block h3,
-.no-scroll-block h4,
-.no-scroll-block h5,
-.no-scroll-block h6 {
+.no-scroll-block h1, .no-scroll-block h2, .no-scroll-block h3,
+.no-scroll-block h4, .no-scroll-block h5, .no-scroll-block h6 {
   overflow: visible !important;
   margin-top: 0.25rem !important;
   margin-bottom: 0.25rem !important;
 }
 
-/* Compact and clean file upload styling: simple 'Drop File or Upload' without upload icon */
-.quiz-file-upload-compact .icon-wrap,
-.quiz-file-upload-compact [data-testid="upload-icon"],
-.quiz-file-upload-compact .file-icon,
-.quiz-file-upload-compact svg,
-.quiz-file-upload-compact span[data-testid="block-info"] svg,
-.quiz-file-upload-compact .block-label svg {
-  display: none !important;
+/* ── Compact file upload (Gradio 6) ── */
+/* Hide all children inside the upload dropzone button */
+.quiz-file-upload-compact button[aria-dropeffect] > *,
+.quiz-file-upload-compact button[aria-label*="upload"] > *,
+.quiz-file-upload-compact button[aria-label*="drop"] > * {
+  visibility: hidden !important;
+  position: absolute !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
 }
 
-.quiz-file-upload-compact .wrap,
-.quiz-file-upload-compact .upload-container,
-.quiz-file-upload-compact [data-testid="dropzone"] {
-  min-height: 38px !important;
+/* Constrain the dropzone button */
+.quiz-file-upload-compact button[aria-dropeffect],
+.quiz-file-upload-compact button[aria-label*="upload"],
+.quiz-file-upload-compact button[aria-label*="drop"] {
+  min-height: 36px !important;
+  max-height: 44px !important;
+  padding: 6px 12px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Show clean replacement label */
+.quiz-file-upload-compact button[aria-dropeffect]::after,
+.quiz-file-upload-compact button[aria-label*="upload"]::after,
+.quiz-file-upload-compact button[aria-label*="drop"]::after {
+  content: "Drop file or click to upload" !important;
+  visibility: visible !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  position: absolute !important;
+  inset: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 4px 10px !important;
-  position: relative !important;
-}
-
-/* Hide ALL default upload text elements aggressively to prevent overlap */
-.quiz-file-upload-compact .wrap *:not(style):not(script),
-.quiz-file-upload-compact [data-testid="dropzone"] *:not(style):not(script) {
-  font-size: 0 !important;
-  line-height: 0 !important;
-  color: transparent !important;
-}
-
-/* Render clean, concise 'Drop File or Upload' */
-.quiz-file-upload-compact .wrap::after,
-.quiz-file-upload-compact [data-testid="dropzone"]::after {
-  content: "Drop File or Upload" !important;
-  font-size: 0.85rem !important;
-  font-weight: 500 !important;
-  color: #475569 !important;
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
   pointer-events: none !important;
-  white-space: nowrap !important;
+  z-index: 1 !important;
 }
 
-.quiz-file-upload-compact:hover .wrap::after,
-.quiz-file-upload-compact:hover [data-testid="dropzone"]::after {
+.quiz-file-upload-compact:hover button::after {
   color: #0f172a !important;
 }
 
+.quiz-file-upload-compact svg {
+  display: none !important;
+}
 
-/* Ensure block labels (like Dropdown label, Upload label) render as normal headers rather than floating rounded pills */
+/* ── Block labels: clean inline style ── */
 span[data-testid="block-info"],
 .block label > span:first-child,
 .gradio-container .block > label > span,
@@ -330,7 +327,7 @@ span[data-testid="block-info"],
   color: #0f172a !important;
 }
 
-/* Outdated package banner styling: style outer block without inner double-border */
+/* ── Outdated package banner ── */
 .outdated-banner.block {
   background-color: #fefce8 !important;
   border: 1px solid #fde047 !important;
@@ -348,18 +345,15 @@ span[data-testid="block-info"],
   padding: 0 !important;
 }
 
-/* Markdown table styling in preview and test runner */
-table.table,
-table.b_default {
+/* ── Markdown tables ── */
+table.table, table.b_default {
   width: 100% !important;
   border-collapse: collapse !important;
   margin: 12px 0 !important;
   font-size: 0.92em !important;
 }
-table.table th,
-table.table td,
-table.b_default th,
-table.b_default td {
+table.table th, table.table td,
+table.b_default th, table.b_default td {
   border: 1px solid #cbd5e1 !important;
   padding: 8px 12px !important;
   line-height: 1.4 !important;
@@ -373,7 +367,7 @@ table.table tbody tr:nth-child(even) {
   background-color: #f8fafc !important;
 }
 
-/* Modern monospace font and comfortable height for QuizMD Source Markdown editor */
+/* ── Monospace editor ── */
 .quiz-source-editor textarea,
 .quiz-source-editor textarea:focus {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
@@ -391,39 +385,21 @@ table.table tbody tr:nth-child(even) {
   padding-right: 6px !important;
 }
 
-
-
-/* Fullscreen mode for QuizMD Source Editor */
-.quiz-editor-fullscreen {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 99999 !important;
-  background: #ffffff !important;
-  padding: 16px 24px !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
-}
-
+/* ── Header toolbar rows ── */
 .quiz-fullscreen-header {
   display: flex !important;
-  justify-content: space-between !important;
   align-items: center !important;
-  gap: 12px !important;
-  margin-bottom: 8px !important;
+  gap: 8px !important;
+  margin-bottom: 4px !important;
   flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
 }
 
 .quiz-fullscreen-header > *:first-child {
   flex: 1 1 auto !important;
 }
 
-
+/* Small toolbar buttons (fullscreen toggle, refresh) */
 .quiz-fullscreen-btn {
   background: transparent !important;
   border: 1px solid #e2e8f0 !important;
@@ -433,14 +409,12 @@ table.table tbody tr:nth-child(even) {
   font-size: 0.85rem !important;
   line-height: 1 !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  box-shadow: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
   min-width: 24px !important;
   height: 24px !important;
   flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .quiz-fullscreen-btn:hover {
@@ -449,30 +423,37 @@ table.table tbody tr:nth-child(even) {
   border-color: #94a3b8 !important;
 }
 
-/* Compact checkbox for header toolbars */
+/* Compact checkbox in header toolbars */
 .quiz-header-checkbox {
   flex: 0 0 auto !important;
-  min-width: auto !important;
-  margin-bottom: 0 !important;
+  min-width: 0 !important;
+  max-width: fit-content !important;
 }
-
-.quiz-header-checkbox .wrap {
+.quiz-header-checkbox .wrap,
+.quiz-header-checkbox label,
+.quiz-header-checkbox .container {
   gap: 4px !important;
-  min-height: auto !important;
   padding: 0 !important;
-}
-
-.quiz-header-checkbox label {
-  font-size: 0.85rem !important;
+  margin: 0 !important;
   white-space: nowrap !important;
-  margin-bottom: 0 !important;
-  cursor: pointer !important;
+}
+.quiz-header-checkbox span {
+  font-size: 0.85rem !important;
 }
 
-/* Make tab titles visually prominent — at least matching ### section headers */
-.tabs > .tab-nav > button {
-  font-size: 1.05rem !important;
-  font-weight: 600 !important;
+/* ── Fullscreen: Editor ── */
+.quiz-editor-fullscreen {
+  position: fixed !important;
+  top: 0; left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: #fff !important;
+  padding: 16px 24px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 .quiz-editor-fullscreen .quiz-source-editor {
@@ -498,21 +479,19 @@ table.table tbody tr:nth-child(even) {
   resize: none !important;
 }
 
-/* Fullscreen mode for Preview Container */
+/* ── Fullscreen: Preview ── */
 .quiz-preview-fullscreen {
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
+  top: 0; left: 0;
   width: 100vw !important;
   height: 100vh !important;
   z-index: 99999 !important;
-  background: #ffffff !important;
+  background: #fff !important;
   padding: 16px 24px !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .quiz-preview-fullscreen #quiz_preview_display {
@@ -679,7 +658,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
 
                     with gr.Column(elem_id="quiz_source_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                            gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
+                            gr.Markdown("**📝 QuizMD Source**", elem_classes=["no-scroll-block"])
                             btn_preview = gr.Button(
                                 "🔄 Refresh",
                                 variant="secondary",
@@ -736,7 +715,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
 
                     with gr.Column(elem_id="quiz_preview_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                            gr.Markdown("### 👁️ Preview", elem_classes=["no-scroll-block"])
+                            gr.Markdown("**👁️ Preview**", elem_classes=["no-scroll-block"])
                             render_math_cb = gr.Checkbox(
                                 value=True,
                                 label="Render math",

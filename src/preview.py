@@ -458,8 +458,12 @@ def _render_question_body(
     elif isinstance(q, FillBlankQuestion):
         items = []
         for i, g in enumerate(q.gaps):
-            alts_str = f" <span style='color: #64748b; font-size: 0.9em;'>(alternatives: {', '.join(html.escape(a) for a in g.alternatives)})</span>" if g.alternatives else ""
-            items.append(f"<li style='margin-bottom: 4px;'><strong>Gap {i+1}:</strong> <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{html.escape(g.expected_value)}</code>{alts_str}</li>")
+            canonical_badge = f"<code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{html.escape(g.expected_value)}</code>"
+            alts_badges = "".join(
+                f" <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{html.escape(a)}</code>"
+                for a in g.alternatives
+            )
+            items.append(f"<li style='margin-bottom: 4px;'><strong>Gap {i+1}:</strong> {canonical_badge}{alts_badges}</li>")
         return f"<ul style='padding-left: 20px; margin: 0; color: #475569;'>{''.join(items)}</ul>"
 
     elif isinstance(q, InlineChoiceQuestion):

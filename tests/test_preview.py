@@ -365,6 +365,22 @@ The {** cat **} { sat } on the {** mat **}.
         self.assertIn("run", html_out)
 
 
+    def test_preview_fill_in_blank_badges(self):
+        text = """## Fill Blank
+The colour is {{gray | grey | greie}}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+        self.assertIn("Gap 1:</strong>", html_out)
+        self.assertIn(">{html_escape}gray</code>".format(html_escape=""), html_out)
+        self.assertIn(">{html_escape}grey</code>".format(html_escape=""), html_out)
+        self.assertIn(">{html_escape}greie</code>".format(html_escape=""), html_out)
+        # Verify both canonical and alternatives are rendered with the green badge style
+        self.assertEqual(html_out.count("background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;"), 3)
+        self.assertNotIn("(alternatives:", html_out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

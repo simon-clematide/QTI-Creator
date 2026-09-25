@@ -253,17 +253,46 @@ APP_CSS = """
   margin-bottom: 0.25rem !important;
 }
 
-/* Compact upload field styling: reduce font size and padding */
-.svelte-1vmd51o {
-  font-size: 0.85rem !important;
+/* Compact and clean file upload styling: simple 'Drop File or Upload' without upload icon */
+.quiz-file-upload-compact .icon-wrap,
+.quiz-file-upload-compact [data-testid="upload-icon"],
+.quiz-file-upload-compact .file-icon,
+.quiz-file-upload-compact svg,
+.quiz-file-upload-compact span[data-testid="block-info"] svg,
+.quiz-file-upload-compact .block-label svg {
+  display: none !important;
 }
-.svelte-1vmd51o .icon-wrap {
-  width: 28px !important;
-  height: 28px !important;
+
+.quiz-file-upload-compact .wrap,
+.quiz-file-upload-compact .upload-container,
+.quiz-file-upload-compact [data-testid="dropzone"] {
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 12px !important;
 }
-.svelte-8prmba {
-  min-height: 85px !important;
+
+/* Hide convoluted default multi-line text (Drop File Here / - or - / Click to Upload) */
+.quiz-file-upload-compact .wrap > *:not(.icon-wrap) {
+  font-size: 0 !important;
+  line-height: 0 !important;
 }
+
+/* Render clean, concise 'Drop File or Upload' */
+.quiz-file-upload-compact .wrap::after {
+  content: "Drop File or Upload" !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+  text-align: center !important;
+  display: block !important;
+}
+
+.quiz-file-upload-compact:hover .wrap::after {
+  color: #0f172a !important;
+}
+
 
 /* Ensure block labels (like Dropdown label, Upload label) render as normal headers rather than floating rounded pills */
 span[data-testid="block-info"],
@@ -572,7 +601,8 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                             file_types=[".md", ".txt"],
                             type="filepath",
                             scale=2,
-                            height=105,
+                            height=85,
+                            elem_classes=["quiz-file-upload-compact"],
                         )
 
                     with gr.Row():
@@ -611,6 +641,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                             label="Media ZIP",
                             file_types=[".zip"],
                             type="filepath",
+                            elem_classes=["quiz-file-upload-compact"],
                         )
                         gr.Markdown(
                             "<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>",

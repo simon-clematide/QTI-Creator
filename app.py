@@ -441,6 +441,21 @@ table.table tbody tr:nth-child(even) {
   font-size: 0.85rem !important;
 }
 
+/* ── Tab titles: prominent, bold, at least matching or exceeding application section headers ── */
+.tabs > .tab-nav > button,
+button[role="tab"],
+.tab-container button,
+button.svelte-11gaq1 {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+}
+
+button[role="tab"].selected,
+button.svelte-11gaq1.selected {
+  font-weight: 700 !important;
+  color: var(--color-accent, #4f46e5) !important;
+}
+
 /* ── Fullscreen: Editor ── */
 .quiz-editor-fullscreen {
   position: fixed !important;
@@ -619,6 +634,20 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
             <span>{__release_date__}</span>
           </div>
         </div>
+        <style>
+          .tabs > .tab-nav > button,
+          button[role="tab"],
+          .tab-container button,
+          button.svelte-11gaq1 {{
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+          }}
+          button[role="tab"].selected,
+          button.svelte-11gaq1.selected {{
+            font-weight: 700 !important;
+            color: #4338ca !important;
+          }}
+        </style>
         """,
         elem_classes=["no-scroll-block"],
     )

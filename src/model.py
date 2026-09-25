@@ -83,6 +83,7 @@ class Question:
     additional_info: Optional[str] = None
     language: Optional[str] = None
     shuffle: Optional[bool] = None
+    raw_markdown: str = ""
 
     def __post_init__(self):
         if not self.title:

@@ -764,14 +764,16 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                             points_val = p_cand
                     except ValueError:
                         pass
-                raw_block_text = "\n".join(line for _, line in block.raw_lines)
+                raw_block_text = "\n".join(line for _, line in block.raw_lines).strip()
                 prompt_text = "\n".join(block.prompt_lines).strip()
+                inv_raw_md = f"## {block.title}\n\n{raw_block_text}" if raw_block_text else f"## {block.title}"
                 inv_q = InvalidQuestion(
                     prompt=prompt_text or raw_block_text,
                     title=block.title or "⚠️ Invalid Question",
                     points=points_val,
                     errors=list(e.diagnostics),
                     raw_text=raw_block_text,
+                    raw_markdown=inv_raw_md,
                     line_number=block.start_line,
                 )
                 sec_questions.append(inv_q)
@@ -926,6 +928,13 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         # Fallback to heading title if no body text
         prompt = block.title
 
+    # Reconstruct raw Markdown source for this question block (heading + raw lines)
+    raw_lines_text = "\n".join(line for _, line in block.raw_lines).strip()
+    if raw_lines_text:
+        question_markdown = f"## {block.title}\n\n{raw_lines_text}"
+    else:
+        question_markdown = f"## {block.title}"
+
     common_kwargs = {
         "title": block.title,
         "prompt": prompt,
@@ -939,6 +948,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "additional_info": additional_info,
         "language": language,
         "shuffle": q_shuffle,
+        "raw_markdown": question_markdown,
     }
 
     # Reject invalid numbered task-list items: 1. [x] or 1. [X]

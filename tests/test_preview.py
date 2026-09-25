@@ -30,6 +30,10 @@ class TestPreview(unittest.TestCase):
         self.assertIn("2. Prime numbers?", html_out)
         self.assertIn("Multiple Choice", html_out)
         self.assertIn("1.0 pt", html_out)
+        # Ensure Markdown source button and block are present for questions
+        self.assertIn('<details class="quiz-question-source-details"', html_out)
+        self.assertIn("Markdown</span>", html_out)
+        self.assertIn("- [X] Paris", html_out)
 
     def test_preview_with_asset_map(self):
         text = """## Tree Anatomy
@@ -206,7 +210,8 @@ Points: 2
         self.assertIn("Invalid", html_out)
         self.assertIn("⚠️ Validation Errors:", html_out)
         self.assertIn("No correct answer is marked with [X] or [x].", html_out)
-        self.assertIn("View raw question source", html_out)
+        self.assertIn("quiz-question-source-details", html_out)
+        self.assertIn("<span>Markdown</span>", html_out)
 
     def test_preview_mathjax_toggle(self):
         text = """## Math Question

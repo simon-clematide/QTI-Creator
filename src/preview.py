@@ -190,6 +190,18 @@ def render_quiz_preview_html(
                 else ""
             )
 
+            markdown_source_html = ""
+            raw_src = getattr(q, "raw_markdown", None) or getattr(q, "raw_text", None) or ""
+            if raw_src.strip():
+                markdown_source_html = f"""
+<details class="quiz-question-source-details" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+  <summary style="display: inline-flex; align-items: center; gap: 6px; color: #475569; font-weight: 600; cursor: pointer; user-select: none; list-style: none; outline: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 0.82em; transition: background 0.15s, color 0.15s;">
+    <span>Markdown</span>
+  </summary>
+  <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
+</details>
+"""
+
             card_border_style = "border: 1px solid #f87171;" if is_invalid else "border: 1px solid #e2e8f0;"
             card = f"""
 <details class="quiz-question-card" style="background: white; {card_border_style} border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
@@ -211,6 +223,7 @@ def render_quiz_preview_html(
     {body_html}
     {hint_html}
     {feedback_html}
+    {markdown_source_html}
   </div>
 </details>
 """
@@ -284,6 +297,8 @@ def render_quiz_preview_html(
   .quiz-section-desc-details summary::-webkit-details-marker {{ display: none; }}
   .quiz-section-desc-details:not([open]) > summary .quiz-desc-chevron {{ transform: rotate(-90deg); }}
   .quiz-section-desc-details > summary:hover {{ color: #1e293b; }}
+  .quiz-question-source-details summary::-webkit-details-marker {{ display: none; }}
+  .quiz-question-source-details summary:hover {{ background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }}
   .quiz-expand-btn {{
     background: #f8fafc;
     border: 1px solid #cbd5e1;
@@ -390,9 +405,6 @@ def _render_question_body(
     render_math: bool = True,
 ) -> str:
     if isinstance(q, InvalidQuestion):
-        # If there is raw block text available, display it as code for debugging
-        if q.raw_text:
-            return f"<details style='margin-top: 6px; font-size: 0.88em;'><summary style='color: #64748b; cursor: pointer;'>View raw question source</summary><pre style='margin-top: 6px;'>{html.escape(q.raw_text)}</pre></details>"
         return ""
 
     elif isinstance(q, (SingleChoiceQuestion, MultipleChoiceQuestion, TrueFalseQuestion)):

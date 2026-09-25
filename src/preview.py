@@ -195,7 +195,7 @@ def render_quiz_preview_html(
             raw_src = getattr(q, "raw_markdown", None) or getattr(q, "raw_text", None) or ""
             if raw_src.strip():
                 line_no = getattr(q, "line_number", 1) or 1
-                escaped_title_js = json.dumps(q.title)
+                escaped_title_attr = html.escape(q.title or "", quote=True)
                 markdown_source_html = f"""
 <div class="quiz-question-source-container" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
   <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -205,7 +205,7 @@ def render_quiz_preview_html(
       </summary>
       <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
     </details>
-    <button type="button" class="quiz-edit-jump-btn" title="Jump to this question in QuizMD editor" onclick="if (window.quizJumpToLine) {{ window.quizJumpToLine({line_no}, {escaped_title_js}); }} else {{ console.warn('quizJumpToLine not registered'); }}">
+    <button type="button" class="quiz-edit-jump-btn" title="Jump to this question in QuizMD editor" data-line="{line_no}" data-title="{escaped_title_attr}" onclick="var l = parseInt(this.getAttribute('data-line'), 10); var t = this.getAttribute('data-title'); var fn = window.quizJumpToLine || (window.parent && window.parent.quizJumpToLine); if (typeof fn === 'function') {{ fn(l, t); }} else if (window.parent &amp;&amp; window.parent.postMessage) {{ window.parent.postMessage({{action: 'quiz-jump', line: l, title: t}}, '*'); }}">
       ✏️ Edit
     </button>
   </div>

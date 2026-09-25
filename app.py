@@ -242,6 +242,14 @@ window.quizJumpToLine = function(lineNo, title) {
   // Ensure editor element itself is scrolled into window view
   editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };
+
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.action === 'quiz-jump') {
+    if (typeof window.quizJumpToLine === 'function') {
+      window.quizJumpToLine(event.data.line, event.data.title);
+    }
+  }
+});
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 """
@@ -344,7 +352,7 @@ span[data-testid="block-info"],
 .quiz-file-upload-compact button[aria-dropeffect],
 .quiz-file-upload-compact button[aria-label*="upload"],
 .quiz-file-upload-compact button[aria-label*="drop"] {
-  margin-top: 4px !important;
+  margin-top: 32px !important;
 }
 
 /* ── Outdated package banner ── */

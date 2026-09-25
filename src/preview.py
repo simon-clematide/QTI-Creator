@@ -291,6 +291,19 @@ def render_quiz_preview_html(
         else:
             sections_html.extend(sec_cards)
 
+    total_questions = len(quiz.questions)
+    total_hints = sum(1 for q in quiz.questions if q.hint and q.hint.strip())
+    total_feedbacks = sum(1 for q in quiz.questions if q.feedback and q.feedback.strip())
+
+    summary_meta = [f"{total_questions} Question(s) parsed"]
+    if len(quiz.sections) > 1:
+        summary_meta[0] += f" across {len(quiz.sections)} section(s)"
+    if total_hints > 0:
+        summary_meta.append(f"💡 {total_hints} hint{'s' if total_hints != 1 else ''}")
+    if total_feedbacks > 0:
+        summary_meta.append(f"💬 {total_feedbacks} feedback{'s' if total_feedbacks != 1 else ''}")
+    summary_meta_text = " &bull; ".join(summary_meta)
+
     return f"""
 <style>
   pre {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; margin: 8px 0; }}
@@ -378,7 +391,7 @@ def render_quiz_preview_html(
         <h3 style="margin: 0; color: #0f172a; font-size: 1.25em;">{html.escape(quiz.title)}</h3>
         {f'<span title="Test and section titles do not support Markdown or math formatting and will display as raw syntax in OpenOLAT" style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;">⚠️ Markdown/Math in title</span>' if contains_markdown(quiz.title) and not has_multiple_sections else ''}
       </div>
-      <span style="color: #64748b; font-size: 0.9em;">{len(quiz.questions)} Question(s) parsed{f" across {len(quiz.sections)} section(s)" if len(quiz.sections) > 1 else ""}</span>
+      <span style="color: #64748b; font-size: 0.9em;">{summary_meta_text}</span>
     </div>
     <div>
 

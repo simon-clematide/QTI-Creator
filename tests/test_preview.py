@@ -175,6 +175,8 @@ Feedback: Great work!
 
         # Section 1 has 2 Qs, 1 Hint, 1 Feedback, 2.0 pt in sequence Qs &bull; 💡 &bull; 💬 &bull; pt
         self.assertIn("2 Qs &bull; 💡 1 &bull; 💬 1 &bull; 2.0 pt", html_out)
+        # Overall header should report 3 Question(s) parsed across 2 section(s) &bull; 💡 1 hint &bull; 💬 1 feedback
+        self.assertIn("3 Question(s) parsed across 2 section(s) &bull; 💡 1 hint &bull; 💬 1 feedback", html_out)
 
     def test_preview_section_description_collapsible(self):
         text = """# Test Exam

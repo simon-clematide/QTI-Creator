@@ -27,15 +27,23 @@ source .venv/bin/activate
 ```
 
 ### Install Dependencies
+
+#### Runtime Dependencies (Application only)
+To run the Gradio web application or use QTI-Creator as a library, install only the minimal runtime dependencies:
 ```bash
-pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-*(Optional)* If you plan to work with YAML frontmatter parsing, install `pyyaml`:
+#### Development & Testing Dependencies
+To run the test suite, linting, and build tools:
 ```bash
-pip install pyyaml
+pip install -r requirements-dev.txt
 ```
+
+#### Optional: OpenOLAT JQTI+ Engine Prerequisites
+To run automated semantic and runtime validation against OpenOLAT's native Java QTI 2.1 engine (**JQTI+**):
+- Java JDK 17+ (`java` and `javac` on your `$PATH`).
+- No separate Maven or JAR installation needed; the runner automatically fetches and caches the required OpenOLAT Nexus artifacts upon first run.
 
 ---
 
@@ -54,17 +62,26 @@ python3 app.py
 The app will be accessible at `http://127.0.0.1:7860`.
 
 ### Running Tests
-Run the complete automated test suite:
+Run the complete automated test suite with either `pytest` or `unittest`:
 ```bash
-python3 -m unittest discover -s tests -p "test_*.py"
+# Using pytest:
+pytest
+
+# Using standard unittest:
+python3 -m unittest discover tests
 ```
 
 To run individual test modules:
 ```bash
-python3 -m unittest tests/test_preview.py
-python3 -m unittest tests/test_parser.py
-python3 -m unittest tests/test_qti21.py
-python3 -m unittest tests/test_version.py
+pytest tests/test_qti21.py
+pytest tests/test_jqtiplus.py
+pytest tests/test_parser.py
+```
+
+### Validating QTI Packages with JQTI+
+Validate any standalone QTI XML file or complete ZIP package against OpenOLAT's native engine:
+```bash
+python3 scripts/validate_qti.py sample_quizzes/13_all_types_combined_qti21.zip
 ```
 
 ---

@@ -394,12 +394,32 @@ What tissue facilitates photosynthesis?
 
 ---
 
-## 🧪 Testing & Validation
+## 📦 Installation & Setup
 
-Run the automated test suite covering all parser rules, model invariants, and QTI XML generators:
+### Runtime Dependencies (Application only)
+To run the Gradio web application or use QTI-Creator as a Python library:
 
 ```bash
-python3 -m unittest discover tests/
+pip install -r requirements.txt
+python3 app.py
+```
+
+### Development & Testing Dependencies
+To install the testing and development dependencies:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+---
+
+## 🧪 Testing & Validation
+
+Run the automated test suite with either `pytest` or `unittest`:
+
+```bash
+pytest
+# or: python3 -m unittest discover tests/
 ```
 
 ### OpenOLAT JQTI+ Runtime Validation

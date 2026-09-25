@@ -114,11 +114,15 @@ def render_quiz_preview_html(
                 )
 
             elif isinstance(q, HottextQuestion):
-                # Render hottext prompt with highlighted selectable spans
+                # Render hottext prompt with highlighted selectable spans:
+                # Convert markdown prompt to XHTML first, then substitute raw hottext tokens with styled preview spans
+                base_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)
                 raw_hottexts = extract_hottexts(q.prompt)
-                rendered_text = q.prompt
-                # Replace hottexts from right to left with preview spans
-                for start_idx, end_idx, raw_token, content, is_correct in sorted(raw_hottexts, key=lambda x: x[0], reverse=True):
+                item_map = {}
+                for idx, ht in enumerate(raw_hottexts):
+                    raw_token = ht[2]
+                    content = ht[3]
+                    is_correct = ht[4]
                     inner_html = markdown_to_qti_xhtml(content, asset_map=asset_map, render_math=render_math)
                     if inner_html.startswith("<p>") and inner_html.endswith("</p>"):
                         inner_html = inner_html[3:-4]
@@ -134,10 +138,17 @@ def render_quiz_preview_html(
                             f"border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.95em;' "
                             f"title='Selectable hottext (Incorrect)'>{inner_html}</span>"
                         )
-                    rendered_text = rendered_text[:start_idx] + span_html + rendered_text[end_idx:]
-                base_html = markdown_to_qti_xhtml(rendered_text, asset_map=asset_map, render_math=render_math)
+                    item_map[raw_token] = span_html
+
+                def _replace_preview_hottext(match):
+                    raw = match.group(0)
+                    return item_map.get(raw, raw)
+
+                re_ht_token = re.compile(r"\{(?:\*\*|\+|\-)?\s+[\s\S]*?\}")
+                rendered_prompt = re_ht_token.sub(_replace_preview_hottext, base_html)
+
                 prompt_html = (
-                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.9;'>{base_html}</div>"
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.9;'>{rendered_prompt}</div>"
                     if (has_distinct_prompt or is_invalid)
                     else ""
                 )

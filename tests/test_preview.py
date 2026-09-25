@@ -316,6 +316,8 @@ The {** cat **} { sat } on the {** mat **}.
         self.assertIn("Selectable Hottext Spans", html_out)
         self.assertIn("cat (Correct)", html_out)
         self.assertIn("sat", html_out)
+        # Ensure HTML tags are not double-escaped as literal &lt;span
+        self.assertNotIn("&lt;span", html_out)
 
 
     def test_preview_match(self):

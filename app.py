@@ -467,6 +467,51 @@ table.table tbody tr:nth-child(even) {
   background-color: #f8fafc !important;
 }
 
+/* ── Unified Utility Toolbar & Actions Row ── */
+.quiz-utility-toolbar {
+  align-items: flex-end !important;
+  gap: 14px !important;
+  padding: 10px 14px !important;
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.quiz-media-compact-accordion {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.quiz-actions-row {
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 8px !important;
+}
+
+.quiz-status-banner {
+  margin-bottom: 8px !important;
+}
+
+/* ── Workspace Panes & Horizon Alignment ── */
+.quiz-workspace-container {
+  gap: 16px !important;
+  align-items: stretch !important;
+}
+
+.quiz-pane {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
 /* ── Monospace editor ── */
 .quiz-source-editor textarea,
 .quiz-source-editor textarea:focus {
@@ -475,12 +520,12 @@ table.table tbody tr:nth-child(even) {
   font-size: 0.92rem !important;
   line-height: 1.55 !important;
   tab-size: 2 !important;
-  min-height: 640px !important;
+  min-height: 520px !important;
   max-height: none !important;
 }
 
 #quiz_preview_display {
-  min-height: 640px !important;
+  min-height: 520px !important;
   overflow-y: auto !important;
   padding-right: 6px !important;
 }
@@ -827,96 +872,100 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
     with gr.Tabs():
         # TAB 1: Editor & Converter
         with gr.TabItem("✏️ Quiz Editor & Converter"):
-            with gr.Row():
-                # LEFT COLUMN: Editor
-                with gr.Column(scale=5):
+            # 1. Top Unified Utility Toolbar
+            with gr.Row(elem_classes=["quiz-utility-toolbar"]):
+                example_dropdown = gr.Dropdown(
+                    choices=list(EXAMPLES.keys()),
+                    value="All Question Types (Showcase)",
+                    label="📂 Load Example",
+                    scale=4,
+                )
+                file_upload = gr.File(
+                    label="📄 Upload .md / .txt",
+                    file_types=[".md", ".txt"],
+                    type="filepath",
+                    scale=3,
+                    elem_classes=["quiz-file-upload-compact"],
+                )
+                with gr.Accordion("🖼️ Media", open=False, elem_classes=["quiz-media-compact-accordion"]):
                     with gr.Row():
-                        example_dropdown = gr.Dropdown(
-                            choices=list(EXAMPLES.keys()),
-                            value="All Question Types (Showcase)",
-                            label="📂 Load Example",
-                            scale=3,
+                        include_media_cb = gr.Checkbox(
+                            value=False,
+                            label="Include media in package",
                         )
-                        file_upload = gr.File(
-                            label="📄 Upload .md / .txt",
-                            file_types=[".md", ".txt"],
-                            type="filepath",
-                            scale=2,
-                            elem_classes=["quiz-file-upload-compact"],
+                        show_relative_images_cb = gr.Checkbox(
+                            value=False,
+                            label="Show relative images in preview",
                         )
-
-                    with gr.Column(elem_id="quiz_source_container"):
-                        with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                            gr.Markdown("**📝 QuizMD Source**", elem_classes=["no-scroll-block"])
-                            btn_preview = gr.Button(
-                                "🔄 Refresh",
-                                variant="secondary",
-                                size="sm",
-                                elem_classes=["quiz-fullscreen-btn"],
-                            )
-                            btn_fullscreen = gr.Button(
-                                "⛶",
-                                size="sm",
-                                elem_id="btn_fullscreen_toggle",
-                                elem_classes=["quiz-fullscreen-btn"],
-                            )
-                        quiz_input = gr.Textbox(
-                            value=SAMPLE_ALL_TYPES,
-                            show_label=False,
-                            placeholder="Write your quiz here in Markdown...",
-                            lines=26,
-                            elem_classes=["quiz-source-editor"],
-                        )
-
-                # RIGHT COLUMN: Media & Export + Preview
-                with gr.Column(scale=5):
-                    with gr.Accordion("🖼️ Media", open=False):
-                        with gr.Row():
-                            include_media_cb = gr.Checkbox(
-                                value=False,
-                                label="Include media in package",
-                            )
-                            show_relative_images_cb = gr.Checkbox(
-                                value=False,
-                                label="Show relative images in preview",
-                            )
-                        media_zip_upload = gr.File(
-                            label="📎 Media ZIP",
-                            file_types=[".zip"],
-                            type="filepath",
-                            elem_classes=["quiz-file-upload-compact"],
-                        )
-
-                    btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
-                    status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
-                    has_package_state = gr.State(value=False)
-                    outdated_warning = gr.Markdown(
-                        "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
-                        visible=False,
-                        elem_classes=["no-scroll-block", "outdated-banner"],
-                    )
-                    download_output = gr.File(
-                        label="📥 Download QTI 2.1 ZIP",
-                        interactive=False,
-                        visible=False,
+                    media_zip_upload = gr.File(
+                        label="📎 Media ZIP",
+                        file_types=[".zip"],
+                        type="filepath",
+                        elem_classes=["quiz-file-upload-compact"],
                     )
 
-                    with gr.Column(elem_id="quiz_preview_container"):
-                        with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                            gr.Markdown("**👁️ Preview**", elem_classes=["no-scroll-block"])
-                            render_math_cb = gr.Checkbox(
-                                value=True,
-                                label="Render math",
-                                container=False,
-                                elem_classes=["quiz-header-checkbox"],
-                            )
-                            btn_preview_fullscreen = gr.Button(
-                                "⛶",
-                                size="sm",
-                                elem_id="btn_preview_fullscreen_toggle",
-                                elem_classes=["quiz-fullscreen-btn"],
-                            )
-                        preview_display = gr.HTML(elem_id="quiz_preview_display")
+            # 2. Prominent Global Actions & Status Banner
+            with gr.Row(elem_classes=["quiz-actions-row"]):
+                btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary", scale=3)
+                download_output = gr.File(
+                    label="📥 Download QTI 2.1 ZIP",
+                    interactive=False,
+                    visible=False,
+                    scale=2,
+                    elem_classes=["quiz-file-upload-compact"],
+                )
+
+            status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block", "quiz-status-banner"])
+            has_package_state = gr.State(value=False)
+            outdated_warning = gr.Markdown(
+                "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
+                visible=False,
+                elem_classes=["no-scroll-block", "outdated-banner"],
+            )
+
+            # 3. Synchronized Two-Column Workspace (Shared Horizon Line)
+            with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True):
+                # LEFT PANE: Editor
+                with gr.Column(scale=5, elem_id="quiz_source_container", elem_classes=["quiz-pane", "quiz-editor-pane"]):
+                    with gr.Row(elem_classes=["quiz-fullscreen-header"]):
+                        gr.Markdown("**📝 QuizMD Source**", elem_classes=["no-scroll-block"])
+                        btn_preview = gr.Button(
+                            "🔄 Refresh",
+                            variant="secondary",
+                            size="sm",
+                            elem_classes=["quiz-fullscreen-btn"],
+                        )
+                        btn_fullscreen = gr.Button(
+                            "⛶",
+                            size="sm",
+                            elem_id="btn_fullscreen_toggle",
+                            elem_classes=["quiz-fullscreen-btn"],
+                        )
+                    quiz_input = gr.Textbox(
+                        value=SAMPLE_ALL_TYPES,
+                        show_label=False,
+                        placeholder="Write your quiz here in Markdown...",
+                        lines=26,
+                        elem_classes=["quiz-source-editor"],
+                    )
+
+                # RIGHT PANE: Preview
+                with gr.Column(scale=5, elem_id="quiz_preview_container", elem_classes=["quiz-pane", "quiz-preview-pane"]):
+                    with gr.Row(elem_classes=["quiz-fullscreen-header"]):
+                        gr.Markdown("**👁️ Preview**", elem_classes=["no-scroll-block"])
+                        render_math_cb = gr.Checkbox(
+                            value=True,
+                            label="Render math",
+                            container=False,
+                            elem_classes=["quiz-header-checkbox"],
+                        )
+                        btn_preview_fullscreen = gr.Button(
+                            "⛶",
+                            size="sm",
+                            elem_id="btn_preview_fullscreen_toggle",
+                            elem_classes=["quiz-fullscreen-btn"],
+                        )
+                    preview_display = gr.HTML(elem_id="quiz_preview_display")
 
             def on_source_or_media_changed(has_pkg: bool):
                 """Show outdated warning if a package was previously generated."""

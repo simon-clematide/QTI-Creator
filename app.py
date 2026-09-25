@@ -157,6 +157,17 @@ theme = gr.themes.Soft(
         "Arial",
         "sans-serif",
     ],
+).set(
+    block_label_background_fill="transparent",
+    block_label_background_fill_dark="transparent",
+    block_label_border_width="0px",
+    block_label_border_width_dark="0px",
+    block_label_shadow="none",
+    block_label_text_color="#0f172a",
+    block_label_text_size="1.05rem",
+    block_label_text_weight="600",
+    block_label_padding="0px 0px 4px 0px",
+    block_label_margin="0px",
 )
 
 _MATHJAX_HEAD = """
@@ -206,6 +217,22 @@ APP_CSS = """
 }
 .svelte-8prmba {
   min-height: 85px !important;
+}
+
+/* Ensure block labels (like Dropdown label, Upload label) render as normal headers rather than floating rounded pills */
+span[data-testid="block-info"],
+.block label > span:first-child,
+.gradio-container .block > label > span,
+.gradio-container .block-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 0 4px 0 !important;
+  margin: 0 !important;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
 }
 
 /* Outdated package banner styling: style outer block without inner double-border */
@@ -442,7 +469,7 @@ _TOGGLE_PREVIEW_FULLSCREEN_JS = """() => {
   }
 }"""
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
+with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS) as demo:
     gr.HTML(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">

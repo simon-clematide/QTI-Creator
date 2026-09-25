@@ -10,6 +10,7 @@ import html
 from src.model import (
     EssayQuestion,
     FillBlankQuestion,
+    HottextQuestion,
     InlineChoiceQuestion,
     KprimQuestion,
     MultipleChoiceQuestion,
@@ -30,6 +31,8 @@ def _get_qti_interaction_type(q: Question) -> str:
         return "matchInteraction"
     elif isinstance(q, InlineChoiceQuestion):
         return "inlineChoiceInteraction"
+    elif isinstance(q, HottextQuestion):
+        return "hottextInteraction"
     elif isinstance(q, (FillBlankQuestion, NumericalQuestion)):
         return "textEntryInteraction"
     elif isinstance(q, EssayQuestion):
@@ -53,6 +56,8 @@ def _get_openolat_question_type(q: Question) -> str:
         return "fib"
     elif isinstance(q, InlineChoiceQuestion):
         return "inlinechoice"
+    elif isinstance(q, HottextQuestion):
+        return "hottext"
     elif isinstance(q, NumericalQuestion):
         return "numerical"
     elif isinstance(q, EssayQuestion):
@@ -60,6 +65,7 @@ def _get_openolat_question_type(q: Question) -> str:
     elif isinstance(q, OrderQuestion):
         return "order"
     return "sc"
+
 
 
 from typing import Dict, List, Optional

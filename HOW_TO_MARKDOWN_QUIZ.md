@@ -166,6 +166,40 @@ Do not mix open text gaps `{{...}}` and dropdown gaps `{[...]}` in the same ques
 
 ---
 
+### Hottext (Selectable Spans in Running Text)
+
+Hottext questions present running text where the learner can click words or phrases to select or deselect them.
+
+Mark selectable hottext spans directly within the sentence:
+- `{ text }` — Selectable distractor (incorrect). **Whitespace after `{` is strictly required.**
+- `{** text **}` — Selectable correct answer. The outer `**` acts as an author-facing solution marker stripped from learner text.
+- `{- text }` — Explicitly incorrect selectable distractor.
+- `{+ text }` — Explicitly correct selectable answer (preserves any internal markdown, code, or math).
+
+```markdown
+## Identify the Parts of Speech
+
+Select all nouns in the following sentence:
+
+The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
+```
+
+Example with code and explicit markup:
+```markdown
+## Python Keywords
+
+Select all valid Python statements that declare or import modules:
+
+In Python, we write {+ `import math` } or {- `using math;` } to load libraries.
+```
+
+Rules:
+- Whitespace after the opening brace (`{ `, `{** `, `{+ `, `{- `) is strictly required to avoid collisions with code, LaTeX math, or template curly braces.
+- Hottext questions support partial credit scoring by default (proportional correct minus incorrect, clamped between 0 and maximum points), or `Scoring: all-correct`.
+- Cannot be mixed with open gaps `{{...}}`, dropdown gaps `{[...]}`, or task-list choices (`- [ ]`) in the same question.
+
+---
+
 ### Numerical
 
 Start the answer line with `=` followed by the correct numerical value.

@@ -10,6 +10,8 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    HottextItem,
+    HottextQuestion,
     InlineChoice,
     InlineChoiceGap,
     InlineChoiceQuestion,
@@ -509,6 +511,52 @@ Switzerland: {[Bern|Zurich]}, Germany: {[Munich|**Berlin**]}.
             self.assertEqual(len(item_files), 1)
             item_xml = zf.read(item_files[0]).decode("utf-8")
             self.assertIn("inlineChoiceInteraction", item_xml)
+
+    def test_hottext_xml_validity(self):
+        q = HottextQuestion(
+            prompt="The {** cat **} { sat } on the {** mat **}.",
+            items=[
+                HottextItem("cat", is_correct=True),
+                HottextItem("sat", is_correct=False),
+                HottextItem("mat", is_correct=True),
+            ],
+            points=2.0,
+            feedback="Cat and mat are nouns.",
+            hint="Look for nouns.",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("assessmentItem", root.tag)
+        self.assertIn("<hottextInteraction", xml_str)
+        self.assertIn("<hottext", xml_str)
+        self.assertIn("cat", xml_str)
+        self.assertIn("sat", xml_str)
+        self.assertIn("mat", xml_str)
+        self.assertIn('identifier="NPS_NUMCORRECT"', xml_str)
+        self.assertIn('identifier="NPS_NUMINCORRECT"', xml_str)
+
+        # Verify manifest metadata
+        quiz = Quiz(title="Hottext Quiz", questions=[q])
+        manifest_xml = generate_manifest_xml(quiz)
+        self.assertIn('qtiMetadata', manifest_xml)
+        self.assertIn('hottextInteraction', manifest_xml)
+        self.assertIn('questionType>hottext</', manifest_xml)
+
+    def test_hottext_package_generation(self):
+        text = """# Grammar Quiz
+## Parts of Speech
+The {** cat **} { sat } on the {** mat **}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        zip_bytes = create_qti_package_bytes(quiz)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+            names = zf.namelist()
+            self.assertIn("imsmanifest.xml", names)
+            item_files = [n for n in names if n.endswith(".xml") and "item" in n]
+            self.assertEqual(len(item_files), 1)
+            item_xml = zf.read(item_files[0]).decode("utf-8")
+            self.assertIn("hottextInteraction", item_xml)
 
 
 if __name__ == "__main__":

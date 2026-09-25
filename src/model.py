@@ -60,6 +60,15 @@ class InlineChoiceGap:
 
 
 @dataclass
+class HottextItem:
+    """A selectable hottext span in a HottextQuestion."""
+    text: str
+    is_correct: bool
+    identifier: str = field(default_factory=lambda: generate_id("ht"))
+
+
+
+@dataclass
 class Question:
     """Base question class."""
     prompt: str
@@ -222,6 +231,42 @@ class InlineChoiceQuestion(Question):
                     f"Dropdown gap {idx + 1} requires exactly 1 correct answer, found {correct_count}.",
                     [Diagnostic(f"Dropdown gap {idx + 1} requires exactly 1 correct answer, found {correct_count}.", Severity.ERROR, self.line_number)],
                 )
+
+
+@dataclass
+class HottextQuestion(Question):
+    """Hottext: Text containing selectable words/phrases marked as correct or incorrect."""
+    items: List[HottextItem] = field(default_factory=list)
+    scoring: Optional[str] = None  # "partial", "all-correct", "per-answer"
+
+    @property
+    def correct_items(self) -> List[HottextItem]:
+        return [it for it in self.items if it.is_correct]
+
+    @property
+    def incorrect_items(self) -> List[HottextItem]:
+        return [it for it in self.items if not it.is_correct]
+
+    def validate(self) -> None:
+        super().validate()
+        if not self.items:
+            raise QuizValidationError(
+                "Hottext question requires at least one selectable { hottext } element.",
+                [Diagnostic("Hottext question requires at least one selectable { hottext } element.", Severity.ERROR, self.line_number)],
+            )
+        for idx, item in enumerate(self.items):
+            if not item.text.strip():
+                raise QuizValidationError(
+                    f"Hottext item {idx + 1} has empty text.",
+                    [Diagnostic(f"Hottext item {idx + 1} has empty text.", Severity.ERROR, self.line_number)],
+                )
+        correct_count = sum(1 for it in self.items if it.is_correct)
+        if correct_count == 0:
+            raise QuizValidationError(
+                "Hottext question must have at least one correct hottext element.",
+                [Diagnostic("Hottext question must have at least one correct hottext element.", Severity.ERROR, self.line_number)],
+            )
+
 
 
 @dataclass

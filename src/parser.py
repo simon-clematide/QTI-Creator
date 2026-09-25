@@ -26,6 +26,8 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    HottextItem,
+    HottextQuestion,
     InlineChoice,
     InlineChoiceGap,
     InlineChoiceQuestion,
@@ -44,7 +46,7 @@ from src.model import (
     generate_id,
 )
 
-from src.markdown import RE_GAP, RE_DROPDOWN_GAP
+from src.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts
 from src.validation import Diagnostic, QuizValidationError, Severity
 
 
@@ -228,6 +230,15 @@ def _parse_dropdown_gaps(prompt: str, question_shuffle: Optional[bool] = None) -
 
         gaps.append(InlineChoiceGap(choices=choices, shuffle=gap_shuffle))
     return gaps
+
+
+def _parse_hottexts(prompt: str) -> List[HottextItem]:
+    """Parse hottext tokens from prompt into HottextItem objects."""
+    raw_hottexts = extract_hottexts(prompt)
+    items: List[HottextItem] = []
+    for _start, _end, _raw_token, content, is_correct in raw_hottexts:
+        items.append(HottextItem(text=content, is_correct=is_correct))
+    return items
 
 
 
@@ -583,8 +594,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         for gap in q.gaps:
                             if gap.shuffle is None:
                                 gap.shuffle = q.shuffle
-                    if isinstance(q, MultipleChoiceQuestion) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
-
+                    if (isinstance(q, (MultipleChoiceQuestion, HottextQuestion))) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
                         if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
                             q.scoring = quiz_mc_scoring
                     if q.additional_info is None:
@@ -816,9 +826,11 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             )],
         )
 
-    # Check for text entry vs dropdown gaps mutual exclusivity
+    # Check for text entry vs dropdown gaps vs hottext mutual exclusivity
     has_text_gaps = bool(RE_GAP.search(prompt))
     has_dropdown_gaps = bool(RE_DROPDOWN_GAP.search(prompt))
+    hottext_items = _parse_hottexts(prompt)
+    has_hottexts = bool(hottext_items)
 
     if has_text_gaps and has_dropdown_gaps:
         raise QuizValidationError(
@@ -831,11 +843,34 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             )],
         )
 
+    if has_hottexts and (has_text_gaps or has_dropdown_gaps):
+        conflict_type = "open text gaps {{...}}" if has_text_gaps else "dropdown gaps {[...]}"
+        raise QuizValidationError(
+            f"Cannot mix hottext tokens and {conflict_type} in the same question.",
+            [Diagnostic(
+                f"Cannot mix hottext tokens and {conflict_type} in the same question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
     if has_dropdown_gaps and (block.choices or block.kprim_items or block.is_kprim_mode or block.order_items or block.numerical is not None):
         raise QuizValidationError(
             "Cannot combine dropdown gaps {[...]} with choices, Kprim, Order, or numerical answers in the same question.",
             [Diagnostic(
                 "Cannot combine dropdown gaps {[...]} with choices, Kprim, Order, or numerical answers in the same question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
+    if has_hottexts and (block.choices or block.kprim_items or block.is_kprim_mode or block.order_items or block.numerical is not None):
+        raise QuizValidationError(
+            "Cannot combine hottext tokens with choices, Kprim, Order, or numerical answers in the same question.",
+            [Diagnostic(
+                "Cannot combine hottext tokens with choices, Kprim, Order, or numerical answers in the same question.",
                 Severity.ERROR,
                 block.start_line,
                 q_idx,
@@ -867,6 +902,11 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         elif explicit_type in ("inlinechoice", "dropdown", "select", "ic"):
             dd_gaps = _parse_dropdown_gaps(prompt, question_shuffle=q_shuffle)
             return InlineChoiceQuestion(**common_kwargs, gaps=dd_gaps)
+        elif explicit_type in ("hottext", "ht"):
+            ht_kwargs = dict(common_kwargs)
+            if q_scoring is not None:
+                ht_kwargs["scoring"] = q_scoring
+            return HottextQuestion(**ht_kwargs, items=hottext_items)
         elif explicit_type in ("numerical", "num"):
             val, tol = (block.numerical[0], block.numerical[1]) if block.numerical else (0.0, 0.0)
             return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)
@@ -896,6 +936,13 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
     gaps_found = _parse_gaps(prompt)
     if gaps_found:
         return FillBlankQuestion(**common_kwargs, gaps=gaps_found)
+
+    # 6. Inferred: Hottext
+    if has_hottexts:
+        ht_kwargs = dict(common_kwargs)
+        if q_scoring is not None:
+            ht_kwargs["scoring"] = q_scoring
+        return HottextQuestion(**ht_kwargs, items=hottext_items)
 
 
     # 5. Inferred: Numerical

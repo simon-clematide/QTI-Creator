@@ -634,6 +634,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                       <td style="padding: 8px 12px;">Points divided equally across dropdowns</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 12px;"><strong>Hottext</strong></td>
+                      <td style="padding: 8px 12px;"><code>The {** cat **} { sat } on the {** mat **}.</code></td>
+                      <td style="padding: 8px 12px;">Selectable spans embedded in text: <code>{ text }</code> (incorrect), <code>{** text **}</code> (correct), <code>{+ text }</code> (correct), <code>{- text }</code> (incorrect)</td>
+                      <td style="padding: 8px 12px;">Partial credit for correct and incorrect selections</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
                       <td style="padding: 8px 12px;"><strong>Numerical</strong></td>
                       <td style="padding: 8px 12px;"><code>= 9.81 ± 0.05</code></td>
                       <td style="padding: 8px 12px;">Answer line starts with <code>= number (optional ± tolerance)</code></td>
@@ -743,7 +749,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     - If no option has bold markup, the first option is the correct answer and option scrambling is automatically enforced (`shuffle="true"`).
                     - *Note: OpenOLAT does not allow mixing open text entry gaps and dropdown gaps within the same question.*
 
-                    #### 5. Numerical Questions
+                    #### 5. Hottext (Selectable Spans in Running Text)
+                    - Embed selectable words or phrases directly in text:
+                      - `{ text }` — Selectable distractor (incorrect). Note: whitespace after `{` is strictly required.
+                      - `{** text **}` — Selectable correct answer. The outer `**` is an author-facing solution marker stripped from learner text.
+                      - `{- text }` — Explicitly incorrect selectable distractor.
+                      - `{+ text }` — Explicitly correct selectable answer (preserves any internal markdown, code, or math, e.g. `{+ The **must** rule }`, `{+ `print()` }`, `{+ $x^2$ }`).
+                    - Hottext questions support OpenOLAT partial credit scoring by default, as well as `Scoring: all-correct`.
+                    - *Note: Cannot be combined with cloze gaps (`{{...}}`, `{[...]}`), choice markers (`[X]`), or order items within the same question.*
+
+                    #### 6. Numerical Questions
                     - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.
 
                     #### 6. Order / Sequencing Questions
@@ -935,6 +950,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     "The capital of Switzerland is {[Bern|Zurich|Geneva]}, and Germany is {[Munich|**Berlin**|Hamburg]}.\n"
                     "If no bold is specified, the first option is correct and options are automatically scrambled.\n"
                     "IMPORTANT: Do NOT mix {{...}} and {[...]} in the same question.\n\n"
+                    "Hottext (Selectable Spans in Running Text)\n"
+                    "Mark selectable words or spans directly in text:\n"
+                    "- { word } for incorrect distractors (whitespace after { is required)\n"
+                    "- {** word **} for correct answers\n"
+                    "- {+ word } for explicitly correct answers\n"
+                    "- {- word } for explicitly incorrect distractors\n"
+                    "Example:\n"
+                    "## Identify the parts of speech\n"
+                    "Select all nouns in the following sentence:\n"
+                    "The {** cat **} { sat } on the {** mat **}.\n\n"
                     "Numerical\n"
 
                     "Give the target value with = and optionally a tolerance with ±.\n"

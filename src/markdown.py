@@ -13,13 +13,135 @@ Initial support:
 import html
 import re
 import urllib.parse
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+
 
 # Shared pattern for fill-in-the-blank gaps: {{answer}} or {{answer|alt1|alt2}}
 RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
 
 # Shared pattern for dropdown / inline choice gaps: {[option1|option2]} or {[option1|**option2**|option3]}
 RE_DROPDOWN_GAP = re.compile(r"\{\[((?:\\.|[^\]\\]|\](?!\})*?)*?)\]\}")
+
+
+def extract_hottexts(text: str) -> List[Tuple[int, int, str, str, bool]]:
+    """Extract hottext tokens from text without false positives from math, code, or templates.
+
+    Recognized patterns:
+      { text }          -> incorrect (whitespace after { required, whitespace before } optional)
+      {- text }         -> explicitly incorrect (whitespace after {- required)
+      {+ text }         -> explicitly correct (whitespace after {+ required, preserves inner markdown)
+      {** text **}      -> correct (whitespace after {** required, closing ** stripped as solution marker)
+
+    Returns:
+      List of tuples: (start_idx, end_idx, raw_token, inner_content, is_correct)
+    """
+    if "{" not in text:
+        return []
+
+    # Identify protected spans (fenced code, inline code, display math, inline math, cloze gaps {{...}}, dropdown gaps {[...]})
+    protected_spans: List[Tuple[int, int]] = []
+    for m in re.finditer(r"```[\s\S]*?```", text):
+        protected_spans.append((m.start(), m.end()))
+    for m in re.finditer(r"`[^`\n]+`", text):
+        protected_spans.append((m.start(), m.end()))
+    for m in re.finditer(r"\$\$[\s\S]+?\$\$", text):
+        protected_spans.append((m.start(), m.end()))
+    for m in re.finditer(r"(?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$)", text):
+        protected_spans.append((m.start(), m.end()))
+    for m in RE_GAP.finditer(text):
+        protected_spans.append((m.start(), m.end()))
+    for m in RE_DROPDOWN_GAP.finditer(text):
+        protected_spans.append((m.start(), m.end()))
+
+    def is_protected(pos: int) -> bool:
+        return any(start <= pos < end for start, end in protected_spans)
+
+    results: List[Tuple[int, int, str, str, bool]] = []
+    i = 0
+    n = len(text)
+
+    while i < n:
+        if text[i] == "{" and not is_protected(i):
+            prefix_len = 0
+            is_correct = False
+            is_bold_marker = False
+
+            if text[i : i + 3] == "{**" and i + 3 < n and text[i + 3].isspace():
+                prefix_len = 3
+                while i + prefix_len < n and text[i + prefix_len].isspace():
+                    prefix_len += 1
+                is_correct = True
+                is_bold_marker = True
+            elif text[i : i + 2] == "{+" and i + 2 < n and text[i + 2].isspace():
+                prefix_len = 2
+                while i + prefix_len < n and text[i + prefix_len].isspace():
+                    prefix_len += 1
+                is_correct = True
+            elif text[i : i + 2] == "{-" and i + 2 < n and text[i + 2].isspace():
+                prefix_len = 2
+                while i + prefix_len < n and text[i + prefix_len].isspace():
+                    prefix_len += 1
+                is_correct = False
+            elif text[i : i + 1] == "{" and i + 1 < n and text[i + 1].isspace():
+                prefix_len = 1
+                while i + prefix_len < n and text[i + prefix_len].isspace():
+                    prefix_len += 1
+                is_correct = False
+            else:
+                i += 1
+                continue
+
+            # Search forward for matching closing '}' respecting code and math
+            j = i + prefix_len
+            brace_depth = 1
+            found_end = -1
+
+            while j < n:
+                if text[j] == "`":
+                    end_code = text.find("`", j + 1)
+                    if end_code != -1:
+                        j = end_code + 1
+                        continue
+                if text[j] == "$":
+                    end_math = text.find("$", j + 1)
+                    if end_math != -1:
+                        j = end_math + 1
+                        continue
+                if text[j] == "\\" and j + 1 < n and text[j + 1] in ("{", "}"):
+                    j += 2
+                    continue
+                if text[j] == "}":
+                    brace_depth -= 1
+                    if brace_depth == 0:
+                        found_end = j
+                        break
+                elif text[j] == "{":
+                    brace_depth += 1
+                j += 1
+
+            if found_end != -1:
+                raw_token = text[i : found_end + 1]
+                raw_inner = text[i + prefix_len : found_end]
+                if is_bold_marker:
+                    raw_inner_stripped = raw_inner.rstrip()
+                    if raw_inner_stripped.endswith("**"):
+                        content = raw_inner_stripped[:-2].strip()
+                        results.append((i, found_end + 1, raw_token, content, True))
+                        i = found_end + 1
+                        continue
+                    else:
+                        # {** did not close with **}
+                        i += 1
+                        continue
+                else:
+                    content = raw_inner.strip()
+                    results.append((i, found_end + 1, raw_token, content, is_correct))
+                    i = found_end + 1
+                    continue
+        i += 1
+
+    return results
+
 
 
 def markdown_to_qti_xhtml(
@@ -399,7 +521,18 @@ def _format_inlines(
 
     text = RE_DROPDOWN_GAP.sub(save_dropdown_gap, text)
 
+    # 5c. Protect hottext tokens { ... } from premature bold/italic formatting
+    hottexts = extract_hottexts(text)
+    if hottexts:
+        # Replace from right to left so indices remain valid
+        for start_idx, end_idx, raw_token, _, _ in sorted(hottexts, key=lambda x: x[0], reverse=True):
+            key = f"XXHOTTEXT{counter}XX"
+            counter += 1
+            placeholders[key] = raw_token
+            text = text[:start_idx] + key + text[end_idx:]
+
     # 6. Safely HTML-escape remaining text
+
     s = html.escape(text)
 
     # 7. Format Markdown inline styles (bold, italic)

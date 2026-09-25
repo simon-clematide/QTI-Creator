@@ -34,6 +34,10 @@ The American spelling of the colour between black and white is {{gray | grey}}.
 ## European Capitals
 Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
 
+## Parts of Speech
+Select all nouns in the following sentence:
+The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
+
 ## Gravitational Acceleration
 What is the acceleration due to gravity on Earth's surface in m/s²?
 = 9.81 ± 0.05

@@ -733,6 +733,64 @@ Choose: {[A|B]}
         quiz, diags = parse_quizmd(text)
         self.assertTrue(any("Cannot combine dropdown gaps {[...]} with choices" in d.message for d in diags))
 
+    def test_hottext_canonical_parsing(self):
+        text = """## Parts of Speech
+The {** cat **} { sat } on the {** mat **}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        from src.model import HottextQuestion
+        self.assertIsInstance(q, HottextQuestion)
+        self.assertEqual(len(q.items), 3)
+        self.assertEqual(q.items[0].text, "cat")
+        self.assertTrue(q.items[0].is_correct)
+        self.assertEqual(q.items[1].text, "sat")
+        self.assertFalse(q.items[1].is_correct)
+        self.assertEqual(q.items[2].text, "mat")
+        self.assertTrue(q.items[2].is_correct)
+
+    def test_hottext_explicit_authoring_and_formatting(self):
+        text = """## Python Statements
+In Python, we use {+ `import math` } or {- `using math;` } to load libraries.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        from src.model import HottextQuestion
+        self.assertIsInstance(q, HottextQuestion)
+        self.assertEqual(len(q.items), 2)
+        self.assertEqual(q.items[0].text, "`import math`")
+        self.assertTrue(q.items[0].is_correct)
+        self.assertEqual(q.items[1].text, "`using math;`")
+        self.assertFalse(q.items[1].is_correct)
+
+    def test_hottext_whitespace_requirement_avoids_templates(self):
+        # {template} without whitespace after { is not a hottext token
+        text = """## Code Template
+Here is `{variable}` in Python.
+"""
+        quiz, diags = parse_quizmd(text)
+        q = quiz.questions[0]
+        from src.model import EssayQuestion
+        self.assertIsInstance(q, EssayQuestion)
+
+    def test_hottext_conflict_with_gaps_error(self):
+        text = """## Conflict Hottext and Gap
+The {** cat **} is {{black}}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot mix hottext tokens and open text gaps" in d.message for d in diags))
+
+    def test_hottext_conflict_with_choices_error(self):
+        text = """## Conflict Hottext and Choices
+The {** cat **} sat.
+- [X] Choice A
+- [ ] Choice B
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot combine hottext tokens with choices" in d.message for d in diags))
+
 
 if __name__ == "__main__":
     unittest.main()

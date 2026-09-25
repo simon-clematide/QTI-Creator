@@ -9,6 +9,8 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    HottextItem,
+    HottextQuestion,
     InlineChoice,
     InlineChoiceGap,
     InlineChoiceQuestion,
@@ -258,6 +260,45 @@ class TestModelInvariants(unittest.TestCase):
                             InlineChoice("B", is_correct=True),
                         ]
                     )
+                ],
+            )
+
+    def test_hottext_valid(self):
+        q = HottextQuestion(
+            prompt="The cat sat on the mat.",
+            items=[
+                HottextItem("cat", is_correct=True),
+                HottextItem("sat", is_correct=False),
+                HottextItem("mat", is_correct=True),
+            ],
+        )
+        self.assertEqual(len(q.items), 3)
+        self.assertEqual(len(q.correct_items), 2)
+        self.assertEqual(len(q.incorrect_items), 1)
+
+    def test_hottext_invalid_no_items(self):
+        with self.assertRaises(QuizValidationError):
+            HottextQuestion(
+                prompt="No items",
+                items=[],
+            )
+
+    def test_hottext_invalid_zero_correct(self):
+        with self.assertRaises(QuizValidationError):
+            HottextQuestion(
+                prompt="All incorrect",
+                items=[
+                    HottextItem("cat", is_correct=False),
+                    HottextItem("mat", is_correct=False),
+                ],
+            )
+
+    def test_hottext_invalid_empty_item_text(self):
+        with self.assertRaises(QuizValidationError):
+            HottextQuestion(
+                prompt="Empty text",
+                items=[
+                    HottextItem("  ", is_correct=True),
                 ],
             )
 

@@ -6,6 +6,8 @@ from src.model import (
     Choice,
     EssayQuestion,
     FillBlankQuestion,
+    HottextItem,
+    HottextQuestion,
     InlineChoiceQuestion,
     InvalidQuestion,
     KprimQuestion,
@@ -20,7 +22,7 @@ from src.model import (
 
 
 from typing import Dict, Optional
-from src.markdown import contains_markdown, markdown_to_qti_xhtml, RE_DROPDOWN_GAP
+from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_DROPDOWN_GAP
 
 
 
@@ -106,6 +108,35 @@ def render_quiz_preview_html(
                 rendered_prompt = RE_DROPDOWN_GAP.sub(_replace_preview_dropdown, base_html)
                 prompt_html = (
                     f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.8;'>{rendered_prompt}</div>"
+                    if (has_distinct_prompt or is_invalid)
+                    else ""
+                )
+
+            elif isinstance(q, HottextQuestion):
+                # Render hottext prompt with highlighted selectable spans
+                raw_hottexts = extract_hottexts(q.prompt)
+                rendered_text = q.prompt
+                # Replace hottexts from right to left with preview spans
+                for start_idx, end_idx, raw_token, content, is_correct in sorted(raw_hottexts, key=lambda x: x[0], reverse=True):
+                    inner_html = markdown_to_qti_xhtml(content, asset_map=asset_map, render_math=render_math)
+                    if inner_html.startswith("<p>") and inner_html.endswith("</p>"):
+                        inner_html = inner_html[3:-4]
+                    if is_correct:
+                        span_html = (
+                            f"<span style='display: inline-block; margin: 1px 3px; padding: 2px 8px; border-radius: 5px; "
+                            f"border: 1.5px solid #16a34a; background: #dcfce7; color: #166534; font-weight: 600; font-size: 0.95em;' "
+                            f"title='Selectable hottext (Correct)'>{inner_html} <span style='font-size: 0.85em; color: #15803d;'>✓</span></span>"
+                        )
+                    else:
+                        span_html = (
+                            f"<span style='display: inline-block; margin: 1px 3px; padding: 2px 8px; border-radius: 5px; "
+                            f"border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; font-size: 0.95em;' "
+                            f"title='Selectable hottext (Incorrect)'>{inner_html}</span>"
+                        )
+                    rendered_text = rendered_text[:start_idx] + span_html + rendered_text[end_idx:]
+                base_html = markdown_to_qti_xhtml(rendered_text, asset_map=asset_map, render_math=render_math)
+                prompt_html = (
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.9;'>{base_html}</div>"
                     if (has_distinct_prompt or is_invalid)
                     else ""
                 )
@@ -300,6 +331,8 @@ def _get_type_label(q: Question) -> str:
         return "Fill-in-the-Blank"
     elif isinstance(q, InlineChoiceQuestion):
         return "Inline Choice"
+    elif isinstance(q, HottextQuestion):
+        return "Hottext"
     elif isinstance(q, NumericalQuestion):
         return "Numerical"
     elif isinstance(q, KprimQuestion):
@@ -324,6 +357,8 @@ def _get_badge_color(q: Question) -> str:
         return "#10b981"  # Emerald
     elif isinstance(q, InlineChoiceQuestion):
         return "#0d9488"  # Teal
+    elif isinstance(q, HottextQuestion):
+        return "#d97706"  # Amber/Ochre
     elif isinstance(q, NumericalQuestion):
         return "#ec4899"  # Pink
     elif isinstance(q, KprimQuestion):
@@ -379,6 +414,19 @@ def _render_question_body(
             shuffle_note = " <em>[shuffled]</em>" if g.shuffle else ""
             items.append(f"<li style='margin-bottom: 6px;'><strong>Dropdown {i+1}{shuffle_note}:</strong> {' | '.join(opts_desc)}</li>")
         return f"<ul style='padding-left: 20px; margin: 0; font-size: 0.95em;'>{''.join(items)}</ul>"
+
+    elif isinstance(q, HottextQuestion):
+        items = []
+        for item in q.items:
+            it_html = markdown_to_qti_xhtml(item.text, asset_map=asset_map, render_math=render_math)
+            if it_html.startswith("<p>") and it_html.endswith("</p>"):
+                it_html = it_html[3:-4]
+            if item.is_correct:
+                items.append(f"<li style='margin-bottom: 4px;'><strong style='color: #166534; background: #dcfce7; padding: 1px 6px; border-radius: 3px; border: 1px solid #bbf7d0;'>{it_html} (Correct)</strong></li>")
+            else:
+                items.append(f"<li style='margin-bottom: 4px; color: #64748b;'>{it_html} <span style='font-size: 0.85em;'>(Incorrect)</span></li>")
+        scoring_desc = f" <span style='color: #64748b; font-size: 0.9em;'>(Scoring: {html.escape(q.scoring)})</span>" if q.scoring else ""
+        return f"<div style='font-size: 0.9em; margin-bottom: 4px; font-weight: 600; color: #475569;'>Selectable Hottext Spans{scoring_desc}:</div><ul style='padding-left: 20px; margin: 0; font-size: 0.95em;'>{''.join(items)}</ul>"
 
 
     elif isinstance(q, NumericalQuestion):

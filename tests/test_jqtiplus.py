@@ -69,6 +69,25 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
         self.assertTrue(is_valid, f"Inline choice failed JQTI+ validation: {errors}")
         self.assertEqual(len(errors), 0)
 
+    def test_hottext_validates_in_jqti(self):
+        from src.model import HottextItem, HottextQuestion
+        q = HottextQuestion(
+            prompt="The {** cat **} { sat } on the {** mat **} using {+ `print()` }.",
+            items=[
+                HottextItem("cat", is_correct=True),
+                HottextItem("sat", is_correct=False),
+                HottextItem("mat", is_correct=True),
+                HottextItem("`print()`", is_correct=True),
+            ],
+            points=2.0,
+            feedback="Cat, mat, and print() are correct.",
+            hint="Look for nouns and code.",
+        )
+        xml_str = generate_item_xml(q)
+        is_valid, errors = validate_qti_xml_string(xml_str, "item_hottext.xml")
+        self.assertTrue(is_valid, f"Hottext failed JQTI+ validation: {errors}")
+        self.assertEqual(len(errors), 0)
+
 
     def test_multiple_choice_partial_scoring_with_hint_validates_in_jqti(self):
         """Regression test for the OpenOLAT runtime crash."""

@@ -198,6 +198,19 @@ Feedback: Switzerland's federal city is Bern, and Germany's capital is Berlin.
 
 Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
 """,
+
+    "15_hottext": """---
+title: "Sample 15 - Hottext Selection"
+---
+
+## Parts of Speech
+
+Hint: Look for words naming living beings or objects.
+Feedback: "cat", "mat", and "fireplace" are nouns, while "sat" is a verb.
+
+Select all nouns in the following sentence:
+The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
+""",
 }
 
 # Also create a comprehensive combined quiz containing all types
@@ -248,6 +261,11 @@ The American spelling is {{gray | grey}}.
 Hint: Federal city vs capital.
 Feedback: Bern and Berlin.
 Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+
+## Parts of Speech Hottext
+Hint: Nouns name things.
+Feedback: Cat, mat, and fireplace are nouns.
+The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
 
 ## Gravity
 Hint: Standard acceleration in m/s^2.

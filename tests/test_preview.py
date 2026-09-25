@@ -302,6 +302,20 @@ Switzerland has its federal city in {[Bern|Zurich]}, and Germany in {[Munich|**B
         self.assertIn("Dropdown 1 <em>[shuffled]</em>:", html_out)
         self.assertIn("Bern (Correct)", html_out)
 
+    def test_preview_hottext(self):
+        text = """## Parts of Speech
+The {** cat **} { sat } on the {** mat **}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        self.assertIn("Hottext", html_out)
+        self.assertIn("Selectable hottext (Correct)", html_out)
+        self.assertIn("Selectable hottext (Incorrect)", html_out)
+        self.assertIn("Selectable Hottext Spans", html_out)
+        self.assertIn("cat (Correct)", html_out)
+        self.assertIn("sat", html_out)
 
 
 if __name__ == "__main__":

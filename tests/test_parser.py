@@ -8,10 +8,12 @@ from src.model import (
     TrueFalseQuestion,
     EssayQuestion,
     FillBlankQuestion,
+    InlineChoiceQuestion,
     NumericalQuestion,
     KprimQuestion,
     OrderQuestion,
 )
+
 
 
 class TestQuizMDParser(unittest.TestCase):
@@ -666,7 +668,74 @@ What is the fastest?
         self.assertIn('<span class="math"', html_out)
 
 
+    def test_inline_choice_inference_with_bold(self):
+        text = """## European Geography
+Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(len(quiz.questions), 1)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, InlineChoiceQuestion)
+        self.assertEqual(len(q.gaps), 2)
+        # Gap 1: No bold -> first item Bern is correct, shuffle must be enforced
+        self.assertTrue(q.gaps[0].shuffle)
+        self.assertEqual([c.text for c in q.gaps[0].choices if c.is_correct], ["Bern"])
+        self.assertEqual([c.text for c in q.gaps[0].choices], ["Bern", "Zurich", "Geneva"])
+        # Gap 2: Berlin is bold -> Berlin is correct, shuffle inherits from quiz default (True)
+        self.assertTrue(q.gaps[1].shuffle)
+        self.assertEqual([c.text for c in q.gaps[1].choices if c.is_correct], ["Berlin"])
+        self.assertEqual([c.text for c in q.gaps[1].choices], ["Munich", "Berlin", "Hamburg"])
+
+    def test_inline_choice_first_item_correct_enforces_shuffle(self):
+        text = """---
+shuffle: false
+---
+## Dropdown with quiz shuffle false
+Choose the right word: The sky is {[blue|green|red]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        self.assertIsInstance(q, InlineChoiceQuestion)
+        # Because no bold was used, the first option is correct and shuffle is strictly enforced (True)
+        self.assertTrue(q.gaps[0].shuffle)
+        self.assertEqual([c.text for c in q.gaps[0].choices if c.is_correct], ["blue"])
+
+    def test_inline_choice_bold_respects_shuffle_false(self):
+        text = """---
+shuffle: false
+---
+## Dropdown with quiz shuffle false
+Choose the right word: The sky is {[green|**blue**|red]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        self.assertIsInstance(q, InlineChoiceQuestion)
+        # Because bold was used, gap.shuffle inherits quiz shuffle: false
+        self.assertFalse(q.gaps[0].shuffle)
+        self.assertEqual([c.text for c in q.gaps[0].choices if c.is_correct], ["blue"])
+
+    def test_mixed_text_and_dropdown_gaps_error(self):
+        text = """## Mixed Cloze Question
+Fill in the text {{word}} and choose from dropdown {[option 1|option 2]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot mix open text gaps {{...}} and dropdown gaps {[...]}" in d.message for d in diags))
+
+    def test_dropdown_gap_with_choices_conflict_error(self):
+        text = """## Conflicting dropdown and task list
+Choose: {[A|B]}
+- [X] Choice A
+- [ ] Choice B
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot combine dropdown gaps {[...]} with choices" in d.message for d in diags))
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

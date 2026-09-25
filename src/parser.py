@@ -26,6 +26,9 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    InlineChoice,
+    InlineChoiceGap,
+    InlineChoiceQuestion,
     InvalidQuestion,
     KprimQuestion,
     KprimStatement,
@@ -41,8 +44,9 @@ from src.model import (
     generate_id,
 )
 
-from src.markdown import RE_GAP
+from src.markdown import RE_GAP, RE_DROPDOWN_GAP
 from src.validation import Diagnostic, QuizValidationError, Severity
+
 
 
 
@@ -148,6 +152,83 @@ def _parse_gaps(prompt: str) -> List[Gap]:
         alternatives = parts[1:]
         gaps.append(Gap(expected_value=canonical, alternatives=alternatives))
     return gaps
+
+
+def _split_dropdown_inner(inner: str) -> List[str]:
+    """Split dropdown token inner content by unescaped pipe (|)."""
+    parts = []
+    current = []
+    i = 0
+    while i < len(inner):
+        if inner[i] == "\\" and i + 1 < len(inner):
+            escaped_char = inner[i + 1]
+            if escaped_char in ("|", "]", "}", "\\"):
+                current.append(escaped_char)
+                i += 2
+                continue
+            else:
+                current.append(inner[i])
+                current.append(escaped_char)
+                i += 2
+                continue
+        elif inner[i] == "|":
+            parts.append("".join(current).strip())
+            current = []
+            i += 1
+            continue
+        else:
+            current.append(inner[i])
+            i += 1
+    if current or not parts:
+        parts.append("".join(current).strip())
+    return [p for p in parts if p]
+
+
+def _parse_dropdown_gaps(prompt: str, question_shuffle: Optional[bool] = None) -> List[InlineChoiceGap]:
+    """Parse dropdown gap tokens {[opt1|**opt2**|opt3]} into InlineChoiceGap objects.
+    
+    If an option is wrapped in bold (**opt** or __opt__), it is marked as the correct answer.
+    If no option has bold markup, the first option is the correct answer and shuffle="true"
+    must be enforced on that gap.
+    """
+    raw_gaps = RE_DROPDOWN_GAP.findall(prompt)
+    gaps: List[InlineChoiceGap] = []
+    for g in raw_gaps:
+        raw_options = _split_dropdown_inner(g)
+        if not raw_options:
+            continue
+
+        choices: List[InlineChoice] = []
+        has_bold_marked = False
+
+        for opt in raw_options:
+            # Check for **bold** or __bold__ marking
+            is_bold = False
+            opt_clean = opt
+            if (opt.startswith("**") and opt.endswith("**") and len(opt) >= 4):
+                is_bold = True
+                opt_clean = opt[2:-2].strip()
+            elif (opt.startswith("__") and opt.endswith("__") and len(opt) >= 4):
+                is_bold = True
+                opt_clean = opt[2:-2].strip()
+
+            if is_bold:
+                has_bold_marked = True
+                choices.append(InlineChoice(text=opt_clean, is_correct=True))
+            else:
+                choices.append(InlineChoice(text=opt_clean, is_correct=False))
+
+        if not has_bold_marked:
+            # First item is correct; shuffle must be enforced
+            if choices:
+                choices[0].is_correct = True
+            gap_shuffle = True
+        else:
+            gap_shuffle = question_shuffle
+
+        gaps.append(InlineChoiceGap(choices=choices, shuffle=gap_shuffle))
+    return gaps
+
 
 
 def _split_keywords(val: Any) -> List[str]:
@@ -498,7 +579,12 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         q.language = quiz_language
                     if q.shuffle is None:
                         q.shuffle = quiz_shuffle
+                    if isinstance(q, InlineChoiceQuestion):
+                        for gap in q.gaps:
+                            if gap.shuffle is None:
+                                gap.shuffle = q.shuffle
                     if isinstance(q, MultipleChoiceQuestion) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
+
                         if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
                             q.scoring = quiz_mc_scoring
                     if q.additional_info is None:
@@ -730,6 +816,33 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             )],
         )
 
+    # Check for text entry vs dropdown gaps mutual exclusivity
+    has_text_gaps = bool(RE_GAP.search(prompt))
+    has_dropdown_gaps = bool(RE_DROPDOWN_GAP.search(prompt))
+
+    if has_text_gaps and has_dropdown_gaps:
+        raise QuizValidationError(
+            "Cannot mix open text gaps {{...}} and dropdown gaps {[...]} in the same question (OpenOLAT does not support mixed cloze tests).",
+            [Diagnostic(
+                "Cannot mix open text gaps {{...}} and dropdown gaps {[...]} in the same question (OpenOLAT does not support mixed cloze tests).",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
+    if has_dropdown_gaps and (block.choices or block.kprim_items or block.is_kprim_mode or block.order_items or block.numerical is not None):
+        raise QuizValidationError(
+            "Cannot combine dropdown gaps {[...]} with choices, Kprim, Order, or numerical answers in the same question.",
+            [Diagnostic(
+                "Cannot combine dropdown gaps {[...]} with choices, Kprim, Order, or numerical answers in the same question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
+
     # Deterministic Inference Sequence
 
     # 1. Explicit Type Override
@@ -751,6 +864,9 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         elif explicit_type in ("fillinblank", "fillblank", "fib"):
             gaps = _parse_gaps(prompt)
             return FillBlankQuestion(**common_kwargs, gaps=gaps)
+        elif explicit_type in ("inlinechoice", "dropdown", "select", "ic"):
+            dd_gaps = _parse_dropdown_gaps(prompt, question_shuffle=q_shuffle)
+            return InlineChoiceQuestion(**common_kwargs, gaps=dd_gaps)
         elif explicit_type in ("numerical", "num"):
             val, tol = (block.numerical[0], block.numerical[1]) if block.numerical else (0.0, 0.0)
             return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)
@@ -771,10 +887,16 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         stmts = [KprimStatement(text=it[1], is_correct=it[0]) for it in block.kprim_items]
         return KprimQuestion(**common_kwargs, statements=stmts)
 
-    # 4. Inferred: Fill-in-the-Blank
+    # 4. Inferred: Inline Choice / Dropdown
+    if has_dropdown_gaps:
+        dd_gaps = _parse_dropdown_gaps(prompt, question_shuffle=q_shuffle)
+        return InlineChoiceQuestion(**common_kwargs, gaps=dd_gaps)
+
+    # 5. Inferred: Fill-in-the-Blank (Text Entry)
     gaps_found = _parse_gaps(prompt)
     if gaps_found:
         return FillBlankQuestion(**common_kwargs, gaps=gaps_found)
+
 
     # 5. Inferred: Numerical
     if block.numerical is not None:

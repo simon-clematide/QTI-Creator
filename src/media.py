@@ -21,6 +21,7 @@ from typing import Dict, List, Literal, Optional, Set, Tuple
 from src.model import (
     EssayQuestion,
     FillBlankQuestion,
+    InlineChoiceQuestion,
     KprimQuestion,
     MultipleChoiceQuestion,
     NumericalQuestion,
@@ -187,6 +188,10 @@ def extract_quiz_media_references(quiz: Quiz) -> List[MediaReference]:
                 q_refs.extend(extract_media_references(g.expected_value, question_id=q.identifier))
                 for alt in g.alternatives:
                     q_refs.extend(extract_media_references(alt, question_id=q.identifier))
+        elif isinstance(q, InlineChoiceQuestion):
+            for g in q.gaps:
+                for c in g.choices:
+                    q_refs.extend(extract_media_references(c.text, question_id=q.identifier))
 
 
         all_refs.extend(q_refs)

@@ -9,12 +9,16 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    InlineChoice,
+    InlineChoiceGap,
+    InlineChoiceQuestion,
     NumericalQuestion,
     KprimQuestion,
     KprimStatement,
     Quiz,
 )
 from src.validation import QuizValidationError
+
 
 
 class TestModelInvariants(unittest.TestCase):
@@ -196,7 +200,70 @@ class TestModelInvariants(unittest.TestCase):
         self.assertIn("OpenOLAT does not format Markdown in section titles", diags[0].message)
 
 
+    def test_inline_choice_valid(self):
+        q = InlineChoiceQuestion(
+            prompt="Choose {[Bern|Zurich]}",
+            gaps=[
+                InlineChoiceGap(
+                    choices=[
+                        InlineChoice("Bern", is_correct=True),
+                        InlineChoice("Zurich", is_correct=False),
+                    ]
+                )
+            ],
+        )
+        self.assertEqual(len(q.gaps), 1)
+        self.assertEqual(len(q.gaps[0].choices), 2)
+
+    def test_inline_choice_invalid_empty_gaps(self):
+        with self.assertRaises(QuizValidationError):
+            InlineChoiceQuestion(
+                prompt="No gaps here",
+                gaps=[],
+            )
+
+    def test_inline_choice_invalid_single_choice(self):
+        with self.assertRaises(QuizValidationError):
+            InlineChoiceQuestion(
+                prompt="Gap with one choice",
+                gaps=[
+                    InlineChoiceGap(
+                        choices=[InlineChoice("OnlyOne", is_correct=True)]
+                    )
+                ],
+            )
+
+    def test_inline_choice_invalid_no_correct(self):
+        with self.assertRaises(QuizValidationError):
+            InlineChoiceQuestion(
+                prompt="Gap with no correct choice",
+                gaps=[
+                    InlineChoiceGap(
+                        choices=[
+                            InlineChoice("A", is_correct=False),
+                            InlineChoice("B", is_correct=False),
+                        ]
+                    )
+                ],
+            )
+
+    def test_inline_choice_invalid_multiple_correct(self):
+        with self.assertRaises(QuizValidationError):
+            InlineChoiceQuestion(
+                prompt="Gap with multiple correct choices",
+                gaps=[
+                    InlineChoiceGap(
+                        choices=[
+                            InlineChoice("A", is_correct=True),
+                            InlineChoice("B", is_correct=True),
+                        ]
+                    )
+                ],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

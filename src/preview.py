@@ -6,6 +6,7 @@ from src.model import (
     Choice,
     EssayQuestion,
     FillBlankQuestion,
+    InlineChoiceQuestion,
     InvalidQuestion,
     KprimQuestion,
     MultipleChoiceQuestion,
@@ -19,7 +20,8 @@ from src.model import (
 
 
 from typing import Dict, Optional
-from src.markdown import contains_markdown, markdown_to_qti_xhtml
+from src.markdown import contains_markdown, markdown_to_qti_xhtml, RE_DROPDOWN_GAP
+
 
 
 def render_quiz_preview_html(
@@ -83,11 +85,38 @@ def render_quiz_preview_html(
                 )
             question_title_html = f"<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>{html.escape(q.title)}{q_title_warning}</div>"
 
-            prompt_html = (
-                f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)}</div>"
-                if (has_distinct_prompt or is_invalid)
-                else ""
-            )
+            if isinstance(q, InlineChoiceQuestion):
+                # Render dropdown prompt with styled select dropdowns
+                base_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)
+                gap_counter = 0
+                def _replace_preview_dropdown(match):
+                    nonlocal gap_counter
+                    gap_idx = gap_counter
+                    gap_counter += 1
+                    opts_html = ["<option value=''>-- Select --</option>"]
+                    if gap_idx < len(q.gaps):
+                        for c in q.gaps[gap_idx].choices:
+                            tag = " ✓" if c.is_correct else ""
+                            opts_html.append(f"<option>{html.escape(c.text)}{tag}</option>")
+                    return (
+                        f"<select disabled style='display: inline-block; vertical-align: middle; margin: 0 4px; padding: 2px 8px; "
+                        f"border-radius: 4px; border: 1px solid #0d9488; background: #f0fdfa; color: #0f766e; font-weight: 500; font-size: 0.9em;'>"
+                        f"{''.join(opts_html)}</select>"
+                    )
+                rendered_prompt = RE_DROPDOWN_GAP.sub(_replace_preview_dropdown, base_html)
+                prompt_html = (
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.8;'>{rendered_prompt}</div>"
+                    if (has_distinct_prompt or is_invalid)
+                    else ""
+                )
+
+            else:
+                prompt_html = (
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)}</div>"
+                    if (has_distinct_prompt or is_invalid)
+                    else ""
+                )
+
             body_html = _render_question_body(q, asset_map=asset_map, render_math=render_math)
             hint_html = (
                 f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
@@ -269,6 +298,8 @@ def _get_type_label(q: Question) -> str:
         return "Essay / Free Text"
     elif isinstance(q, FillBlankQuestion):
         return "Fill-in-the-Blank"
+    elif isinstance(q, InlineChoiceQuestion):
+        return "Inline Choice"
     elif isinstance(q, NumericalQuestion):
         return "Numerical"
     elif isinstance(q, KprimQuestion):
@@ -291,6 +322,8 @@ def _get_badge_color(q: Question) -> str:
         return "#f59e0b"  # Amber
     elif isinstance(q, FillBlankQuestion):
         return "#10b981"  # Emerald
+    elif isinstance(q, InlineChoiceQuestion):
+        return "#0d9488"  # Teal
     elif isinstance(q, NumericalQuestion):
         return "#ec4899"  # Pink
     elif isinstance(q, KprimQuestion):
@@ -333,6 +366,20 @@ def _render_question_body(
             alts_str = f" <span style='color: #64748b; font-size: 0.9em;'>(alternatives: {', '.join(html.escape(a) for a in g.alternatives)})</span>" if g.alternatives else ""
             items.append(f"<li style='margin-bottom: 4px;'><strong>Gap {i+1}:</strong> <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{html.escape(g.expected_value)}</code>{alts_str}</li>")
         return f"<ul style='padding-left: 20px; margin: 0; color: #475569;'>{''.join(items)}</ul>"
+
+    elif isinstance(q, InlineChoiceQuestion):
+        items = []
+        for i, g in enumerate(q.gaps):
+            opts_desc = []
+            for c in g.choices:
+                if c.is_correct:
+                    opts_desc.append(f"<strong style='color: #166534; background: #dcfce7; padding: 1px 5px; border-radius: 3px; border: 1px solid #bbf7d0;'>{html.escape(c.text)} (Correct)</strong>")
+                else:
+                    opts_desc.append(f"<span style='color: #64748b;'>{html.escape(c.text)}</span>")
+            shuffle_note = " <em>[shuffled]</em>" if g.shuffle else ""
+            items.append(f"<li style='margin-bottom: 6px;'><strong>Dropdown {i+1}{shuffle_note}:</strong> {' | '.join(opts_desc)}</li>")
+        return f"<ul style='padding-left: 20px; margin: 0; font-size: 0.95em;'>{''.join(items)}</ul>"
+
 
     elif isinstance(q, NumericalQuestion):
         tol_str = f" ± {q.tolerance}" if q.tolerance > 0 else ""

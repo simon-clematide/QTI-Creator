@@ -622,10 +622,16 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                       <td style="padding: 8px 12px;">4/4 = full, 3/4 = half, ≤2/4 = zero</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
-                      <td style="padding: 8px 12px;"><strong>Fill in the Blank</strong></td>
+                      <td style="padding: 8px 12px;"><strong>Fill in the Blank (Text)</strong></td>
                       <td style="padding: 8px 12px;"><code>The word is {{gray | grey}}.</code></td>
                       <td style="padding: 8px 12px;">Answer embedded as <code>{{answer | alternative}}</code></td>
                       <td style="padding: 8px 12px;">Points divided equally across blanks</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 12px;"><strong>Fill in the Blank (Dropdown)</strong></td>
+                      <td style="padding: 8px 12px;"><code>The capital is {[Munich|**Berlin**|Hamburg]}.</code></td>
+                      <td style="padding: 8px 12px;">Choices embedded as <code>{[opt 1|**opt 2**|opt 3]}</code> (bold marks correct answer; if no bold, first option is correct and options are scrambled)</td>
+                      <td style="padding: 8px 12px;">Points divided equally across dropdowns</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
                       <td style="padding: 8px 12px;"><strong>Numerical</strong></td>
@@ -633,6 +639,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                       <td style="padding: 8px 12px;">Answer line starts with <code>= number (optional ± tolerance)</code></td>
                       <td style="padding: 8px 12px;">All or nothing within tolerance</td>
                     </tr>
+
                     <tr style="border-bottom: 1px solid #e2e8f0;">
                       <td style="padding: 8px 12px;"><strong>Order / Sequencing</strong></td>
                       <td style="padding: 8px 12px;"><code>1. [ ] First<br>1. [ ] Second<br>1. [ ] Third</code></td>
@@ -724,25 +731,32 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     #### 2. Kprim (4-Statement Matrix)
                     - Must contain exactly 4 statements, each marked with `- [+]` (true) or `- [-]` (false).
 
-                    #### 3. Fill in the Blank with Alternatives
+                    #### 3. Fill in the Blank (Text Entry) with Alternatives
                     - Wrap target blanks in `{{...}}`.
                     - Provide acceptable synonyms or alternate spellings with pipe `|`: `{{gray | grey}}`.
                     - The first value is canonical; all alternatives receive equal full credit.
                     - **Escaping syntax characters**: Within `{{...}}`, use a backslash to escape syntax characters: `\\|` (literal `|`), `\\}` (literal `}`), and `\\\\` (literal `\\`), e.g., `{{answer containing \\}\\} braces | alternative}}`.
 
-                    #### 4. Numerical Questions
+                    #### 4. Fill in the Blank with Dropdown (Inline Choice)
+                    - Embed dropdown options directly in text: `{[option 1|option 2|option 3]}`.
+                    - Mark the correct answer using Markdown bold: `{[Munich|**Berlin**|Hamburg]}`.
+                    - If no option has bold markup, the first option is the correct answer and option scrambling is automatically enforced (`shuffle="true"`).
+                    - *Note: OpenOLAT does not allow mixing open text entry gaps and dropdown gaps within the same question.*
+
+                    #### 5. Numerical Questions
                     - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.
 
-                    #### 5. Order / Sequencing Questions
+                    #### 6. Order / Sequencing Questions
                     - Write an ordered list with empty boxes: `1. [ ] Step A`, `1. [ ] Step B`, `1. [ ] Step C` (minimum 2 items).
                     - **The order written in Markdown is the correct solution.**
                     - Learner-facing tiles are automatically scrambled (`shuffle="true"`).
                     - *Regular numbered lists (`1. Foo`, `2. Bar`) without `[ ]` remain standard Markdown text.*
 
-                    #### 6. Essay / Free Text
+                    #### 7. Essay / Free Text
                     - Write the prompt without any answer markers. OpenOLAT creates an open text response area for manual grading.
 
-                    #### 7. Formulas & Code Blocks
+                    #### 8. Formulas & Code Blocks
+
                     - **Math Formulas**: Use MathJax-compatible TeX syntax — e.g. `$E = mc^2$`, `$$\frac{a}{b}$$`, `\sum`, `\text{...}`. OpenOLAT renders math natively via MathJax 3 (OpenOLAT ≥ 16.2). Arbitrary LaTeX packages and document-level commands are not supported.
                     - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                     - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
@@ -906,14 +920,23 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                     "- [-] They require every sentence to have the same length.\n"
                     "- [+] They can be trained on text corpora.\n"
                     "- [-] They always produce factually correct output.\n\n"
-                    "Fill-in-the-Blank\n"
+                    "Fill-in-the-Blank (Text Entry)\n"
                     "Put the expected answer inside double braces.\n"
                     "Example:\n"
                     "## Complete the sentence.\n"
                     "The process of splitting text into units is called {{tokenization}}.\n"
                     "Alternative accepted answers may be separated with |:\n"
                     "The spelling may be {{gray | grey}}.\n\n"
+                    "Fill-in-the-Blank (Dropdown / Inline Choice)\n"
+                    "Put multiple options inside {[option 1|option 2|option 3]}.\n"
+                    "Mark the correct answer using Markdown bold **...**:\n"
+                    "Example:\n"
+                    "## Complete the sentence with the right terms.\n"
+                    "The capital of Switzerland is {[Bern|Zurich|Geneva]}, and Germany is {[Munich|**Berlin**|Hamburg]}.\n"
+                    "If no bold is specified, the first option is correct and options are automatically scrambled.\n"
+                    "IMPORTANT: Do NOT mix {{...}} and {[...]} in the same question.\n\n"
                     "Numerical\n"
+
                     "Give the target value with = and optionally a tolerance with ±.\n"
                     "Example:\n"
                     "## What is the approximate acceleration due to gravity on Earth?\n"

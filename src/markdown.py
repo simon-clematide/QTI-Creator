@@ -18,6 +18,9 @@ from typing import Dict, List, Optional
 # Shared pattern for fill-in-the-blank gaps: {{answer}} or {{answer|alt1|alt2}}
 RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
 
+# Shared pattern for dropdown / inline choice gaps: {[option1|option2]} or {[option1|**option2**|option3]}
+RE_DROPDOWN_GAP = re.compile(r"\{\[((?:\\.|[^\]\\]|\](?!\})*?)*?)\]\}")
+
 
 def markdown_to_qti_xhtml(
     text: str,
@@ -385,6 +388,16 @@ def _format_inlines(
         return key
 
     text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", save_link, text)
+
+    # 5b. Protect dropdown gaps {[...]} from markdown bold/italic parsing
+    def save_dropdown_gap(match):
+        nonlocal counter
+        key = f"XXDROPDOWNGAP{counter}XX"
+        counter += 1
+        placeholders[key] = match.group(0)
+        return key
+
+    text = RE_DROPDOWN_GAP.sub(save_dropdown_gap, text)
 
     # 6. Safely HTML-escape remaining text
     s = html.escape(text)

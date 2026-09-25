@@ -44,6 +44,22 @@ class Gap:
 
 
 @dataclass
+class InlineChoice:
+    """An option in an inline choice / dropdown gap."""
+    text: str
+    is_correct: bool
+    identifier: str = field(default_factory=lambda: generate_id("inline_choice"))
+
+
+@dataclass
+class InlineChoiceGap:
+    """A dropdown gap containing multiple options."""
+    choices: List[InlineChoice] = field(default_factory=list)
+    identifier: str = field(default_factory=lambda: generate_id("gap"))
+    shuffle: Optional[bool] = None
+
+
+@dataclass
 class Question:
     """Base question class."""
     prompt: str
@@ -174,6 +190,38 @@ class FillBlankQuestion(Question):
                 "Fill-in-the-Blank question requires at least one {{gap}}.",
                 [Diagnostic("Fill-in-the-Blank question requires at least one {{gap}}.", Severity.ERROR, self.line_number)],
             )
+
+
+@dataclass
+class InlineChoiceQuestion(Question):
+    """Inline Choice / Dropdown: One or more {[option1|option2]} placeholders in prompt."""
+    gaps: List[InlineChoiceGap] = field(default_factory=list)
+
+    def validate(self) -> None:
+        super().validate()
+        if not self.gaps:
+            raise QuizValidationError(
+                "Inline Choice question requires at least one {[...]} dropdown gap.",
+                [Diagnostic("Inline Choice question requires at least one {[...]} dropdown gap.", Severity.ERROR, self.line_number)],
+            )
+        for idx, gap in enumerate(self.gaps):
+            if len(gap.choices) < 2:
+                raise QuizValidationError(
+                    f"Dropdown gap {idx + 1} requires at least 2 options, found {len(gap.choices)}.",
+                    [Diagnostic(f"Dropdown gap {idx + 1} requires at least 2 options, found {len(gap.choices)}.", Severity.ERROR, self.line_number)],
+                )
+            for c in gap.choices:
+                if not c.text.strip():
+                    raise QuizValidationError(
+                        f"Dropdown gap {idx + 1} contains an empty option.",
+                        [Diagnostic(f"Dropdown gap {idx + 1} contains an empty option.", Severity.ERROR, self.line_number)],
+                    )
+            correct_count = sum(1 for c in gap.choices if c.is_correct)
+            if correct_count != 1:
+                raise QuizValidationError(
+                    f"Dropdown gap {idx + 1} requires exactly 1 correct answer, found {correct_count}.",
+                    [Diagnostic(f"Dropdown gap {idx + 1} requires exactly 1 correct answer, found {correct_count}.", Severity.ERROR, self.line_number)],
+                )
 
 
 @dataclass

@@ -286,7 +286,26 @@ What is $x$?
         self.assertIn('title="Question title contains Markdown or math syntax"', html_out)
 
 
+    def test_preview_inline_choice_dropdown(self):
+        text = """## Geography Dropdown
+Switzerland has its federal city in {[Bern|Zurich]}, and Germany in {[Munich|**Berlin**]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        self.assertIn("Inline Choice", html_out)
+        self.assertIn("<select disabled", html_out)
+        self.assertIn("-- Select --", html_out)
+        self.assertIn("Bern ✓", html_out)
+        self.assertIn("Berlin ✓", html_out)
+        self.assertIn("Dropdown 1 <em>[shuffled]</em>:", html_out)
+        self.assertIn("Bern (Correct)", html_out)
+
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

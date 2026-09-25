@@ -10,7 +10,14 @@ from src.jqti_validator import (
     validate_qti_xml_string,
     validate_with_jqti,
 )
-from src.model import Choice, MultipleChoiceQuestion, SingleChoiceQuestion
+from src.model import (
+    Choice,
+    InlineChoice,
+    InlineChoiceGap,
+    InlineChoiceQuestion,
+    MultipleChoiceQuestion,
+    SingleChoiceQuestion,
+)
 from src.packager import create_qti_package
 from src.parser import parse_quizmd
 from src.qti21 import generate_item_xml
@@ -31,6 +38,37 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
         is_valid, errors = validate_qti_xml_string(xml_str, "item_single_choice.xml")
         self.assertTrue(is_valid, f"Single choice failed JQTI+ validation: {errors}")
         self.assertEqual(len(errors), 0)
+
+    def test_inline_choice_validates_in_jqti(self):
+        q = InlineChoiceQuestion(
+            prompt="The capital of Switzerland is {[Bern|Zurich|Geneva]}, and Germany is {[Munich|**Berlin**|Hamburg]}.",
+            gaps=[
+                InlineChoiceGap(
+                    choices=[
+                        InlineChoice("Bern", True),
+                        InlineChoice("Zurich", False),
+                        InlineChoice("Geneva", False),
+                    ],
+                    shuffle=True,
+                ),
+                InlineChoiceGap(
+                    choices=[
+                        InlineChoice("Munich", False),
+                        InlineChoice("Berlin", True),
+                        InlineChoice("Hamburg", False),
+                    ],
+                    shuffle=True,
+                ),
+            ],
+            points=2.0,
+            feedback="Bern and Berlin are the capitals.",
+            hint="European capitals.",
+        )
+        xml_str = generate_item_xml(q)
+        is_valid, errors = validate_qti_xml_string(xml_str, "item_inline_choice.xml")
+        self.assertTrue(is_valid, f"Inline choice failed JQTI+ validation: {errors}")
+        self.assertEqual(len(errors), 0)
+
 
     def test_multiple_choice_partial_scoring_with_hint_validates_in_jqti(self):
         """Regression test for the OpenOLAT runtime crash."""

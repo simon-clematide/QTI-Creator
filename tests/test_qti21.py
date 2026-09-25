@@ -10,8 +10,12 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    InlineChoice,
+    InlineChoiceGap,
+    InlineChoiceQuestion,
     KprimQuestion,
     KprimStatement,
+
     MultipleChoiceQuestion,
     NumericalQuestion,
     OrderItem,
@@ -453,5 +457,60 @@ Hint: Recall that $x^2 = x \\cdot x$.
         self.assertNotIn("<span", sec.attrib.get("title", ""))
 
 
+    def test_inline_choice_xml_validity(self):
+        q = InlineChoiceQuestion(
+            prompt="Switzerland has its capital in {[Bern|Zurich|Geneva]}.",
+            gaps=[
+                InlineChoiceGap(
+                    choices=[
+                        InlineChoice("Bern", is_correct=True),
+                        InlineChoice("Zurich", is_correct=False),
+                        InlineChoice("Geneva", is_correct=False),
+                    ],
+                    shuffle=True,
+                )
+            ],
+            points=2.0,
+            feedback="Bern is the federal city.",
+            hint="Bear on flag.",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("assessmentItem", root.tag)
+        self.assertIn("<inlineChoiceInteraction", xml_str)
+        self.assertIn('shuffle="true"', xml_str)
+        self.assertIn("<inlineChoice", xml_str)
+        self.assertIn("Bern", xml_str)
+        self.assertIn("Zurich", xml_str)
+        self.assertIn("Geneva", xml_str)
+        self.assertIn("<setOutcomeValue identifier=\"SCORE\">", xml_str)
+        self.assertIn("<mapResponse", xml_str)
+
+        # Verify manifest metadata
+        quiz = Quiz(title="Inline Choice Quiz", questions=[q])
+        manifest_xml = generate_manifest_xml(quiz)
+        self.assertIn('qtiMetadata', manifest_xml)
+        self.assertIn('inlineChoiceInteraction', manifest_xml)
+        self.assertIn('questionType>inlinechoice</', manifest_xml)
+
+
+    def test_inline_choice_package_generation(self):
+        text = """# Capitals Quiz
+## Switzerland and Germany
+Switzerland: {[Bern|Zurich]}, Germany: {[Munich|**Berlin**]}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        zip_bytes = create_qti_package_bytes(quiz)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+            names = zf.namelist()
+            self.assertIn("imsmanifest.xml", names)
+            item_files = [n for n in names if n.endswith(".xml") and "item" in n]
+            self.assertEqual(len(item_files), 1)
+            item_xml = zf.read(item_files[0]).decode("utf-8")
+            self.assertIn("inlineChoiceInteraction", item_xml)
+
+
 if __name__ == "__main__":
     unittest.main()
+

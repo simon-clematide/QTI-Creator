@@ -31,6 +31,9 @@ A demonstration quiz covering all supported question types with automatic infere
 The past tense of *go* is {{went}} and the past participle is {{gone}}.
 The American spelling of the colour between black and white is {{gray | grey}}.
 
+## European Capitals
+Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+
 ## Gravitational Acceleration
 What is the acceleration due to gravity on Earth's surface in m/s²?
 = 9.81 ± 0.05
@@ -43,6 +46,7 @@ What is the acceleration due to gravity on Earth's surface in m/s²?
 
 ## Cellular Respiration
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
+
 """
 
 SAMPLE_LINGUISTICS = """---

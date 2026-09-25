@@ -65,12 +65,23 @@ Exactly 4 statements. Use `[+]` for true and `[-]` for false.
 - [-] They are ectothermic.
 ```
 
-### Fill-in-the-Blank
+### Fill-in-the-Blank (Text Entry)
 Embed the answer inside the text using double braces. Use `|` for accepted alternatives.
 ```markdown
 ## Color Spelling
 The American spelling of the colour is {{gray | grey | gray colour}}.
 ```
+
+### Fill-in-the-Blank with Dropdown (Inline Choice)
+Embed multiple choices inside text using `{[option 1|option 2|option 3]}`.
+Mark the correct answer using Markdown bold `**...**` (or `__...__`).
+If no bold option is specified, the first option is the correct answer and shuffling is automatically enforced for the dropdown options.
+*(Note: OpenOLAT does not allow mixing open text entry gaps and dropdown gaps in the same question).*
+```markdown
+## European Geography
+Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+```
+
 
 ### Numerical
 Start the answer line with `=` followed by the value and an optional `±` tolerance.

@@ -186,6 +186,18 @@ Feedback: Aerobic respiration uses oxygen to produce up to ~38 ATP per glucose, 
 
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
 """,
+
+    "14_inline_choice": """---
+title: "Sample 14 - Fill-in-the-Blank with Dropdown"
+---
+
+## European Geography
+
+Hint: Bern is the federal city of Switzerland, and Berlin is Germany's capital.
+Feedback: Switzerland's federal city is Bern, and Germany's capital is Berlin.
+
+Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+""",
 }
 
 # Also create a comprehensive combined quiz containing all types
@@ -232,6 +244,11 @@ Hint: Gray vs grey.
 Feedback: American English uses gray.
 The American spelling is {{gray | grey}}.
 
+## European Capitals Dropdown
+Hint: Federal city vs capital.
+Feedback: Bern and Berlin.
+Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+
 ## Gravity
 Hint: Standard acceleration in m/s^2.
 Feedback: Standard gravity is 9.81 m/s^2.
@@ -251,6 +268,7 @@ Hint: Aerobic vs anaerobic.
 Feedback: Look for oxygen requirement and ATP yield differences.
 Explain the difference between aerobic and anaerobic respiration.
 """
+
 
 
 def main():

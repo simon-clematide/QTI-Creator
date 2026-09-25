@@ -69,9 +69,13 @@ Explain the difference between aerobic and anaerobic respiration in 2-3 sentence
 | **True / False** | `- [X] True`<br>`- [ ] False` | Single Choice with exactly True and False | All or nothing |
 | **Multiple Choice** | `- [x] Option 1`<br>`- [x] Option 2` | One or more options marked `[x]` | Partial credit for correct and incorrect selections |
 | **Kprim (Matrix)** | `- [+] True statement`<br>`- [-] False statement` | Exactly 4 statements marked `[+]` or `[-]` | 4/4 = full, 3/4 = half, ≤2/4 = zero |
-| **Fill in the Blank** | `The word is {{gray \| grey}}.` | Answer embedded as `{{answer \| alternative}}` | Points divided equally across blanks |
+| **Fill in the Blank (Text)** | `The word is {{gray \| grey}}.` | Answer embedded as `{{answer \| alternative}}` | Points divided equally across blanks |
+| **Fill in the Blank (Dropdown)** | `The capital is {[Munich\|**Berlin**\|Hamburg]}.` | Options embedded as `{[opt 1\|**opt 2**\|opt 3]}` (`**` marks correct option) | Points divided equally across dropdowns |
+| **Hottext** | `The {** cat **} { sat } on the {** mat **}.` | Selectable spans: `{ text }` (distractor), `{** text **}` / `{+ text }` (correct), `{- text }` | Partial credit for correct and incorrect selections |
 | **Numerical** | `= 9.81 ± 0.05` | Answer line starts with `= number (optional ± tolerance)` | All or nothing within tolerance |
 | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered list with empty `[ ]` (minimum 2 items) | All or nothing |
+| **Match** | `\| Item \| Match \|`<br>`\|---\|---\|`<br>`\| dog \| noun \|`<br>`\| cat \| noun \|` | 2-column table with `Item` and `Match` headers (ditto supported via empty cells) | Partial credit (OpenOLAT negative point system) |
+| **Drag & Drop** | `\| Item \| Drag \|`<br>`\|---\|---\|`<br>`\| dog \| noun \|`<br>`\| run \| verb \|` | 2-column table with `Item` and `Drag` headers. Native OpenOLAT drag-and-drop | Partial credit (OpenOLAT negative point system) |
 | **Essay / Free Text** | Question prompt with no answers | No answer syntax | Manual grading |
 
 *All questions are worth 1 point by default. Use `Points: <number>` to change a question's weight.*
@@ -121,7 +125,33 @@ The American spelling of the colour between black and white is {{gray | grey}}.
 - Whitespace around `|` is automatically trimmed.
 - **Escaping syntax characters**: Within `{{...}}`, use a backslash to escape syntax characters: `\|` (literal `|`), `\}` (literal `}`), and `\\` (literal `\`). For example: `{{answer containing \}\} braces | alternative}}`.
 
-### 4. Order / Sequencing Questions (`N. [ ]`)
+### 4. Dropdown / Inline Choice (`{[...]}`)
+Embed dropdown selections directly within sentences using `{[...]}` with pipe `|` separators:
+
+```markdown
+## European Capitals
+Switzerland has its federal city in {[**Bern**|Zurich|Geneva]}, while the capital of Germany is {[Munich|**Berlin**|Hamburg]}.
+```
+- Mark the correct option with Markdown bold: `**...**`.
+- If no bold option is specified, the first option is interpreted as correct and options are automatically shuffled.
+- *Note:* Do not mix text entry gaps `{{...}}` and dropdown gaps `{[...]}` in the same question (OpenOLAT limitation).
+
+### 5. Hottext (Selectable Spans in Running Text)
+Hottext questions present running text where learners click words or phrases to select or deselect them:
+
+```markdown
+## Identify Parts of Speech
+Select all nouns in the following sentence:
+The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
+```
+- `{ text }` — Selectable distractor (incorrect). **Whitespace after `{` is strictly required** to distinguish from template or LaTeX braces.
+- `{** text **}` — Selectable correct answer. The outer `**` is an author-facing solution marker.
+- `{- text }` — Explicitly incorrect selectable distractor.
+- `{+ text }` — Explicitly correct selectable answer (preserves internal markdown, code, or math, e.g. `{+ `import sys` }`).
+- Hottext questions support proportional partial scoring bounded at 0.0 by default, or `Scoring: all-correct`.
+- Cannot be mixed with open gaps `{{...}}`, dropdown gaps `{[...]}`, or choice checkboxes (`- [ ]`).
+
+### 6. Order / Sequencing Questions (`N. [ ]`)
 Order questions require students to drag and drop items into the correct target sequence.
 
 ```markdown
@@ -141,7 +171,36 @@ Points: 2
 - **Empty Checkboxes Required**: If a numbered task item contains `[X]` or `[x]`, it is rejected with a diagnostic error.
 - **Automatic Shuffling**: In the generated QTI package, the question interaction is set to `shuffle="true"` so students are presented with scrambled tiles.
 
-### 5. Shuffling / Randomization
+### 7. Match & Drag-and-Drop (Association Tables)
+Association questions are specified as clean two-column Markdown tables:
+
+**Match (Matrix Interaction):**
+```markdown
+## Match each word with its category
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+```
+- Headers: `| Item | Match |`.
+- Single Choice matrix if every item has 1 target; Multiple Choice matrix if any item has 2+ targets.
+- Multiple associations for one item use empty cells as ditto (repeats the nearest item above).
+
+**Drag & Drop (`class="match_dnd"`):**
+```markdown
+## Drag words into categories
+| Item | Drag |
+|---|---|
+| dog | noun |
+| run | verb |
+```
+- Headers: `| Item | Drag |` or `| Item | Drag & Drop |`.
+- Generates OpenOLAT's native visual drag-and-drop interaction.
+- Partial credit uses OpenOLAT's negative point system (bounded at 0.0), or `Scoring: all-correct`.
+
+### 8. Shuffling / Randomization
 QuizMD defaults to **shuffling answer options** wherever the interaction supports and benefits from it (`Shuffle: yes` by default), reducing authoring boilerplate and preventing accidental answer leakage.
 
 - **Choice & Kprim Questions**: Answer choices are shuffled by default in OpenOLAT. Use `Shuffle: no` (or `false`, `0`, `off`) when choice ordering matters pedagogically (e.g. "All of the above" or progressive numeric options).
@@ -162,7 +221,7 @@ Shuffle: no
 Shuffle: no
 ```
 
-### 6. Quiz Metadata & Shuffling
+### 9. Quiz Metadata & Shuffling
 You can specify quiz-level settings using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
 
 **Way A: Top-Level Header Metadata**
@@ -207,7 +266,7 @@ Quiz-level metadata acts as defaults that automatically inherit down to every in
 
 ---
 
-### 7. Test Structure & Sections (`#` and `##`)
+### 10. Test Structure & Sections (`#` and `##`)
 QuizMD uses deterministic heading semantics to model OpenOLAT's native test hierarchy:
 - **YAML `title:`** defines the overall test title.
 - **`#` always starts an Assessment Section** (rendered as `<assessmentSection>` in OpenOLAT).
@@ -241,7 +300,7 @@ Formula sheets are provided in the appendix.
 
 ---
 
-### 8. Question Metadata & Local Overrides
+### 11. Question Metadata & Local Overrides
 Question metadata can be placed **before or after** choices/statements (case-insensitive):
 - `Points: <number>` (default: 1) — Point weight for the question.
 - `Hint: <text>` — Pre-submission interactive hint displayed during test-taking in OpenOLAT (supports Markdown and math). *Note on OpenOLAT layout:* If personal notes are enabled in the test options, OpenOLAT positions the personal notes field directly beneath the question choices, placing it in-between the interactive Hint button and the revealed hint text/modal.
@@ -268,7 +327,7 @@ Additional_Info: Source: General Biology Curriculum
 Feedback: Remember "Dear King Philip Came Over For Good Soup".
 ```
 
-### 9. Full Configuration & Metadata Example
+### 12. Full Configuration & Metadata Example
 Here is a comprehensive example demonstrating every available global and question-level configuration option in QuizMD:
 
 ```markdown
@@ -351,14 +410,14 @@ Provide a detailed explanation of amortized time complexity.
 Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $O(n)$ worst-case copy steps.
 ```
 
-### 10. Mathematical Formulas & Code Blocks
+### 13. Mathematical Formulas & Code Blocks
 - **Inline LaTeX**: Wrap in `$ ... $` or `\( ... \)`. In generated QTI packages, inline math is wrapped in OpenOLAT-compatible `<span class="math" title="URL_ENCODED">latex</span>` elements (without delimiters inside the span).
 - **Display Math**: Wrap in `$$ ... $$` or `\[ ... \]`. In generated QTI packages, display math is formatted as a centered paragraph `<p style="text-align:center"><span class="math" title="URL_ENCODED">latex</span></p>` matching OpenOLAT's native editor.
 - **Headings Prohibition**: Do not put mathematical formulas (`$...$`) or code inside `#` or `##` headings. Always put them in the body, choices, hint, or feedback.
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
-### 11. Markdown Tables (GFM Pipe Syntax)
+### 14. Markdown Tables (GFM Pipe Syntax)
 Standard GitHub Flavored Markdown (GFM) tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles):
 
 ```markdown
@@ -372,7 +431,7 @@ Standard GitHub Flavored Markdown (GFM) tables are supported in question prompts
 - **Rich Inlines in Cells**: Cells support math (`$...$`), code spans, bold, italic, and links.
 - **Native OpenOLAT Styling**: Exported with `<table class="b_default" style="border-collapse:collapse;width:100%;">` for native rendering in OpenOLAT and the live preview.
 
-### 12. Media & Image Support (Remote & Relative Packaging)
+### 15. Media & Image Support (Remote & Relative Packaging)
 Embed images anywhere in questions, choices, or feedback using standard Markdown:
 ```markdown
 ## Plant Biology

@@ -304,10 +304,32 @@ APP_CSS = """
 }
 
 /* ── Compact file upload (Gradio 6) ── */
-/* Hide all children inside the upload dropzone button */
+.block.quiz-file-upload-compact,
+.quiz-file-upload-compact {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+/* Standardize label height to match neighboring controls */
+.quiz-file-upload-compact label,
+.quiz-file-upload-compact label.float,
+.quiz-file-upload-compact label[class*="float"] {
+  display: block !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  margin-bottom: 4px !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  position: static !important;
+  transform: none !important;
+}
+
+/* Hide all children (icons, nested text) inside the upload dropzone button */
 .quiz-file-upload-compact button[aria-dropeffect] > *,
 .quiz-file-upload-compact button[aria-label*="upload"] > *,
-.quiz-file-upload-compact button[aria-label*="drop"] > * {
+.quiz-file-upload-compact button[aria-label*="drop"] > *,
+.quiz-file-upload-compact .upload-container > * {
   visibility: hidden !important;
   position: absolute !important;
   height: 0 !important;
@@ -315,24 +337,37 @@ APP_CSS = """
   overflow: hidden !important;
 }
 
-/* Constrain the dropzone button */
+/* Standardize dropzone button to single-line input height matching dropdown */
+.quiz-file-upload-compact button.upload-container,
+.quiz-file-upload-compact .upload-container,
 .quiz-file-upload-compact button[aria-dropeffect],
 .quiz-file-upload-compact button[aria-label*="upload"],
 .quiz-file-upload-compact button[aria-label*="drop"] {
-  min-height: 36px !important;
-  max-height: 44px !important;
-  padding: 6px 12px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  margin-top: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 12px !important;
+  background-color: #fff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
   position: relative !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-/* Show clean replacement label */
+/* Show clean replacement single-line label */
 .quiz-file-upload-compact button[aria-dropeffect]::after,
 .quiz-file-upload-compact button[aria-label*="upload"]::after,
-.quiz-file-upload-compact button[aria-label*="drop"]::after {
+.quiz-file-upload-compact button[aria-label*="drop"]::after,
+.quiz-file-upload-compact .upload-container::after {
   content: "Drop file or click to upload" !important;
   visibility: visible !important;
-  font-size: 0.85rem !important;
+  font-size: 0.88rem !important;
   font-weight: 500 !important;
   color: #64748b !important;
   position: absolute !important;
@@ -344,7 +379,14 @@ APP_CSS = """
   z-index: 1 !important;
 }
 
-.quiz-file-upload-compact:hover button::after {
+.quiz-file-upload-compact:hover button.upload-container,
+.quiz-file-upload-compact:hover .upload-container,
+.quiz-file-upload-compact:hover button {
+  border-color: #94a3b8 !important;
+}
+
+.quiz-file-upload-compact:hover button::after,
+.quiz-file-upload-compact:hover .upload-container::after {
   color: #0f172a !important;
 }
 
@@ -353,8 +395,6 @@ APP_CSS = """
 }
 
 /* ── Block labels: clean inline style & normal document flow ── */
-.quiz-file-upload-compact label.float,
-.quiz-file-upload-compact label[class*="float"],
 label.float,
 label[class*="float"] {
   position: static !important;
@@ -378,14 +418,6 @@ span[data-testid="block-info"],
   color: #0f172a !important;
   position: static !important;
   display: block !important;
-}
-
-.quiz-file-upload-compact button.upload-container,
-.quiz-file-upload-compact .upload-container,
-.quiz-file-upload-compact button[aria-dropeffect],
-.quiz-file-upload-compact button[aria-label*="upload"],
-.quiz-file-upload-compact button[aria-label*="drop"] {
-  margin-top: 32px !important;
 }
 
 /* ── Outdated package banner ── */

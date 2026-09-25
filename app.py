@@ -585,7 +585,7 @@ _TOGGLE_PREVIEW_FULLSCREEN_JS = """() => {
   }
 }"""
 
-with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS) as demo:
+with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
     gr.HTML(
         f"""
         <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
@@ -648,7 +648,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                                 size="sm",
                                 elem_id="btn_fullscreen_toggle",
                                 elem_classes=["quiz-fullscreen-btn"],
-                                tooltip="Fullscreen",
                             )
                         quiz_input = gr.Textbox(
                             value=SAMPLE_ALL_TYPES,
@@ -702,7 +701,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                                 size="sm",
                                 elem_id="btn_preview_fullscreen_toggle",
                                 elem_classes=["quiz-fullscreen-btn"],
-                                tooltip="Fullscreen",
                             )
                         with gr.Row():
                             render_math_cb = gr.Checkbox(

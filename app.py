@@ -327,6 +327,31 @@ table.table tbody tr:nth-child(even) {
   max-height: none !important;
   resize: none !important;
 }
+
+/* Fullscreen mode for Preview Container */
+.quiz-preview-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: #ffffff !important;
+  padding: 16px 24px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.quiz-preview-fullscreen #quiz_preview_display {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  height: calc(100vh - 75px) !important;
+  max-height: calc(100vh - 75px) !important;
+  padding-right: 8px !important;
+}
 """
 
 # JS called after each preview update to re-typeset the newly injected HTML.
@@ -367,11 +392,50 @@ _TOGGLE_FULLSCREEN_JS = """() => {
     window._quiz_fs_esc_bound = true;
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        const c = document.getElementById('quiz_source_container');
-        const b = document.getElementById('btn_fullscreen_toggle');
-        if (c && c.classList.contains('quiz-editor-fullscreen')) {
-          c.classList.remove('quiz-editor-fullscreen');
-          if (b) b.innerText = '⛶ Fullscreen';
+        const c1 = document.getElementById('quiz_source_container');
+        const b1 = document.getElementById('btn_fullscreen_toggle');
+        if (c1 && c1.classList.contains('quiz-editor-fullscreen')) {
+          c1.classList.remove('quiz-editor-fullscreen');
+          if (b1) b1.innerText = '⛶ Fullscreen';
+        }
+        const c2 = document.getElementById('quiz_preview_container');
+        const b2 = document.getElementById('btn_preview_fullscreen_toggle');
+        if (c2 && c2.classList.contains('quiz-preview-fullscreen')) {
+          c2.classList.remove('quiz-preview-fullscreen');
+          if (b2) b2.innerText = '⛶ Fullscreen';
+        }
+      }
+    });
+  }
+}"""
+
+# JS to toggle fullscreen mode on the Preview container
+_TOGGLE_PREVIEW_FULLSCREEN_JS = """() => {
+  const container = document.getElementById('quiz_preview_container');
+  const btn = document.getElementById('btn_preview_fullscreen_toggle');
+  if (!container) return;
+
+  const isFs = container.classList.toggle('quiz-preview-fullscreen');
+  if (btn) {
+    btn.innerText = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+  }
+
+  // Bind Escape key listener once to exit fullscreen gracefully
+  if (!window._quiz_fs_esc_bound) {
+    window._quiz_fs_esc_bound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const c1 = document.getElementById('quiz_source_container');
+        const b1 = document.getElementById('btn_fullscreen_toggle');
+        if (c1 && c1.classList.contains('quiz-editor-fullscreen')) {
+          c1.classList.remove('quiz-editor-fullscreen');
+          if (b1) b1.innerText = '⛶ Fullscreen';
+        }
+        const c2 = document.getElementById('quiz_preview_container');
+        const b2 = document.getElementById('btn_preview_fullscreen_toggle');
+        if (c2 && c2.classList.contains('quiz-preview-fullscreen')) {
+          c2.classList.remove('quiz-preview-fullscreen');
+          if (b2) b2.innerText = '⛶ Fullscreen';
         }
       }
     });
@@ -484,14 +548,21 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                         interactive=False,
                         visible=False,
                     )
-                    with gr.Row():
-                        gr.Markdown("### 👁️ Preview", scale=2, elem_classes=["no-scroll-block"])
-                        render_math_cb = gr.Checkbox(
-                            value=True,
-                            label="Render math with MathJax (matches OpenOLAT)",
-                            scale=3,
-                        )
-                    preview_display = gr.HTML()
+                    with gr.Column(elem_id="quiz_preview_container"):
+                        with gr.Row(elem_classes=["quiz-fullscreen-header"]):
+                            gr.Markdown("### 👁️ Preview", elem_classes=["no-scroll-block"])
+                            btn_preview_fullscreen = gr.Button(
+                                "⛶ Fullscreen",
+                                size="sm",
+                                elem_id="btn_preview_fullscreen_toggle",
+                                elem_classes=["quiz-fullscreen-btn"],
+                            )
+                        with gr.Row():
+                            render_math_cb = gr.Checkbox(
+                                value=True,
+                                label="Render math with MathJax (matches OpenOLAT)",
+                            )
+                        preview_display = gr.HTML(elem_id="quiz_preview_display")
 
             def on_source_or_media_changed(has_pkg: bool):
                 """Show outdated warning if a package was previously generated."""
@@ -566,6 +637,12 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
             btn_fullscreen.click(
                 fn=None,
                 js=_TOGGLE_FULLSCREEN_JS,
+                api_name=False,
+            )
+
+            btn_preview_fullscreen.click(
+                fn=None,
+                js=_TOGGLE_PREVIEW_FULLSCREEN_JS,
                 api_name=False,
             )
 

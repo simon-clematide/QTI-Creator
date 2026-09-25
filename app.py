@@ -250,6 +250,39 @@ window.addEventListener('message', function(event) {
     }
   }
 });
+
+// Auto-expansion fallback for browsers lacking CSS field-sizing support
+function initTextareaAutoResize() {
+  const editor = document.querySelector('.quiz-source-editor textarea');
+  if (!editor || editor._autoResizeInit) return;
+  editor._autoResizeInit = true;
+
+  // Check if field-sizing: content is supported natively
+  if (CSS.supports && CSS.supports('field-sizing', 'content')) {
+    return;
+  }
+
+  const container = editor.closest('.quiz-source-editor');
+  const adjustHeight = () => {
+    if (container && container.closest('.quiz-editor-fullscreen')) return;
+    editor.style.height = 'auto';
+    const newHeight = Math.max(480, Math.min(window.innerHeight * 0.8, editor.scrollHeight));
+    editor.style.height = newHeight + 'px';
+  };
+
+  editor.addEventListener('input', adjustHeight);
+  // Initial adjustment once loaded
+  setTimeout(adjustHeight, 100);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTextareaAutoResize);
+} else {
+  initTextareaAutoResize();
+}
+// Also re-check when DOM changes (e.g. Gradio tab/re-render)
+const observer = new MutationObserver(initTextareaAutoResize);
+observer.observe(document.documentElement, { childList: true, subtree: true });
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 """
@@ -523,6 +556,21 @@ button.svelte-11gaq1.selected {
   color: var(--color-accent, #4f46e5) !important;
 }
 
+/* ── Dynamic Resizing for QuizMD Source Editor ── */
+.quiz-source-editor .input-container,
+.quiz-source-editor label {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.quiz-source-editor textarea {
+  field-sizing: content;
+  resize: vertical !important;
+  min-height: 480px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+}
+
 /* ── Fullscreen: Editor ── */
 .quiz-editor-fullscreen {
   position: fixed !important;
@@ -546,7 +594,8 @@ button.svelte-11gaq1.selected {
 }
 
 .quiz-editor-fullscreen .quiz-source-editor > div,
-.quiz-editor-fullscreen .quiz-source-editor > label {
+.quiz-editor-fullscreen .quiz-source-editor > label,
+.quiz-editor-fullscreen .quiz-source-editor .input-container {
   flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
@@ -554,6 +603,7 @@ button.svelte-11gaq1.selected {
 }
 
 .quiz-editor-fullscreen .quiz-source-editor textarea {
+  field-sizing: normal !important;
   flex: 1 1 auto !important;
   height: 100% !important;
   min-height: calc(100vh - 105px) !important;

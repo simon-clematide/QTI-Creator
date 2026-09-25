@@ -318,10 +318,9 @@ def square(n):
         )
         xml_str = generate_item_xml(q)
         root = ET.fromstring(xml_str)
-        # Verify both values in correctResponse
+        # In QTI 2.1 single-cardinality, correctResponse contains the primary value
         values = [elem.text for elem in root.findall(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}correctResponse/{http://www.imsglobal.org/xsd/imsqti_v2p1}value")]
-        self.assertIn("gray", values)
-        self.assertIn("grey", values)
+        self.assertEqual(values, ["gray"])
         # Verify mapping entries for both with full score
         self.assertIn('mapKey="gray" mappedValue="2.0"', xml_str)
         self.assertIn('mapKey="grey" mappedValue="2.0"', xml_str)

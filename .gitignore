@@ -8,3 +8,4 @@ __pycache__/
 stacktrace*.txt
 Tokenization_*/
 sample_quizzes/
+.jqti_cache/

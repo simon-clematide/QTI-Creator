@@ -402,6 +402,14 @@ Run the automated test suite covering all parser rules, model invariants, and QT
 python3 -m unittest discover tests/
 ```
 
+### OpenOLAT JQTI+ Runtime Validation
+
+If Java is installed, the test suite automatically runs regression and semantic validation against OpenOLAT's native Java QTI 2.1 engine (**JQTI+ / qtiworks**). You can also validate any standalone QTI XML file or `.zip` package from the command line:
+
+```bash
+python3 scripts/validate_qti.py my_quiz_qti21.zip
+```
+
 ---
 
 ## 🔌 Programmatic API Access (Gradio API)

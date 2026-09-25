@@ -21,22 +21,15 @@ def generate_fill_blank_xml(q: FillBlankQuestion, asset_map: Optional[Dict[str, 
         resp_id = f"RESPONSE_{idx}"
         escaped_val = html.escape(gap.expected_value)
         
-        alt_values = "\n".join(
-            f"      <value>{html.escape(alt)}</value>" for alt in gap.alternatives
-        )
-        alt_mappings = "\n".join(
-            f'      <mapEntry mapKey="{html.escape(alt)}" mappedValue="{pts_per_gap}"/>'
-            for alt in gap.alternatives
-        )
+        alt_mappings_list = [f'      <mapEntry mapKey="{html.escape(alt)}" mappedValue="{pts_per_gap}"/>' for alt in gap.alternatives]
+        alt_mappings = ("\n" + "\n".join(alt_mappings_list)) if alt_mappings_list else ""
 
         decl = f"""  <responseDeclaration identifier="{resp_id}" cardinality="single" baseType="string">
     <correctResponse>
       <value>{escaped_val}</value>
-{alt_values}
     </correctResponse>
     <mapping defaultValue="0.0">
-      <mapEntry mapKey="{escaped_val}" mappedValue="{pts_per_gap}"/>
-{alt_mappings}
+      <mapEntry mapKey="{escaped_val}" mappedValue="{pts_per_gap}"/>{alt_mappings}
     </mapping>
   </responseDeclaration>"""
         response_decls.append(decl)

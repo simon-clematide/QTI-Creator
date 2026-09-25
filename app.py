@@ -70,15 +70,15 @@ def update_preview_and_validate(
 
     msg_lines = []
     if errors:
-        msg_lines.append("### ⚠️ Validation")
+        msg_lines.append("⚠️ **Validation Errors:**")
         for err in errors:
             msg_lines.append(f"- {str(err)}")
     elif warnings:
-        msg_lines.append(f"### ⚠️ Validation\n\n{len(quiz.questions)} question(s) parsed with warnings:")
+        msg_lines.append(f"⚠️ **Validation Warnings** — {len(quiz.questions)} question(s) parsed with warnings:")
         for warn in warnings:
             msg_lines.append(f"- {str(warn)}")
     else:
-        msg_lines.append(f"### ✅ Validation\n\n{len(quiz.questions)} question(s) parsed with zero issues.")
+        msg_lines.append(f"✅ **Validation** — {len(quiz.questions)} question(s) parsed with zero issues.")
 
     media_summary = media_res.summary_text()
     if media_summary:
@@ -286,34 +286,26 @@ APP_CSS = """
 }
 
 /* Hide ALL default upload text elements aggressively to prevent overlap */
-.quiz-file-upload-compact .wrap > span,
-.quiz-file-upload-compact .wrap > p,
-.quiz-file-upload-compact .wrap > h2,
-.quiz-file-upload-compact .wrap > div:not(.icon-wrap),
-.quiz-file-upload-compact [data-testid="dropzone"] > span,
-.quiz-file-upload-compact [data-testid="dropzone"] > p,
-.quiz-file-upload-compact .upload-text,
-.quiz-file-upload-compact .or {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+.quiz-file-upload-compact .wrap *:not(style):not(script),
+.quiz-file-upload-compact [data-testid="dropzone"] *:not(style):not(script) {
   font-size: 0 !important;
   line-height: 0 !important;
+  color: transparent !important;
 }
 
 /* Render clean, concise 'Drop File or Upload' */
 .quiz-file-upload-compact .wrap::after,
 .quiz-file-upload-compact [data-testid="dropzone"]::after {
   content: "Drop File or Upload" !important;
-  font-size: 0.88rem !important;
+  font-size: 0.85rem !important;
   font-weight: 500 !important;
   color: #475569 !important;
-  text-align: center !important;
-  display: block !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
 }
 
 .quiz-file-upload-compact:hover .wrap::after,
@@ -433,28 +425,54 @@ table.table tbody tr:nth-child(even) {
 
 
 .quiz-fullscreen-btn {
-  background: #f8fafc !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #334155 !important;
-  border-radius: 6px !important;
-  padding: 3px 8px !important;
-  font-size: 0.95rem !important;
+  background: transparent !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  font-size: 0.85rem !important;
   line-height: 1 !important;
-  font-weight: 500 !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   box-shadow: none !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 30px !important;
-  height: 28px !important;
+  min-width: 24px !important;
+  height: 24px !important;
+  flex: 0 0 auto !important;
 }
 
 .quiz-fullscreen-btn:hover {
   background: #f1f5f9 !important;
   color: #0f172a !important;
   border-color: #94a3b8 !important;
+}
+
+/* Compact checkbox for header toolbars */
+.quiz-header-checkbox {
+  flex: 0 0 auto !important;
+  min-width: auto !important;
+  margin-bottom: 0 !important;
+}
+
+.quiz-header-checkbox .wrap {
+  gap: 4px !important;
+  min-height: auto !important;
+  padding: 0 !important;
+}
+
+.quiz-header-checkbox label {
+  font-size: 0.85rem !important;
+  white-space: nowrap !important;
+  margin-bottom: 0 !important;
+  cursor: pointer !important;
+}
+
+/* Make tab titles visually prominent — at least matching ### section headers */
+.tabs > .tab-nav > button {
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
 }
 
 .quiz-editor-fullscreen .quiz-source-editor {
@@ -659,12 +677,15 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             elem_classes=["quiz-file-upload-compact"],
                         )
 
-                    with gr.Row():
-                        btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
-
                     with gr.Column(elem_id="quiz_source_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                             gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
+                            btn_preview = gr.Button(
+                                "🔄 Refresh",
+                                variant="secondary",
+                                size="sm",
+                                elem_classes=["quiz-fullscreen-btn"],
+                            )
                             btn_fullscreen = gr.Button(
                                 "⛶",
                                 size="sm",
@@ -681,8 +702,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
 
                 # RIGHT COLUMN: Media & Export + Preview
                 with gr.Column(scale=5):
-                    gr.Markdown("### 🖼️ Media & Export", elem_classes=["no-scroll-block"])
-                    with gr.Group():
+                    with gr.Accordion("🖼️ Media", open=False):
                         with gr.Row():
                             include_media_cb = gr.Checkbox(
                                 value=False,
@@ -699,19 +719,20 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             height=55,
                             elem_classes=["quiz-file-upload-compact"],
                         )
-                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
-                        status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
-                        has_package_state = gr.State(value=False)
-                        outdated_warning = gr.Markdown(
-                            "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
-                            visible=False,
-                            elem_classes=["no-scroll-block", "outdated-banner"],
-                        )
-                        download_output = gr.File(
-                            label="📥 Download QTI 2.1 ZIP",
-                            interactive=False,
-                            visible=False,
-                        )
+
+                    btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
+                    status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
+                    has_package_state = gr.State(value=False)
+                    outdated_warning = gr.Markdown(
+                        "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
+                        visible=False,
+                        elem_classes=["no-scroll-block", "outdated-banner"],
+                    )
+                    download_output = gr.File(
+                        label="📥 Download QTI 2.1 ZIP",
+                        interactive=False,
+                        visible=False,
+                    )
 
                     with gr.Column(elem_id="quiz_preview_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
@@ -719,7 +740,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             render_math_cb = gr.Checkbox(
                                 value=True,
                                 label="Render math",
-                                elem_classes=["no-scroll-block"],
+                                elem_classes=["quiz-header-checkbox"],
                             )
                             btn_preview_fullscreen = gr.Button(
                                 "⛶",
@@ -1462,14 +1483,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                     📖 OpenOlat documentation: <a href="https://docs.openolat.org/manual_user/learningresources/Tests_at_course_level/" target="_blank" rel="noopener noreferrer">Tests at course level</a>
                     """
                 )
-
-    gr.HTML(
-        f"""
-        <div style="text-align: center; margin-top: 28px; padding-top: 14px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 0.8em;">
-          <span>QTI-Creator v{__version__} ({__release_date__}) &bull; Standardized OpenOLAT QTI 2.1 Quiz Generator</span>
-        </div>
-        """
-    )
 
 if __name__ == "__main__":
     demo.launch(theme=theme, head=_MATHJAX_HEAD, css=APP_CSS)

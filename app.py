@@ -423,22 +423,61 @@ table.table tbody tr:nth-child(even) {
   border-color: #94a3b8 !important;
 }
 
-/* Compact checkbox in header toolbars */
+/* Compact checkbox in header toolbars — clean inline text matching toolbar style */
 .quiz-header-checkbox {
   flex: 0 0 auto !important;
   min-width: 0 !important;
   max-width: fit-content !important;
-}
-.quiz-header-checkbox .wrap,
-.quiz-header-checkbox label,
-.quiz-header-checkbox .container {
-  gap: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   padding: 0 !important;
   margin: 0 !important;
-  white-space: nowrap !important;
 }
-.quiz-header-checkbox span {
+
+.quiz-header-checkbox,
+.quiz-header-checkbox > div,
+.quiz-header-checkbox .wrap,
+.quiz-header-checkbox .container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: auto !important;
+}
+
+.quiz-header-checkbox label,
+.quiz-header-checkbox .checkbox-container {
+  gap: 5px !important;
+  padding: 2px 4px !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  color: #64748b !important;
   font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+.quiz-header-checkbox label:hover,
+.quiz-header-checkbox .checkbox-container:hover {
+  color: #0f172a !important;
+}
+
+.quiz-header-checkbox span,
+.quiz-header-checkbox .label-text {
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: inherit !important;
+  line-height: 1 !important;
+}
+
+.quiz-header-checkbox input[type="checkbox"] {
+  margin: 0 !important;
+  cursor: pointer !important;
 }
 
 /* ── Tab titles: prominent, bold, at least matching or exceeding application section headers ── */
@@ -748,6 +787,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             render_math_cb = gr.Checkbox(
                                 value=True,
                                 label="Render math",
+                                container=False,
                                 elem_classes=["quiz-header-checkbox"],
                             )
                             btn_preview_fullscreen = gr.Button(

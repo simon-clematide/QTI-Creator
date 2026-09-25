@@ -277,21 +277,37 @@ APP_CSS = """
 .quiz-file-upload-compact .wrap,
 .quiz-file-upload-compact .upload-container,
 .quiz-file-upload-compact [data-testid="dropzone"] {
-  min-height: 48px !important;
+  min-height: 38px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 6px 12px !important;
+  padding: 4px 10px !important;
+  position: relative !important;
 }
 
-/* Hide convoluted default multi-line text (Drop File Here / - or - / Click to Upload) */
-.quiz-file-upload-compact .wrap > *:not(.icon-wrap) {
+/* Hide ALL default upload text elements aggressively to prevent overlap */
+.quiz-file-upload-compact .wrap > span,
+.quiz-file-upload-compact .wrap > p,
+.quiz-file-upload-compact .wrap > h2,
+.quiz-file-upload-compact .wrap > div:not(.icon-wrap),
+.quiz-file-upload-compact [data-testid="dropzone"] > span,
+.quiz-file-upload-compact [data-testid="dropzone"] > p,
+.quiz-file-upload-compact .upload-text,
+.quiz-file-upload-compact .or {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
   font-size: 0 !important;
   line-height: 0 !important;
 }
 
 /* Render clean, concise 'Drop File or Upload' */
-.quiz-file-upload-compact .wrap::after {
+.quiz-file-upload-compact .wrap::after,
+.quiz-file-upload-compact [data-testid="dropzone"]::after {
   content: "Drop File or Upload" !important;
   font-size: 0.88rem !important;
   font-weight: 500 !important;
@@ -300,7 +316,8 @@ APP_CSS = """
   display: block !important;
 }
 
-.quiz-file-upload-compact:hover .wrap::after {
+.quiz-file-upload-compact:hover .wrap::after,
+.quiz-file-upload-compact:hover [data-testid="dropzone"]::after {
   color: #0f172a !important;
 }
 
@@ -372,16 +389,16 @@ table.table tbody tr:nth-child(even) {
   font-size: 0.92rem !important;
   line-height: 1.55 !important;
   tab-size: 2 !important;
-  height: 640px !important;
+  min-height: 640px !important;
   max-height: none !important;
 }
 
 #quiz_preview_display {
-  height: 640px !important;
-  max-height: 640px !important;
+  min-height: 640px !important;
   overflow-y: auto !important;
   padding-right: 6px !important;
 }
+
 
 
 /* Fullscreen mode for QuizMD Source Editor */
@@ -405,9 +422,15 @@ table.table tbody tr:nth-child(even) {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
+  gap: 12px !important;
   margin-bottom: 8px !important;
   flex-shrink: 0 !important;
 }
+
+.quiz-fullscreen-header > *:first-child {
+  flex: 1 1 auto !important;
+}
+
 
 .quiz-fullscreen-btn {
   background: #f8fafc !important;
@@ -624,21 +647,20 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                         example_dropdown = gr.Dropdown(
                             choices=list(EXAMPLES.keys()),
                             value="All Question Types (Showcase)",
-                            label="Load Example",
+                            label="📂 Load Example",
                             scale=3,
                         )
                         file_upload = gr.File(
-                            label="Upload .md / .txt",
+                            label="📄 Upload .md / .txt",
                             file_types=[".md", ".txt"],
                             type="filepath",
                             scale=2,
-                            height=85,
+                            height=55,
                             elem_classes=["quiz-file-upload-compact"],
                         )
 
                     with gr.Row():
                         btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
-                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="secondary")
 
                     with gr.Column(elem_id="quiz_source_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
@@ -657,55 +679,53 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             elem_classes=["quiz-source-editor"],
                         )
 
-                    with gr.Accordion("🖼️ Media Packaging", open=False):
-                        include_media_cb = gr.Checkbox(
-                            value=False,
-                            label="Include media in QTI package",
-                            info="Download remote images and include uploaded relative images to make the QTI package self-contained.",
-                        )
-                        show_relative_images_cb = gr.Checkbox(
-                            value=False,
-                            label="Show relative images in preview",
-                            info="Extract and display images referenced by relative paths from the uploaded Media ZIP.",
-                        )
+                # RIGHT COLUMN: Media & Export + Preview
+                with gr.Column(scale=5):
+                    gr.Markdown("### 🖼️ Media & Export", elem_classes=["no-scroll-block"])
+                    with gr.Group():
+                        with gr.Row():
+                            include_media_cb = gr.Checkbox(
+                                value=False,
+                                label="Include media in package",
+                            )
+                            show_relative_images_cb = gr.Checkbox(
+                                value=False,
+                                label="Show relative images in preview",
+                            )
                         media_zip_upload = gr.File(
-                            label="Media ZIP",
+                            label="📎 Media ZIP",
                             file_types=[".zip"],
                             type="filepath",
+                            height=55,
                             elem_classes=["quiz-file-upload-compact"],
                         )
-                        gr.Markdown(
-                            "<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>",
-                            elem_classes=["no-scroll-block"],
+                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="primary")
+                        status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
+                        has_package_state = gr.State(value=False)
+                        outdated_warning = gr.Markdown(
+                            "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
+                            visible=False,
+                            elem_classes=["no-scroll-block", "outdated-banner"],
+                        )
+                        download_output = gr.File(
+                            label="📥 Download QTI 2.1 ZIP",
+                            interactive=False,
+                            visible=False,
                         )
 
-                # RIGHT COLUMN: Preview & Download
-                with gr.Column(scale=5):
-                    status_box = gr.Markdown("Ready.", elem_classes=["no-scroll-block"])
-                    has_package_state = gr.State(value=False)
-                    outdated_warning = gr.Markdown(
-                        "⚠️ **Outdated Package:** Quiz source or media settings have changed since this package was generated. Click **'📦 Generate OpenOLAT QTI Package'** to re-generate with latest changes.",
-                        visible=False,
-                        elem_classes=["no-scroll-block", "outdated-banner"],
-                    )
-                    download_output = gr.File(
-                        label="Download QTI 2.1 ZIP Package",
-                        interactive=False,
-                        visible=False,
-                    )
                     with gr.Column(elem_id="quiz_preview_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                             gr.Markdown("### 👁️ Preview", elem_classes=["no-scroll-block"])
+                            render_math_cb = gr.Checkbox(
+                                value=True,
+                                label="Render math",
+                                elem_classes=["no-scroll-block"],
+                            )
                             btn_preview_fullscreen = gr.Button(
                                 "⛶",
                                 size="sm",
                                 elem_id="btn_preview_fullscreen_toggle",
                                 elem_classes=["quiz-fullscreen-btn"],
-                            )
-                        with gr.Row():
-                            render_math_cb = gr.Checkbox(
-                                value=True,
-                                label="Render math with MathJax (matches OpenOLAT)",
                             )
                         preview_display = gr.HTML(elem_id="quiz_preview_display")
 

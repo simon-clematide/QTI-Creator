@@ -188,7 +188,9 @@ table.table tbody tr:nth-child(even) {
 }
 
 /* ── Fullscreen styling ── */
-.quiz-fs-active {
+.quiz-fs-active,
+#quiz_source_container.quiz-fs-active,
+#quiz_preview_container.quiz-fs-active {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -200,21 +202,37 @@ table.table tbody tr:nth-child(even) {
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
+  flex-wrap: nowrap !important;
   overflow: hidden !important;
 }
 
+/* Header: Restrict to content height and prevent growing */
+.quiz-fs-active .quiz-fullscreen-header,
+.quiz-fs-active .row.quiz-fullscreen-header {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: 48px !important;
+  flex: 0 0 auto !important;
+  margin-bottom: 8px !important;
+}
+
+/* Form / inner wrapper: Enable shrinking and growing to fill remaining vertical space */
+.quiz-fs-active .form,
 .quiz-fs-active .quiz-source-editor,
 .quiz-fs-active #quiz_preview_display {
   flex: 1 1 auto !important;
   height: calc(100vh - 75px) !important;
   min-height: calc(100vh - 75px) !important;
   max-height: calc(100vh - 75px) !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .quiz-fs-active .quiz-source-editor textarea {
   height: 100% !important;
   min-height: calc(100vh - 105px) !important;
   max-height: none !important;
+  flex: 1 1 auto !important;
 }
 
 /* ── Media Page Specific Styling ── */

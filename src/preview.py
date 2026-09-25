@@ -1,6 +1,7 @@
 """HTML preview generator for QuizMD."""
 
 import html
+import json
 import re
 from src.model import (
     AssociationQuestion,
@@ -193,13 +194,22 @@ def render_quiz_preview_html(
             markdown_source_html = ""
             raw_src = getattr(q, "raw_markdown", None) or getattr(q, "raw_text", None) or ""
             if raw_src.strip():
+                line_no = getattr(q, "line_number", 1) or 1
+                escaped_title_js = json.dumps(q.title)
                 markdown_source_html = f"""
-<details class="quiz-question-source-details" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-  <summary style="display: inline-flex; align-items: center; gap: 6px; color: #475569; font-weight: 600; cursor: pointer; user-select: none; list-style: none; outline: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 0.82em; transition: background 0.15s, color 0.15s;">
-    <span>Markdown</span>
-  </summary>
-  <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
-</details>
+<div class="quiz-question-source-container" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+    <details class="quiz-question-source-details" style="flex: 1 1 auto;">
+      <summary style="display: inline-flex; align-items: center; gap: 6px; color: #475569; font-weight: 600; cursor: pointer; user-select: none; list-style: none; outline: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 0.82em; transition: background 0.15s, color 0.15s;">
+        <span>Markdown</span>
+      </summary>
+      <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
+    </details>
+    <button type="button" class="quiz-edit-jump-btn" title="Jump to this question in QuizMD editor" onclick="if (window.quizJumpToLine) {{ window.quizJumpToLine({line_no}, {escaped_title_js}); }} else {{ console.warn('quizJumpToLine not registered'); }}">
+      ✏️ Edit
+    </button>
+  </div>
+</div>
 """
 
             card_border_style = "border: 1px solid #f87171;" if is_invalid else "border: 1px solid #e2e8f0;"
@@ -299,6 +309,28 @@ def render_quiz_preview_html(
   .quiz-section-desc-details > summary:hover {{ color: #1e293b; }}
   .quiz-question-source-details summary::-webkit-details-marker {{ display: none; }}
   .quiz-question-source-details summary:hover {{ background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }}
+  .quiz-edit-jump-btn {{
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.82em;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    user-select: none;
+    outline: none;
+    white-space: nowrap;
+  }}
+  .quiz-edit-jump-btn:hover {{
+    background: #e0f2fe;
+    color: #0369a1;
+    border-color: #7dd3fc;
+  }}
   .quiz-expand-btn {{
     background: #f8fafc;
     border: 1px solid #cbd5e1;

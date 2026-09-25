@@ -34,6 +34,10 @@ class TestPreview(unittest.TestCase):
         self.assertIn('<details class="quiz-question-source-details"', html_out)
         self.assertIn("Markdown</span>", html_out)
         self.assertIn("- [X] Paris", html_out)
+        # Ensure Edit jump button is present
+        self.assertIn('class="quiz-edit-jump-btn"', html_out)
+        self.assertIn("window.quizJumpToLine", html_out)
+        self.assertIn('"Capital of France?"', html_out)
 
     def test_preview_with_asset_map(self):
         text = """## Tree Anatomy

@@ -183,6 +183,52 @@ window.MathJax = {
   },
   svg: { fontCache: 'global' }
 };
+
+window.quizJumpToLine = function(lineNo, title) {
+  const editor = document.querySelector('.quiz-source-editor textarea');
+  if (!editor) return;
+
+  const text = editor.value;
+  let targetIndex = -1;
+  let targetEnd = -1;
+
+  // 1. Try finding heading with title first
+  if (title) {
+    const cleanTitle = title.trim();
+    const headingPattern = new RegExp('^##\\\\s+' + cleanTitle.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'm');
+    const match = text.match(headingPattern);
+    if (match && typeof match.index === 'number') {
+      targetIndex = match.index;
+      const lineEnd = text.indexOf('\\n', targetIndex);
+      targetEnd = lineEnd !== -1 ? lineEnd : targetIndex + match[0].length;
+    }
+  }
+
+  // 2. Fallback to line number if title search did not match
+  if (targetIndex === -1) {
+    const lines = text.split('\\n');
+    const targetLine = Math.max(1, Math.min(lineNo, lines.length));
+    targetIndex = 0;
+    for (let i = 0; i < targetLine - 1; i++) {
+      targetIndex += lines[i].length + 1;
+    }
+    const lineLen = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
+    targetEnd = targetIndex + lineLen;
+  }
+
+  // Focus textarea and set cursor / selection range
+  editor.focus();
+  editor.setSelectionRange(targetIndex, targetEnd);
+
+  // Scroll textarea so target line is positioned near the top of visible view
+  const computedLineHeight = parseFloat(window.getComputedStyle(editor).lineHeight) || 20;
+  const linesBefore = text.substring(0, targetIndex).split('\\n').length - 1;
+  const scrollPos = Math.max(0, (linesBefore - 2) * computedLineHeight);
+  editor.scrollTop = scrollPos;
+
+  // Ensure editor element itself is scrolled into window view
+  editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 """
@@ -278,7 +324,7 @@ table.table tbody tr:nth-child(even) {
   background-color: #f8fafc !important;
 }
 
-/* Modern monospace font for QuizMD Source Markdown editor */
+/* Modern monospace font and comfortable height for QuizMD Source Markdown editor */
 .quiz-source-editor textarea,
 .quiz-source-editor textarea:focus {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
@@ -286,7 +332,17 @@ table.table tbody tr:nth-child(even) {
   font-size: 0.92rem !important;
   line-height: 1.55 !important;
   tab-size: 2 !important;
+  height: 640px !important;
+  max-height: none !important;
 }
+
+#quiz_preview_display {
+  height: 640px !important;
+  max-height: 640px !important;
+  overflow-y: auto !important;
+  padding-right: 6px !important;
+}
+
 
 /* Fullscreen mode for QuizMD Source Editor */
 .quiz-editor-fullscreen {
@@ -519,6 +575,10 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                             height=105,
                         )
 
+                    with gr.Row():
+                        btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
+                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="secondary")
+
                     with gr.Column(elem_id="quiz_source_container"):
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                             gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
@@ -532,7 +592,7 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                             value=SAMPLE_ALL_TYPES,
                             show_label=False,
                             placeholder="Write your quiz here in Markdown...",
-                            lines=22,
+                            lines=26,
                             elem_classes=["quiz-source-editor"],
                         )
 
@@ -556,10 +616,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                             "<p style='color: #64748b; font-size: 0.85em; margin-top: -4px;'>Required only when referencing images by relative paths.</p>",
                             elem_classes=["no-scroll-block"],
                         )
-
-                    with gr.Row():
-                        btn_preview = gr.Button("🔄 Refresh Preview", variant="secondary")
-                        btn_convert = gr.Button("📦 Generate OpenOLAT QTI Package", variant="secondary")
 
                 # RIGHT COLUMN: Preview & Download
                 with gr.Column(scale=5):

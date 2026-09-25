@@ -309,19 +309,25 @@ APP_CSS = """
   display: flex !important;
   flex-direction: column !important;
   justify-content: flex-start !important;
+  height: auto !important;
+  min-height: 76px !important;
+  gap: 8px !important;
+  overflow: visible !important;
 }
 
-/* Standardize label height to match neighboring controls */
+/* Standardize label to standard relative flow matching neighboring controls */
+.block.quiz-file-upload-compact label,
+.block.quiz-file-upload-compact label.float,
 .quiz-file-upload-compact label,
 .quiz-file-upload-compact label.float,
 .quiz-file-upload-compact label[class*="float"] {
   display: block !important;
+  position: relative !important;
   height: 24px !important;
   line-height: 24px !important;
-  margin-bottom: 4px !important;
   margin-top: 0 !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
-  position: static !important;
   transform: none !important;
 }
 
@@ -338,6 +344,7 @@ APP_CSS = """
 }
 
 /* Standardize dropzone button to single-line input height matching dropdown */
+.block.quiz-file-upload-compact button.upload-container,
 .quiz-file-upload-compact button.upload-container,
 .quiz-file-upload-compact .upload-container,
 .quiz-file-upload-compact button[aria-dropeffect],
@@ -835,7 +842,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             file_types=[".md", ".txt"],
                             type="filepath",
                             scale=2,
-                            height=55,
                             elem_classes=["quiz-file-upload-compact"],
                         )
 
@@ -878,7 +884,6 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
                             label="📎 Media ZIP",
                             file_types=[".zip"],
                             type="filepath",
-                            height=55,
                             elem_classes=["quiz-file-upload-compact"],
                         )
 

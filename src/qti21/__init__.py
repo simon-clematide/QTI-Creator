@@ -3,6 +3,7 @@
 from typing import Dict, Optional
 
 from src.model import (
+    AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
     HottextQuestion,
@@ -15,6 +16,7 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
+from src.qti21.association import generate_association_xml
 from src.qti21.choice import generate_single_choice_xml, generate_multiple_choice_xml, generate_true_false_xml
 from src.qti21.essay import generate_essay_xml
 from src.qti21.hottext import generate_hottext_xml
@@ -47,5 +49,7 @@ def generate_item_xml(question: Question, asset_map: Optional[Dict[str, str]] = 
         return generate_kprim_xml(question, asset_map=asset_map)
     elif isinstance(question, OrderQuestion):
         return generate_order_xml(question, asset_map=asset_map)
+    elif isinstance(question, AssociationQuestion):
+        return generate_association_xml(question, asset_map=asset_map)
     else:
         raise NotImplementedError(f"No QTI 2.1 generator for {type(question).__name__}")

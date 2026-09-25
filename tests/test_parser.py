@@ -792,6 +792,133 @@ The {** cat **} sat.
         self.assertTrue(any("Cannot combine hottext tokens with choices" in d.message for d in diags))
 
 
+    def test_match_single_choice_inference(self):
+        text = """## Match each word with its category.
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(len(quiz.questions), 1)
+        from src.model import AssociationQuestion
+        q = quiz.questions[0]
+        self.assertIsInstance(q, AssociationQuestion)
+        self.assertEqual(q.interaction, "match")
+        self.assertFalse(q.multiple)
+        self.assertEqual(len(q.items), 4)
+        self.assertEqual([it.text for it in q.items], ["dog", "cat", "run", "quickly"])
+        self.assertEqual([t.text for t in q.targets], ["noun", "verb", "adverb"])
+        # dog and cat share same target ID
+        self.assertEqual(q.items[0].target_ids, [q.targets[0].identifier])
+        self.assertEqual(q.items[1].target_ids, [q.targets[0].identifier])
+        self.assertEqual(q.items[2].target_ids, [q.targets[1].identifier])
+        self.assertEqual(q.items[3].target_ids, [q.targets[2].identifier])
+
+    def test_match_multiple_choice_ditto_inference(self):
+        text = """## Match countries with official languages.
+| Item | Match |
+|---|---|
+| Switzerland | German |
+|             | French |
+|             | Italian |
+| Belgium     | French |
+|             | Dutch |
+| Canada      | English |
+|             | French |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        from src.model import AssociationQuestion
+        self.assertIsInstance(q, AssociationQuestion)
+        self.assertEqual(q.interaction, "match")
+        self.assertTrue(q.multiple)
+        self.assertEqual(len(q.items), 3)
+        self.assertEqual([it.text for it in q.items], ["Switzerland", "Belgium", "Canada"])
+        self.assertEqual([t.text for t in q.targets], ["German", "French", "Italian", "Dutch", "English"])
+        self.assertEqual(len(q.items[0].target_ids), 3)  # German, French, Italian
+        self.assertEqual(len(q.items[1].target_ids), 2)  # French, Dutch
+        self.assertEqual(len(q.items[2].target_ids), 2)  # English, French
+
+    def test_drag_and_drop_inference(self):
+        text = """## Drag items to categories.
+| Item | Drag |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        from src.model import AssociationQuestion
+        self.assertIsInstance(q, AssociationQuestion)
+        self.assertEqual(q.interaction, "drag")
+        self.assertFalse(q.multiple)
+
+    def test_drag_and_drop_header_variants(self):
+        text = """## Drag items.
+| Item | Drag & Drop |
+|---|---|
+| dog | noun |
+| run | verb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        from src.model import AssociationQuestion
+        self.assertIsInstance(q, AssociationQuestion)
+        self.assertEqual(q.interaction, "drag")
+
+    def test_association_ditto_error_on_first_row(self):
+        text = """## Broken table.
+| Item | Match |
+|---|---|
+|      | noun |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Empty Item cell has no preceding value to repeat." in d.message for d in diags))
+
+    def test_association_duplicate_error(self):
+        text = """## Duplicate associations.
+| Item | Match |
+|---|---|
+| dog | noun |
+| dog | noun |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Duplicate association: 'dog' → 'noun'." in d.message for d in diags))
+
+    def test_association_conflict_with_choices_error(self):
+        text = """## Conflict.
+| Item | Match |
+|---|---|
+| dog | noun |
+- [X] Some choice
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("Cannot combine association table with choice markers" in d.message for d in diags))
+
+    def test_normal_table_not_association(self):
+        text = """## Normal Table Question
+Here is reference info:
+| Property | Value |
+|---|---|
+| Color | Blue |
+| Size | Large |
+
+Explain what this property table describes.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        from src.model import EssayQuestion
+        self.assertIsInstance(quiz.questions[0], EssayQuestion)
+
+
 if __name__ == "__main__":
     unittest.main()
 

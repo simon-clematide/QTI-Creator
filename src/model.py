@@ -6,7 +6,7 @@ model where each question class enforces its own domain invariants.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Literal, Optional
 import uuid
 
 from src.defaults import DEFAULTS
@@ -319,6 +319,68 @@ class OrderQuestion(Question):
                 f"Order question requires at least {min_items} items, found {len(self.items)}.",
                 [Diagnostic(f"Order question requires at least {min_items} items, found {len(self.items)}.", Severity.ERROR, self.line_number)],
             )
+
+
+@dataclass
+class AssociationTarget:
+    """A target category / column choice in an AssociationQuestion (Match or Drag)."""
+    text: str
+    identifier: str = field(default_factory=lambda: generate_id("target"))
+
+
+@dataclass
+class AssociationItem:
+    """A source item / row in an AssociationQuestion (Match or Drag)."""
+    text: str
+    target_ids: List[str] = field(default_factory=list)
+    identifier: str = field(default_factory=lambda: generate_id("source"))
+
+
+@dataclass
+class AssociationQuestion(Question):
+    """Association question: Match or Drag & Drop rendered from association tables."""
+    interaction: Literal["match", "drag"] = "match"
+    items: List[AssociationItem] = field(default_factory=list)
+    targets: List[AssociationTarget] = field(default_factory=list)
+    multiple: bool = False
+    scoring: Optional[str] = None  # "partial", "all-correct", "per-answer"
+
+    def validate(self) -> None:
+        super().validate()
+        if not self.items:
+            raise QuizValidationError(
+                "Association question requires at least one source Item.",
+                [Diagnostic("Association question requires at least one source Item.", Severity.ERROR, self.line_number)],
+            )
+        if not self.targets:
+            raise QuizValidationError(
+                "Association question requires at least one target category.",
+                [Diagnostic("Association question requires at least one target category.", Severity.ERROR, self.line_number)],
+            )
+        target_id_set = {t.identifier for t in self.targets}
+        for idx, item in enumerate(self.items):
+            if not item.text.strip():
+                raise QuizValidationError(
+                    f"Association item {idx + 1} has empty text.",
+                    [Diagnostic(f"Association item {idx + 1} has empty text.", Severity.ERROR, self.line_number)],
+                )
+            if not item.target_ids:
+                raise QuizValidationError(
+                    f"Association item '{item.text}' has no target associations.",
+                    [Diagnostic(f"Association item '{item.text}' has no target associations.", Severity.ERROR, self.line_number)],
+                )
+            for tid in item.target_ids:
+                if tid not in target_id_set:
+                    raise QuizValidationError(
+                        f"Association item '{item.text}' references unknown target ID '{tid}'.",
+                        [Diagnostic(f"Association item '{item.text}' references unknown target ID '{tid}'.", Severity.ERROR, self.line_number)],
+                    )
+        for idx, t in enumerate(self.targets):
+            if not t.text.strip():
+                raise QuizValidationError(
+                    f"Association target {idx + 1} has empty text.",
+                    [Diagnostic(f"Association target {idx + 1} has empty text.", Severity.ERROR, self.line_number)],
+                )
 
 
 @dataclass

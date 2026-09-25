@@ -4,8 +4,10 @@ import io
 import unittest
 import xml.etree.ElementTree as ET
 import zipfile
-
 from src.model import (
+    AssociationItem,
+    AssociationQuestion,
+    AssociationTarget,
     Choice,
     EssayQuestion,
     FillBlankQuestion,
@@ -17,7 +19,6 @@ from src.model import (
     InlineChoiceQuestion,
     KprimQuestion,
     KprimStatement,
-
     MultipleChoiceQuestion,
     NumericalQuestion,
     OrderItem,
@@ -557,6 +558,64 @@ The {** cat **} { sat } on the {** mat **}.
             self.assertEqual(len(item_files), 1)
             item_xml = zf.read(item_files[0]).decode("utf-8")
             self.assertIn("hottextInteraction", item_xml)
+
+
+    def test_match_xml_validity(self):
+        t1 = AssociationTarget("noun", "target_noun")
+        t2 = AssociationTarget("verb", "target_verb")
+        i1 = AssociationItem("dog", ["target_noun"], "src_dog")
+        i2 = AssociationItem("run", ["target_verb"], "src_run")
+
+        q = AssociationQuestion(
+            title="Match parts of speech",
+            prompt="Match words with categories:",
+            interaction="match",
+            items=[i1, i2],
+            targets=[t1, t2],
+            multiple=False,
+            points=2.0,
+            feedback="Good job!",
+            hint="Think of actions and things.",
+        )
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+        self.assertIn("assessmentItem", root.tag)
+        self.assertIn('<matchInteraction class="match_matrix"', xml_str)
+        self.assertIn('maxAssociations="2"', xml_str)
+        self.assertIn('identifier="src_dog"', xml_str)
+        self.assertIn('identifier="target_noun"', xml_str)
+        self.assertIn('fixed="true"', xml_str)
+        self.assertIn('NPS_NUMCORRECT', xml_str)
+        self.assertIn('NPS_NUMINCORRECT', xml_str)
+        self.assertIn('directedPair', xml_str)
+
+        # Check manifest
+        quiz = Quiz(title="Match Quiz", questions=[q])
+        manifest_xml = generate_manifest_xml(quiz)
+        self.assertIn('matchInteraction', manifest_xml)
+        self.assertIn('questionType>match</', manifest_xml)
+
+    def test_drag_and_drop_package_generation(self):
+        text = """# Drag Quiz
+## Drag items into groups
+| Item | Drag |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        zip_bytes = create_qti_package_bytes(quiz)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
+            names = zf.namelist()
+            self.assertIn("imsmanifest.xml", names)
+            manifest_xml = zf.read("imsmanifest.xml").decode("utf-8")
+            self.assertIn("matchdraganddrop", manifest_xml)
+            item_files = [n for n in names if n.endswith(".xml") and "item" in n]
+            self.assertEqual(len(item_files), 1)
+            item_xml = zf.read(item_files[0]).decode("utf-8")
+            self.assertIn('class="match_dnd"', item_xml)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,9 @@ from typing import List, Optional, Tuple, Dict, Any
 
 from src.defaults import DEFAULTS
 from src.model import (
+    AssociationItem,
+    AssociationQuestion,
+    AssociationTarget,
     Choice,
     EssayQuestion,
     FillBlankQuestion,
@@ -46,7 +49,7 @@ from src.model import (
     generate_id,
 )
 
-from src.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts
+from src.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts, is_table_separator_row, split_table_row
 from src.validation import Diagnostic, QuizValidationError, Severity
 
 
@@ -239,6 +242,153 @@ def _parse_hottexts(prompt: str) -> List[HottextItem]:
     for _start, _end, _raw_token, content, is_correct in raw_hottexts:
         items.append(HottextItem(text=content, is_correct=is_correct))
     return items
+
+
+def _extract_association_table(
+    prompt_lines: List[str],
+    line_number: int,
+    q_idx: int,
+) -> Optional[Tuple[str, List[str], List[AssociationItem], List[AssociationTarget], bool]]:
+    """Detect and parse an association table (Match or Drag & Drop) from question prompt lines.
+
+    Expected header:
+      | Item | Match |  -> interaction = "match"
+      | Item | Drag |   -> interaction = "drag"
+      | Item | Drag & Drop | -> interaction = "drag"
+
+    Returns:
+      (interaction, remaining_prompt_lines, items, targets, multiple)
+      or None if no association table is present.
+    """
+    # Find table candidate: a header row followed by a separator row
+    header_idx = None
+    interaction_type = None
+
+    for idx, line in enumerate(prompt_lines):
+        stripped = line.strip()
+        if "|" in stripped and idx + 1 < len(prompt_lines) and is_table_separator_row(prompt_lines[idx + 1]):
+            cells = split_table_row(stripped)
+            if len(cells) == 2:
+                c0 = cells[0].strip().lower()
+                c1 = cells[1].strip().lower()
+                if c0 == "item":
+                    if c1 == "match":
+                        header_idx = idx
+                        interaction_type = "match"
+                        break
+                    elif c1 in ("drag", "drag & drop", "drag&drop", "drag and drop"):
+                        header_idx = idx
+                        interaction_type = "drag"
+                        break
+
+    if header_idx is None or interaction_type is None:
+        return None
+
+    # Collect consecutive table lines starting from header_idx
+    table_lines: List[str] = [prompt_lines[header_idx], prompt_lines[header_idx + 1]]
+    end_idx = header_idx + 2
+    while end_idx < len(prompt_lines):
+        line = prompt_lines[end_idx]
+        stripped = line.strip()
+        if not stripped:
+            break
+        if "|" in stripped:
+            table_lines.append(line)
+            end_idx += 1
+        else:
+            break
+
+    remaining_prompt_lines = prompt_lines[:header_idx] + prompt_lines[end_idx:]
+
+    # Parse rows and apply ditto rule
+    data_rows = table_lines[2:]
+    if not data_rows:
+        raise QuizValidationError(
+            f"Association table for {interaction_type.capitalize()} has no data rows.",
+            [Diagnostic(f"Association table for {interaction_type.capitalize()} has no data rows.", Severity.ERROR, line_number, q_idx)],
+        )
+
+    last_item_text: Optional[str] = None
+    last_target_text: Optional[str] = None
+
+    raw_pairs: List[Tuple[str, str]] = []
+    seen_pairs = set()
+
+    for r_idx, r_line in enumerate(data_rows):
+        cells = split_table_row(r_line)
+        c0 = cells[0].strip() if len(cells) > 0 else ""
+        c1 = cells[1].strip() if len(cells) > 1 else ""
+
+        # Completely empty row is ignored
+        if not c0 and not c1:
+            continue
+
+        # Item ditto
+        if not c0:
+            if last_item_text is None:
+                raise QuizValidationError(
+                    "Empty Item cell has no preceding value to repeat.",
+                    [Diagnostic("Empty Item cell has no preceding value to repeat.", Severity.ERROR, line_number, q_idx)],
+                )
+            c0 = last_item_text
+        else:
+            last_item_text = c0
+
+        # Target ditto
+        if not c1:
+            if last_target_text is None:
+                target_col_name = "Match" if interaction_type == "match" else "Drag"
+                raise QuizValidationError(
+                    f"Empty {target_col_name} cell has no preceding value to repeat.",
+                    [Diagnostic(f"Empty {target_col_name} cell has no preceding value to repeat.", Severity.ERROR, line_number, q_idx)],
+                )
+            c1 = last_target_text
+        else:
+            last_target_text = c1
+
+        pair_key = (c0, c1)
+        if pair_key in seen_pairs:
+            raise QuizValidationError(
+                f"Duplicate association: '{c0}' → '{c1}'.",
+                [Diagnostic(f"Duplicate association: '{c0}' → '{c1}'.", Severity.ERROR, line_number, q_idx)],
+            )
+        seen_pairs.add(pair_key)
+        raw_pairs.append(pair_key)
+
+    if not raw_pairs:
+        raise QuizValidationError(
+            f"Association table for {interaction_type.capitalize()} has no valid association rows.",
+            [Diagnostic(f"Association table for {interaction_type.capitalize()} has no valid association rows.", Severity.ERROR, line_number, q_idx)],
+        )
+
+    # Collect targets in first-occurrence order
+    targets: List[AssociationTarget] = []
+    target_by_text: Dict[str, AssociationTarget] = {}
+    for _, t_text in raw_pairs:
+        if t_text not in target_by_text:
+            target_obj = AssociationTarget(text=t_text)
+            target_by_text[t_text] = target_obj
+            targets.append(target_obj)
+
+    # Collect items in first-occurrence order and their associated target IDs
+    item_map: Dict[str, List[str]] = {}
+    item_order: List[str] = []
+    for i_text, t_text in raw_pairs:
+        t_obj = target_by_text[t_text]
+        if i_text not in item_map:
+            item_map[i_text] = []
+            item_order.append(i_text)
+        item_map[i_text].append(t_obj.identifier)
+
+    items: List[AssociationItem] = []
+    multiple = False
+    for i_text in item_order:
+        t_ids = item_map[i_text]
+        if len(t_ids) > 1:
+            multiple = True
+        items.append(AssociationItem(text=i_text, target_ids=t_ids))
+
+    return interaction_type, remaining_prompt_lines, items, targets, multiple
 
 
 
@@ -594,7 +744,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         for gap in q.gaps:
                             if gap.shuffle is None:
                                 gap.shuffle = q.shuffle
-                    if (isinstance(q, (MultipleChoiceQuestion, HottextQuestion))) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
+                    if (isinstance(q, (MultipleChoiceQuestion, HottextQuestion, AssociationQuestion))) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
                         if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
                             q.scoring = quiz_mc_scoring
                     if q.additional_info is None:
@@ -878,6 +1028,32 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         )
 
 
+    # Check for association table (| Item | Match | or | Item | Drag |)
+    assoc_info = _extract_association_table(block.prompt_lines, block.start_line, q_idx)
+    has_assoc_table = assoc_info is not None
+
+    if has_assoc_table:
+        if has_text_gaps or has_dropdown_gaps or has_hottexts:
+            raise QuizValidationError(
+                "Cannot mix association table with cloze gaps or hottext in the same question.",
+                [Diagnostic(
+                    "Cannot mix association table with cloze gaps or hottext in the same question.",
+                    Severity.ERROR,
+                    block.start_line,
+                    q_idx,
+                )],
+            )
+        if block.choices or block.kprim_items or block.is_kprim_mode or block.order_items or block.numerical is not None:
+            raise QuizValidationError(
+                "Cannot combine association table with choice markers, Kprim, Order, or numerical answers in the same question.",
+                [Diagnostic(
+                    "Cannot combine association table with choice markers, Kprim, Order, or numerical answers in the same question.",
+                    Severity.ERROR,
+                    block.start_line,
+                    q_idx,
+                )],
+            )
+
     # Deterministic Inference Sequence
 
     # 1. Explicit Type Override
@@ -907,6 +1083,26 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             if q_scoring is not None:
                 ht_kwargs["scoring"] = q_scoring
             return HottextQuestion(**ht_kwargs, items=hottext_items)
+        elif explicit_type in ("match", "drag", "matchdraganddrop", "draganddrop", "dnd"):
+            if not has_assoc_table:
+                raise QuizValidationError(
+                    f"Question marked as '{explicit_type}' requires an association table (| Item | Match | or | Item | Drag |).",
+                    [Diagnostic(f"Question marked as '{explicit_type}' requires an association table (| Item | Match | or | Item | Drag |).", Severity.ERROR, block.start_line, q_idx)],
+                )
+            detected_interaction, rem_prompt_lines, items, targets, inferred_multiple = assoc_info
+            forced_interaction = "drag" if "drag" in explicit_type or explicit_type == "dnd" else "match"
+            assoc_prompt = "\n".join(rem_prompt_lines).strip() or block.title
+            assoc_kwargs = dict(common_kwargs)
+            assoc_kwargs["prompt"] = assoc_prompt
+            if q_scoring is not None:
+                assoc_kwargs["scoring"] = q_scoring
+            return AssociationQuestion(
+                **assoc_kwargs,
+                interaction=forced_interaction,
+                items=items,
+                targets=targets,
+                multiple=inferred_multiple,
+            )
         elif explicit_type in ("numerical", "num"):
             val, tol = (block.numerical[0], block.numerical[1]) if block.numerical else (0.0, 0.0)
             return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)
@@ -917,27 +1113,43 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             items = [OrderItem(text=it[0]) for it in block.order_items]
             return OrderQuestion(**common_kwargs, items=items)
 
-    # 2. Inferred: Order / Sequencing (N. [ ] ...)
+    # 2. Inferred: Association Table (Match / Drag & Drop)
+    if has_assoc_table:
+        detected_interaction, rem_prompt_lines, items, targets, inferred_multiple = assoc_info
+        assoc_prompt = "\n".join(rem_prompt_lines).strip() or block.title
+        assoc_kwargs = dict(common_kwargs)
+        assoc_kwargs["prompt"] = assoc_prompt
+        if q_scoring is not None:
+            assoc_kwargs["scoring"] = q_scoring
+        return AssociationQuestion(
+            **assoc_kwargs,
+            interaction=detected_interaction,
+            items=items,
+            targets=targets,
+            multiple=inferred_multiple,
+        )
+
+    # 3. Inferred: Order / Sequencing (N. [ ] ...)
     if block.order_items:
         items = [OrderItem(text=it[0]) for it in block.order_items]
         return OrderQuestion(**common_kwargs, items=items)
 
-    # 3. Inferred: Kprim
+    # 4. Inferred: Kprim
     if block.is_kprim_mode or block.kprim_items:
         stmts = [KprimStatement(text=it[1], is_correct=it[0]) for it in block.kprim_items]
         return KprimQuestion(**common_kwargs, statements=stmts)
 
-    # 4. Inferred: Inline Choice / Dropdown
+    # 5. Inferred: Inline Choice / Dropdown
     if has_dropdown_gaps:
         dd_gaps = _parse_dropdown_gaps(prompt, question_shuffle=q_shuffle)
         return InlineChoiceQuestion(**common_kwargs, gaps=dd_gaps)
 
-    # 5. Inferred: Fill-in-the-Blank (Text Entry)
+    # 6. Inferred: Fill-in-the-Blank (Text Entry)
     gaps_found = _parse_gaps(prompt)
     if gaps_found:
         return FillBlankQuestion(**common_kwargs, gaps=gaps_found)
 
-    # 6. Inferred: Hottext
+    # 7. Inferred: Hottext
     if has_hottexts:
         ht_kwargs = dict(common_kwargs)
         if q_scoring is not None:

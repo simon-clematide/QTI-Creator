@@ -2,6 +2,9 @@
 
 import unittest
 from src.model import (
+    AssociationItem,
+    AssociationQuestion,
+    AssociationTarget,
     Choice,
     SingleChoiceQuestion,
     MultipleChoiceQuestion,
@@ -300,6 +303,42 @@ class TestModelInvariants(unittest.TestCase):
                 items=[
                     HottextItem("  ", is_correct=True),
                 ],
+            )
+
+
+    def test_association_valid(self):
+        t1 = AssociationTarget("noun", "target_noun")
+        t2 = AssociationTarget("verb", "target_verb")
+        i1 = AssociationItem("dog", ["target_noun"])
+        i2 = AssociationItem("run", ["target_verb"])
+        q = AssociationQuestion(
+            prompt="Match items",
+            interaction="match",
+            items=[i1, i2],
+            targets=[t1, t2],
+            multiple=False,
+        )
+        self.assertEqual(len(q.items), 2)
+        self.assertEqual(len(q.targets), 2)
+        self.assertFalse(q.multiple)
+
+    def test_association_invalid_no_items(self):
+        t1 = AssociationTarget("noun", "target_noun")
+        with self.assertRaises(QuizValidationError):
+            AssociationQuestion(
+                prompt="Match items",
+                items=[],
+                targets=[t1],
+            )
+
+    def test_association_invalid_unknown_target_id(self):
+        t1 = AssociationTarget("noun", "target_noun")
+        i1 = AssociationItem("dog", ["target_unknown"])
+        with self.assertRaises(QuizValidationError):
+            AssociationQuestion(
+                prompt="Match items",
+                items=[i1],
+                targets=[t1],
             )
 
 

@@ -318,6 +318,42 @@ The {** cat **} { sat } on the {** mat **}.
         self.assertIn("sat", html_out)
 
 
+    def test_preview_match(self):
+        text = """## Parts of Speech Matrix
+| Item | Match |
+|---|---|
+| dog | noun |
+| run | verb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+        self.assertIn("Match", html_out)
+        self.assertIn("Matrix (Single Choice)", html_out)
+        self.assertIn("dog", html_out)
+        self.assertIn("noun", html_out)
+        self.assertIn("verb", html_out)
+
+    def test_preview_drag_and_drop(self):
+        text = """## Drag to Groups
+| Item | Drag |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+        self.assertIn("Drag & Drop", html_out)
+        self.assertIn("Drag & Drop Categories (Single Choice)", html_out)
+        self.assertIn("📂 noun:", html_out)
+        self.assertIn("📂 verb:", html_out)
+        self.assertIn("dog", html_out)
+        self.assertIn("cat", html_out)
+        self.assertIn("run", html_out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

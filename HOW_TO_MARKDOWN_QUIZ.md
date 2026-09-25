@@ -240,6 +240,64 @@ Do not use `[X]` or `[x]` in an ordering question.
 
 ---
 
+### Match
+
+Match questions present a two-column association table where each source item is matched to one or more target categories:
+
+```markdown
+## Match each word with the appropriate category.
+
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+```
+
+- When every Item has exactly one target, QTI-Creator infers **Single Choice** (matrix radio buttons in OpenOLAT).
+- Multiple associations use empty cells as ditto (repeats nearest non-empty value above):
+
+```markdown
+## Match each country with its official languages.
+
+| Item | Match |
+|---|---|
+| Switzerland | German |
+|             | French |
+|             | Italian |
+| Belgium     | French |
+|             | Dutch |
+| Canada      | English |
+|             | French |
+```
+
+- If any Item has 2 or more targets, QTI-Creator infers **Multiple Choice** (matrix checkboxes in OpenOLAT).
+- Supports partial scoring by default (OpenOLAT negative point system) or `Scoring: all-correct`.
+
+---
+
+### Drag & Drop
+
+Drag & Drop questions use the same association table format with header `| Item | Drag |` or `| Item | Drag & Drop |`:
+
+```markdown
+## Drag each word into the appropriate grammatical category.
+
+| Item | Drag |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+```
+
+- In OpenOLAT, this is rendered as a native drag-and-drop interaction (`matchInteraction` with `class="match_dnd"`).
+- Target categories are fixed in first-occurrence order; source items are shuffled by default.
+- Multiple associations use the same empty-cell ditto rule.
+
+---
+
 ### Essay / Free Text
 
 Write a question without any answer specification:

@@ -48,6 +48,26 @@ What is the acceleration due to gravity on Earth's surface in m/s²?
 1. [ ] Model training
 1. [ ] Evaluation
 
+## Match Words by Part of Speech
+Match each word with its corresponding grammatical category:
+
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+
+## Drag and Drop Elements by Group
+Drag each chemical element into its correct group:
+
+| Item | Drag |
+|---|---|
+| Helium | Noble gas |
+| Neon | Noble gas |
+| Sodium | Alkali metal |
+| Potassium | Alkali metal |
+
 ## Cellular Respiration
 Explain the difference between aerobic and anaerobic respiration in 2-3 sentences.
 

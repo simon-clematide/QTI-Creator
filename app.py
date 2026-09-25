@@ -653,6 +653,18 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", css=APP_CSS) as demo:
                       <td style="padding: 8px 12px;">All or nothing</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 12px;"><strong>Match</strong></td>
+                      <td style="padding: 8px 12px;"><code>| Item | Match |<br>|---|---|<br>| dog | noun |<br>| cat | noun |</code></td>
+                      <td style="padding: 8px 12px;">2-column table with <code>Item</code> and <code>Match</code> headers. Single Choice if each item has 1 target; Multiple Choice if any item has 2+ targets (empty cells repeat previous)</td>
+                      <td style="padding: 8px 12px;">Partial credit (OpenOLAT negative point system)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 8px 12px;"><strong>Drag &amp; Drop</strong></td>
+                      <td style="padding: 8px 12px;"><code>| Item | Drag |<br>|---|---|<br>| dog | noun |<br>| run | verb |</code></td>
+                      <td style="padding: 8px 12px;">2-column table with <code>Item</code> and <code>Drag</code> headers. Renders native OpenOLAT drag-and-drop interaction</td>
+                      <td style="padding: 8px 12px;">Partial credit (OpenOLAT negative point system)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
                       <td style="padding: 8px 12px;"><strong>Essay / Free Text</strong></td>
                       <td style="padding: 8px 12px;"><em>Question prompt with no answers</em></td>
                       <td style="padding: 8px 12px;">No answer syntax</td>

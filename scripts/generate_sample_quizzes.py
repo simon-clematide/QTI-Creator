@@ -211,6 +211,44 @@ Feedback: "cat", "mat", and "fireplace" are nouns, while "sat" is a verb.
 Select all nouns in the following sentence:
 The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
 """,
+
+    "16_match": """---
+title: "Sample 16 - Match Matrix"
+---
+
+## Match Words with Grammatical Categories
+
+Hint: Think about nouns, verbs, and adverbs.
+Feedback: dog and cat are nouns, run is a verb, quickly is an adverb.
+
+Match each word with its grammatical category:
+
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+""",
+
+    "17_drag_and_drop": """---
+title: "Sample 17 - Drag and Drop"
+---
+
+## Drag Words into Categories
+
+Hint: Classify by part of speech.
+Feedback: Categorize nouns and verbs correctly.
+
+Drag each word into its category:
+
+| Item | Drag |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| sleep | verb |
+""",
 }
 
 # Also create a comprehensive combined quiz containing all types
@@ -266,6 +304,26 @@ Switzerland has its federal city in {[Bern|Zurich|Geneva]}, while the capital of
 Hint: Nouns name things.
 Feedback: Cat, mat, and fireplace are nouns.
 The {** cat **} { sat } on the {** mat **} near the {** fireplace **}.
+
+## Match Words by Category
+Match each word with its category:
+
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+| quickly | adverb |
+
+## Drag and Drop Elements
+Drag each element into its chemical group:
+
+| Item | Drag |
+|---|---|
+| Helium | Noble gas |
+| Neon | Noble gas |
+| Sodium | Alkali metal |
+| Potassium | Alkali metal |
 
 ## Gravity
 Hint: Standard acceleration in m/s^2.

@@ -309,12 +309,12 @@ def markdown_to_qti_xhtml(
     return "\n".join(output_blocks)
 
 
-def _is_table_separator_row(line: str) -> bool:
+def is_table_separator_row(line: str) -> bool:
     """Check if line is a valid GFM table separator row e.g. |:---|:---:|---:|."""
     stripped = line.strip()
     if not stripped or "|" not in stripped:
         return False
-    parts = _split_table_row(stripped)
+    parts = split_table_row(stripped)
     if not parts:
         return False
     for p in parts:
@@ -323,8 +323,10 @@ def _is_table_separator_row(line: str) -> bool:
             return False
     return True
 
+_is_table_separator_row = is_table_separator_row
 
-def _split_table_row(line: str) -> List[str]:
+
+def split_table_row(line: str) -> List[str]:
     """Split a table row on '|' taking care of optional leading and trailing pipes."""
     s = line.strip()
     if s.startswith("|"):
@@ -335,6 +337,8 @@ def _split_table_row(line: str) -> List[str]:
     # We split on | that is not escaped
     tokens = re.split(r"(?<!\\)\|", s)
     return [t.replace(r"\|", "|").strip() for t in tokens]
+
+_split_table_row = split_table_row
 
 
 def _render_table(

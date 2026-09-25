@@ -3,6 +3,7 @@
 import html
 import re
 from src.model import (
+    AssociationQuestion,
     Choice,
     EssayQuestion,
     FillBlankQuestion,
@@ -339,6 +340,8 @@ def _get_type_label(q: Question) -> str:
         return "Kprim (Matrix)"
     elif isinstance(q, OrderQuestion):
         return "Order / Sequencing"
+    elif isinstance(q, AssociationQuestion):
+        return "Drag & Drop" if q.interaction == "drag" else "Match"
     return "Question"
 
 
@@ -365,6 +368,8 @@ def _get_badge_color(q: Question) -> str:
         return "#6366f1"  # Indigo
     elif isinstance(q, OrderQuestion):
         return "#0ea5e9"  # Sky
+    elif isinstance(q, AssociationQuestion):
+        return "#8b5cf6" if q.interaction == "drag" else "#2563eb"
     return "#64748b"
 
 
@@ -428,7 +433,6 @@ def _render_question_body(
         scoring_desc = f" <span style='color: #64748b; font-size: 0.9em;'>(Scoring: {html.escape(q.scoring)})</span>" if q.scoring else ""
         return f"<div style='font-size: 0.9em; margin-bottom: 4px; font-weight: 600; color: #475569;'>Selectable Hottext Spans{scoring_desc}:</div><ul style='padding-left: 20px; margin: 0; font-size: 0.95em;'>{''.join(items)}</ul>"
 
-
     elif isinstance(q, NumericalQuestion):
         tol_str = f" ± {q.tolerance}" if q.tolerance > 0 else ""
         return f"<div style='color: #475569;'><strong>Expected Answer:</strong> <code style='background: #dcfce7; color: #166534; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid #bbf7d0;'>{q.answer}{tol_str}</code></div>"
@@ -454,5 +458,73 @@ def _render_question_body(
                 it_html = it_html[3:-4]
             items.append(f"<li>{it_html}</li>")
         return f"<ol class='order-answer'>{''.join(items)}</ol>"
+
+    elif isinstance(q, AssociationQuestion):
+        target_map = {t.identifier: t for t in q.targets}
+        if q.interaction == "match":
+            # Render a 2D matrix table with items as rows and targets as columns
+            th_cells = ["<th style='padding: 6px 12px; border: 1px solid #cbd5e1; background: #f8fafc; text-align: left;'>Item</th>"]
+            for t in q.targets:
+                t_html = markdown_to_qti_xhtml(t.text, asset_map=asset_map, render_math=render_math)
+                if t_html.startswith("<p>") and t_html.endswith("</p>"):
+                    t_html = t_html[3:-4]
+                th_cells.append(f"<th style='padding: 6px 12px; border: 1px solid #cbd5e1; background: #f8fafc; text-align: center;'>{t_html}</th>")
+            thead = f"<tr>{''.join(th_cells)}</tr>"
+
+            tr_rows = []
+            symbol_on = "■" if q.multiple else "●"
+            symbol_off = "□" if q.multiple else "○"
+
+            for item in q.items:
+                td_cells = []
+                it_html = markdown_to_qti_xhtml(item.text, asset_map=asset_map, render_math=render_math)
+                if it_html.startswith("<p>") and it_html.endswith("</p>"):
+                    it_html = it_html[3:-4]
+                td_cells.append(f"<td style='padding: 6px 12px; border: 1px solid #e2e8f0; font-weight: 500;'>{it_html}</td>")
+                for t in q.targets:
+                    is_assoc = t.identifier in item.target_ids
+                    icon = f"<span style='color: #16a34a; font-weight: bold;'>{symbol_on}</span>" if is_assoc else f"<span style='color: #94a3b8;'>{symbol_off}</span>"
+                    td_cells.append(f"<td style='padding: 6px 12px; border: 1px solid #e2e8f0; text-align: center;'>{icon}</td>")
+                tr_rows.append(f"<tr>{''.join(td_cells)}</tr>")
+
+            tbody = "\n".join(tr_rows)
+            type_mode = "Multiple Choice" if q.multiple else "Single Choice"
+            scoring_str = f", Scoring: {q.scoring}" if q.scoring else ""
+            table_info = f"<div style='font-size: 0.85em; color: #64748b; margin-bottom: 6px;'>Matrix ({type_mode}{scoring_str})</div>"
+            return f"{table_info}<table style='width: 100%; border-collapse: collapse; font-size: 0.9em;'>{thead}\n{tbody}</table>"
+
+        else:
+            # Drag & Drop preview: show target categories as containers with associated draggable items
+            cards = []
+            # Group items by target
+            target_to_items: Dict[str, List[str]] = {t.identifier: [] for t in q.targets}
+            for item in q.items:
+                it_html = markdown_to_qti_xhtml(item.text, asset_map=asset_map, render_math=render_math)
+                if it_html.startswith("<p>") and it_html.endswith("</p>"):
+                    it_html = it_html[3:-4]
+                for tid in item.target_ids:
+                    if tid in target_to_items:
+                        target_to_items[tid].append(it_html)
+
+            for t in q.targets:
+                t_html = markdown_to_qti_xhtml(t.text, asset_map=asset_map, render_math=render_math)
+                if t_html.startswith("<p>") and t_html.endswith("</p>"):
+                    t_html = t_html[3:-4]
+                assigned_items = target_to_items.get(t.identifier, [])
+                items_pills = "".join(
+                    f"<span style='display: inline-block; background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; margin: 2px 4px 2px 0; border: 1px solid #c7d2fe;'>{it}</span>"
+                    for it in assigned_items
+                ) or "<span style='color: #94a3b8; font-style: italic; font-size: 0.85em;'>No items</span>"
+                cards.append(
+                    f"<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;'>"
+                    f"<div style='font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 0.9em;'>📂 {t_html}:</div>"
+                    f"<div>{items_pills}</div>"
+                    f"</div>"
+                )
+
+            type_mode = "Multiple Choice" if q.multiple else "Single Choice"
+            scoring_str = f", Scoring: {q.scoring}" if q.scoring else ""
+            desc = f"<div style='font-size: 0.85em; color: #64748b; margin-bottom: 6px;'>Drag & Drop Categories ({type_mode}{scoring_str}):</div>"
+            return f"{desc}{''.join(cards)}"
 
     return ""

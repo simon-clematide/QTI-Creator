@@ -88,6 +88,30 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
         self.assertTrue(is_valid, f"Hottext failed JQTI+ validation: {errors}")
         self.assertEqual(len(errors), 0)
 
+    def test_match_and_drag_validate_in_jqti(self):
+        text = """# Match & Drag Test
+## Match Words
+| Item | Match |
+|---|---|
+| dog | noun |
+| cat | noun |
+| run | verb |
+
+## Drag Words
+| Item | Drag |
+|---|---|
+| dog | noun |
+| run | verb |
+| quickly | adverb |
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        for q in quiz.questions:
+            xml_str = generate_item_xml(q)
+            is_valid, errors = validate_qti_xml_string(xml_str, f"{q.identifier}.xml")
+            self.assertTrue(is_valid, f"{q.title} failed JQTI+ validation: {errors}")
+            self.assertEqual(len(errors), 0)
+
 
     def test_multiple_choice_partial_scoring_with_hint_validates_in_jqti(self):
         """Regression test for the OpenOLAT runtime crash."""

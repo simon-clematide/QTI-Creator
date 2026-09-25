@@ -8,6 +8,7 @@ in OpenOLAT.
 import html
 
 from src.model import (
+    AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
     HottextQuestion,
@@ -27,7 +28,7 @@ def _get_qti_interaction_type(q: Question) -> str:
     """Return the standard IMS QTI interaction type."""
     if isinstance(q, (SingleChoiceQuestion, MultipleChoiceQuestion, TrueFalseQuestion)):
         return "choiceInteraction"
-    elif isinstance(q, KprimQuestion):
+    elif isinstance(q, (KprimQuestion, AssociationQuestion)):
         return "matchInteraction"
     elif isinstance(q, InlineChoiceQuestion):
         return "inlineChoiceInteraction"
@@ -52,6 +53,8 @@ def _get_openolat_question_type(q: Question) -> str:
         return "sc"
     elif isinstance(q, KprimQuestion):
         return "kprim"
+    elif isinstance(q, AssociationQuestion):
+        return "matchdraganddrop" if q.interaction == "drag" else "match"
     elif isinstance(q, FillBlankQuestion):
         return "fib"
     elif isinstance(q, InlineChoiceQuestion):

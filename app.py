@@ -311,8 +311,18 @@ APP_CSS = """
   display: none !important;
 }
 
-/* ── Block labels: clean inline style ── */
+/* ── Block labels: clean inline style & normal document flow ── */
+.quiz-file-upload-compact label.float,
+.quiz-file-upload-compact label[class*="float"],
+label.float,
+label[class*="float"] {
+  position: static !important;
+  display: block !important;
+  transform: none !important;
+}
+
 span[data-testid="block-info"],
+.block label,
 .block label > span:first-child,
 .gradio-container .block > label > span,
 .gradio-container .block-label {
@@ -320,11 +330,21 @@ span[data-testid="block-info"],
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  padding: 0 0 4px 0 !important;
+  padding: 0 0 6px 0 !important;
   margin: 0 !important;
   font-size: 1.05rem !important;
   font-weight: 600 !important;
   color: #0f172a !important;
+  position: static !important;
+  display: block !important;
+}
+
+.quiz-file-upload-compact button.upload-container,
+.quiz-file-upload-compact .upload-container,
+.quiz-file-upload-compact button[aria-dropeffect],
+.quiz-file-upload-compact button[aria-label*="upload"],
+.quiz-file-upload-compact button[aria-label*="drop"] {
+  margin-top: 4px !important;
 }
 
 /* ── Outdated package banner ── */
@@ -685,6 +705,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)") as demo:
           button.svelte-11gaq1.selected {{
             font-weight: 700 !important;
             color: #4338ca !important;
+          }}
+          label.float,
+          label[class*="float"] {{
+            position: static !important;
+            display: block !important;
           }}
         </style>
         """,

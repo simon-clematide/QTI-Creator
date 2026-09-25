@@ -200,7 +200,7 @@ def render_quiz_preview_html(
 <div class="quiz-question-source-container" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
   <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
     <details class="quiz-question-source-details" style="flex: 1 1 auto;">
-      <summary style="display: inline-flex; align-items: center; gap: 6px; color: #475569; font-weight: 600; cursor: pointer; user-select: none; list-style: none; outline: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 0.82em; transition: background 0.15s, color 0.15s;">
+      <summary>
         <span>Markdown</span>
       </summary>
       <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
@@ -308,15 +308,34 @@ def render_quiz_preview_html(
   .quiz-section-desc-details:not([open]) > summary .quiz-desc-chevron {{ transform: rotate(-90deg); }}
   .quiz-section-desc-details > summary:hover {{ color: #1e293b; }}
   .quiz-question-source-details summary::-webkit-details-marker {{ display: none; }}
+  .quiz-question-source-details summary {{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    outline: none;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.82em;
+    line-height: 1.4;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }}
   .quiz-question-source-details summary:hover {{ background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }}
   .quiz-edit-jump-btn {{
     background: #f8fafc;
     border: 1px solid #cbd5e1;
     color: #475569;
-    border-radius: 4px;
-    padding: 2px 8px;
+    border-radius: 6px;
+    padding: 3px 10px;
     font-size: 0.82em;
-    font-weight: 600;
+    line-height: 1.4;
+    font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -336,8 +355,9 @@ def render_quiz_preview_html(
     border: 1px solid #cbd5e1;
     color: #475569;
     border-radius: 6px;
-    padding: 4px 10px;
+    padding: 3px 10px;
     font-size: 0.82em;
+    line-height: 1.4;
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;

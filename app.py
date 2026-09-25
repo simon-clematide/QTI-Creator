@@ -185,6 +185,17 @@ window.MathJax = {
 };
 
 window.quizJumpToLine = function(lineNo, title) {
+  // If Preview is currently in fullscreen mode, exit fullscreen first
+  const prevContainer = document.getElementById('quiz_preview_container');
+  const prevBtn = document.getElementById('btn_preview_fullscreen_toggle');
+  if (prevContainer && prevContainer.classList.contains('quiz-preview-fullscreen')) {
+    prevContainer.classList.remove('quiz-preview-fullscreen');
+    if (prevBtn) {
+      prevBtn.innerHTML = '⛶';
+      prevBtn.title = 'Enter Fullscreen';
+    }
+  }
+
   const editor = document.querySelector('.quiz-source-editor textarea');
   if (!editor) return;
 
@@ -403,12 +414,18 @@ table.table tbody tr:nth-child(even) {
   border: 1px solid #cbd5e1 !important;
   color: #334155 !important;
   border-radius: 6px !important;
-  padding: 3px 10px !important;
-  font-size: 0.82rem !important;
+  padding: 3px 8px !important;
+  font-size: 0.95rem !important;
+  line-height: 1 !important;
   font-weight: 500 !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 30px !important;
+  height: 28px !important;
 }
 
 .quiz-fullscreen-btn:hover {
@@ -496,7 +513,8 @@ _TOGGLE_FULLSCREEN_JS = """() => {
 
   const isFs = container.classList.toggle('quiz-editor-fullscreen');
   if (btn) {
-    btn.innerText = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    btn.innerHTML = isFs ? '✕' : '⛶';
+    btn.title = isFs ? 'Exit Fullscreen (Esc)' : 'Fullscreen';
   }
 
   // Bind Escape key listener once to exit fullscreen gracefully
@@ -508,13 +526,19 @@ _TOGGLE_FULLSCREEN_JS = """() => {
         const b1 = document.getElementById('btn_fullscreen_toggle');
         if (c1 && c1.classList.contains('quiz-editor-fullscreen')) {
           c1.classList.remove('quiz-editor-fullscreen');
-          if (b1) b1.innerText = '⛶ Fullscreen';
+          if (b1) {
+            b1.innerHTML = '⛶';
+            b1.title = 'Fullscreen';
+          }
         }
         const c2 = document.getElementById('quiz_preview_container');
         const b2 = document.getElementById('btn_preview_fullscreen_toggle');
         if (c2 && c2.classList.contains('quiz-preview-fullscreen')) {
           c2.classList.remove('quiz-preview-fullscreen');
-          if (b2) b2.innerText = '⛶ Fullscreen';
+          if (b2) {
+            b2.innerHTML = '⛶';
+            b2.title = 'Fullscreen';
+          }
         }
       }
     });
@@ -529,7 +553,8 @@ _TOGGLE_PREVIEW_FULLSCREEN_JS = """() => {
 
   const isFs = container.classList.toggle('quiz-preview-fullscreen');
   if (btn) {
-    btn.innerText = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    btn.innerHTML = isFs ? '✕' : '⛶';
+    btn.title = isFs ? 'Exit Fullscreen (Esc)' : 'Fullscreen';
   }
 
   // Bind Escape key listener once to exit fullscreen gracefully
@@ -541,13 +566,19 @@ _TOGGLE_PREVIEW_FULLSCREEN_JS = """() => {
         const b1 = document.getElementById('btn_fullscreen_toggle');
         if (c1 && c1.classList.contains('quiz-editor-fullscreen')) {
           c1.classList.remove('quiz-editor-fullscreen');
-          if (b1) b1.innerText = '⛶ Fullscreen';
+          if (b1) {
+            b1.innerHTML = '⛶';
+            b1.title = 'Fullscreen';
+          }
         }
         const c2 = document.getElementById('quiz_preview_container');
         const b2 = document.getElementById('btn_preview_fullscreen_toggle');
         if (c2 && c2.classList.contains('quiz-preview-fullscreen')) {
           c2.classList.remove('quiz-preview-fullscreen');
-          if (b2) b2.innerText = '⛶ Fullscreen';
+          if (b2) {
+            b2.innerHTML = '⛶';
+            b2.title = 'Fullscreen';
+          }
         }
       }
     });
@@ -613,10 +644,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                             gr.Markdown("### 📝 QuizMD Source", elem_classes=["no-scroll-block"])
                             btn_fullscreen = gr.Button(
-                                "⛶ Fullscreen",
+                                "⛶",
                                 size="sm",
                                 elem_id="btn_fullscreen_toggle",
                                 elem_classes=["quiz-fullscreen-btn"],
+                                tooltip="Fullscreen",
                             )
                         quiz_input = gr.Textbox(
                             value=SAMPLE_ALL_TYPES,
@@ -666,10 +698,11 @@ with gr.Blocks(title="QTI-Creator for OpenOLAT (Beta)", theme=theme, css=APP_CSS
                         with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                             gr.Markdown("### 👁️ Preview", elem_classes=["no-scroll-block"])
                             btn_preview_fullscreen = gr.Button(
-                                "⛶ Fullscreen",
+                                "⛶",
                                 size="sm",
                                 elem_id="btn_preview_fullscreen_toggle",
                                 elem_classes=["quiz-fullscreen-btn"],
+                                tooltip="Fullscreen",
                             )
                         with gr.Row():
                             render_math_cb = gr.Checkbox(

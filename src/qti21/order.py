@@ -49,6 +49,8 @@ def generate_order_xml(q: OrderQuestion, asset_map: Optional[Dict[str, str]] = N
         response_processing=response_proc,
         feedback=q.feedback,
         hint=q.hint,
+        feedback_title=q.feedback_title,
+        hint_title=q.hint_title,
         max_score=q.points,
         asset_map=asset_map,
     )

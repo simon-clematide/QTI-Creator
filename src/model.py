@@ -75,7 +75,9 @@ class Question:
     title: str = ""
     points: float = field(default_factory=lambda: DEFAULTS["points"])
     feedback: Optional[str] = None
+    feedback_title: Optional[str] = None
     hint: Optional[str] = None
+    hint_title: Optional[str] = None
     identifier: str = field(default_factory=lambda: generate_id("item"))
     line_number: Optional[int] = None
     topic: Optional[str] = None
@@ -83,6 +85,7 @@ class Question:
     additional_info: Optional[str] = None
     language: Optional[str] = None
     shuffle: Optional[bool] = None
+    warning_message: Optional[str] = None
     raw_markdown: str = ""
 
     def __post_init__(self):

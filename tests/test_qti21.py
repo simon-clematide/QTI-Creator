@@ -618,6 +618,42 @@ The {** cat **} { sat } on the {** mat **}.
             self.assertIn('class="match_dnd"', item_xml)
 
 
+    def test_qti_xml_modal_feedback_and_hint_with_titles(self):
+        text = """# Physics
+## Newton's Law
+What is F?
+- [X] m * a
+- [ ] m / a
+
+### Hint: Second Law
+Recall force equals mass times acceleration.
+
+### Feedback: Classical Mechanics
+According to Newton's Second Law, the rate of change of momentum is proportional to the applied force.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        q = quiz.questions[0]
+        xml_str = generate_item_xml(q)
+        root = ET.fromstring(xml_str)
+
+        # Verify modalFeedback for Hint with title
+        hint_modal = root.find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}modalFeedback[@identifier='HINT']")
+        self.assertIsNotNone(hint_modal)
+        self.assertEqual(hint_modal.attrib.get("title"), "Second Law")
+
+        # Verify endAttemptInteraction with title
+        interaction = root.find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}endAttemptInteraction[@responseIdentifier='HINTREQUEST']")
+        self.assertIsNotNone(interaction)
+        self.assertEqual(interaction.attrib.get("title"), "Second Law")
+
+        # Verify modalFeedback for Feedback with title
+        feedback_modal = root.find(".//{http://www.imsglobal.org/xsd/imsqti_v2p1}modalFeedback[@identifier='feedback_modal']")
+        self.assertIsNotNone(feedback_modal)
+        self.assertEqual(feedback_modal.attrib.get("title"), "Classical Mechanics")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

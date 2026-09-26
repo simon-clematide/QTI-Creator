@@ -220,12 +220,18 @@ Shuffle: no
 Topic: Search Algorithms
 Keywords: search, linear, complexity
 Additional_Info: Source: Knuth TAOCP Vol 3
-Hint: Think about how many comparisons are made if the target element is at the very end of the list.
-Feedback: Linear search scans sequentially through $n$ elements, resulting in $O(n)$ worst-case time complexity.
 - [ ] $O(1)$
 - [X] $O(n)$
 - [ ] $O(n \log n)$
 - [ ] $O(n^2)$
+
+### Hint
+Think about how many comparisons are made if the target element is at the very end of the list.
+
+### Feedback: Asymptotic Analysis
+Linear search scans sequentially through $n$ elements, resulting in $O(n)$ worst-case time complexity.
+
+In the best case where the target element is at index 0, the time complexity is $O(1)$.
 
 ## Which data structures are non-linear?
 Points: 3

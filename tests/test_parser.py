@@ -919,6 +919,88 @@ Explain what this property table describes.
         self.assertIsInstance(quiz.questions[0], EssayQuestion)
 
 
+    def test_h3_hint_and_feedback_multiparagraph(self):
+        text = """## Photosynthesis
+What gas do plants release during photosynthesis?
+- [ ] Carbon dioxide
+- [X] Oxygen
+- [ ] Nitrogen
+
+### Hint
+Think about what humans inhale.
+
+Remember the role of chloroplasts.
+
+### Feedback
+Plants absorb carbon dioxide and water to produce glucose.
+
+Oxygen is released as a byproduct into the atmosphere:
+$$6CO_2 + 6H_2O \\rightarrow C_6H_{12}O_6 + 6O_2$$
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        self.assertIn("Think about what humans inhale.", q.hint)
+        self.assertIn("Remember the role of chloroplasts.", q.hint)
+        self.assertIn("Plants absorb carbon dioxide", q.feedback)
+        self.assertIn("Oxygen is released as a byproduct", q.feedback)
+        self.assertIn("$$6CO_2", q.feedback)
+        self.assertIsNone(q.hint_title)
+        self.assertIsNone(q.feedback_title)
+
+    def test_h3_hint_and_feedback_with_titles(self):
+        text = """## Thermodynamics Question
+- [X] Correct
+- [ ] Incorrect
+
+### Hint: Conservation of Energy
+Look closely at the first law.
+
+### Feedback: Detailed Thermodynamic Proof
+Energy cannot be created or destroyed.
+
+Only transformed from one form to another.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        self.assertEqual(q.hint_title, "Conservation of Energy")
+        self.assertEqual(q.feedback_title, "Detailed Thermodynamic Proof")
+        self.assertIn("Look closely at the first law.", q.hint)
+        self.assertIn("Energy cannot be created or destroyed.", q.feedback)
+
+    def test_legacy_feedback_leak_warning(self):
+        text = """## Leaky Question
+Feedback: This was paragraph 1.
+
+This was paragraph 2 which accidentally leaks into the question prompt!
+- [X] Yes
+- [ ] No
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertTrue(any("was absorbed into the question prompt" in d.message for d in diags))
+        q = quiz.questions[0]
+        self.assertIsNotNone(q.warning_message)
+        self.assertIn("### Feedback", q.warning_message)
+
+    def test_h3_feedback_protects_choices_inside_explanation(self):
+        text = """## Code Review
+What does this function do?
+- [X] Option A
+- [ ] Option B
+
+### Feedback
+Here is why other choices were wrong:
+- [ ] Fake Choice 1
+- [ ] Fake Choice 2
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        q = quiz.questions[0]
+        self.assertEqual(len(q.choices), 2)
+        self.assertIn("- [ ] Fake Choice 1", q.feedback)
+
+
 if __name__ == "__main__":
     unittest.main()
 

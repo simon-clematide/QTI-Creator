@@ -69,6 +69,8 @@ def generate_inline_choice_xml(q: InlineChoiceQuestion, asset_map: Optional[Dict
         response_processing=response_proc,
         feedback=q.feedback,
         hint=q.hint,
+        feedback_title=q.feedback_title,
+        hint_title=q.hint_title,
         max_score=q.points,
         asset_map=asset_map,
     )

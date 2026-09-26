@@ -14,7 +14,9 @@ def wrap_assessment_item(
     item_body_content: str,
     response_processing: str,
     feedback: Optional[str] = None,
+    feedback_title: Optional[str] = None,
     hint: Optional[str] = None,
+    hint_title: Optional[str] = None,
     max_score: float = 1.0,
     min_score: Optional[float] = None,
     extra_outcome_declarations: Optional[str] = None,
@@ -31,11 +33,12 @@ def wrap_assessment_item(
 
     if hint:
         hint_body = markdown_to_qti_xhtml(hint, asset_map=asset_map)
+        hint_title_attr = html.escape(hint_title, quote=True) if hint_title else ""
         hint_resp_decl = '\n  <responseDeclaration identifier="HINTREQUEST" cardinality="single" baseType="boolean"/>'
         hint_outcome_decl = '\n  <outcomeDeclaration identifier="HINTFEEDBACKMODAL" cardinality="single" baseType="identifier"/>'
-        hint_interaction = '\n    <p><endAttemptInteraction responseIdentifier="HINTREQUEST" title=""/></p>'
+        hint_interaction = f'\n    <p><endAttemptInteraction responseIdentifier="HINTREQUEST" title="{hint_title_attr}"/></p>'
         hint_modal = f"""
-  <modalFeedback showHide="show" outcomeIdentifier="HINTFEEDBACKMODAL" identifier="HINT" title="">
+  <modalFeedback showHide="show" outcomeIdentifier="HINTFEEDBACKMODAL" identifier="HINT" title="{hint_title_attr}">
     {hint_body}
   </modalFeedback>"""
         hint_cond = """    <responseCondition>
@@ -50,8 +53,9 @@ def wrap_assessment_item(
     feedback_xml = ""
     if feedback:
         feedback_body = markdown_to_qti_xhtml(feedback, asset_map=asset_map)
+        feedback_title_attr = html.escape(feedback_title, quote=True) if feedback_title else ""
         feedback_xml = f"""
-  <modalFeedback outcomeIdentifier="FEEDBACK" identifier="feedback_modal" showHide="show">
+  <modalFeedback outcomeIdentifier="FEEDBACK" identifier="feedback_modal" showHide="show" title="{feedback_title_attr}">
     {feedback_body}
   </modalFeedback>"""
 

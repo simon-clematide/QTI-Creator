@@ -64,6 +64,8 @@ def generate_numerical_xml(q: NumericalQuestion, asset_map: Optional[Dict[str, s
         response_processing=response_proc,
         feedback=q.feedback,
         hint=q.hint,
+        feedback_title=q.feedback_title,
+        hint_title=q.hint_title,
         max_score=q.points,
         asset_map=asset_map,
     )

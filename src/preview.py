@@ -162,23 +162,41 @@ def render_quiz_preview_html(
                 )
 
             body_html = _render_question_body(q, asset_map=asset_map, render_math=render_math)
+            hint_header = f"💡 Hint: {html.escape(q.hint_title)}" if getattr(q, "hint_title", None) else "💡 Hint"
             hint_html = (
                 f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
-                f"<summary style='font-weight: 600; outline: none;'>💡 Hint</summary>"
+                f"<summary style='font-weight: 600; outline: none;'>{hint_header}</summary>"
                 f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map, render_math=render_math)}</div></details>"
                 if q.hint
                 else ""
             )
+
+            feedback_header = f"Feedback: {html.escape(q.feedback_title)}" if getattr(q, "feedback_title", None) else "Feedback:"
             feedback_html = (
                 f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
-                f"<strong>Feedback:</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map, render_math=render_math)}</div>"
+                f"<strong>{feedback_header}</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map, render_math=render_math)}</div>"
                 if q.feedback
                 else ""
             )
 
+            # Warning alert for leaked metadata lines or format issues
+            leak_warning = getattr(q, "warning_message", None)
+            warning_alert_html = ""
+            if leak_warning:
+                warning_alert_html = f"""
+<div style="background: #fffbeb; border: 1px solid #fcd34d; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; color: #92400e; font-size: 0.9em;">
+  <div style="font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #b45309;">
+    <span>⚠️ Potential Content Leak:</span>
+  </div>
+  <div style="line-height: 1.4;">{html.escape(leak_warning)}</div>
+</div>
+"""
+
             status_badges = []
             if is_invalid:
                 status_badges.append('<span title="Validation error" style="cursor: help; font-size: 0.95em;">⚠️</span>')
+            elif leak_warning:
+                status_badges.append(f'<span title="{html.escape(leak_warning, quote=True)}" style="cursor: help; font-size: 0.95em;">⚠️</span>')
             elif has_title_md:
                 status_badges.append(f'<span title="Question title contains Markdown or math syntax" style="cursor: help; font-size: 0.95em;">⚠️</span>')
             if q.hint and q.hint.strip():
@@ -228,6 +246,7 @@ def render_quiz_preview_html(
   </summary>
   <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
     {validation_alert_html}
+    {warning_alert_html}
     {question_title_html}
     {prompt_html}
     {body_html}

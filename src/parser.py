@@ -58,6 +58,9 @@ from src.validation import Diagnostic, QuizValidationError, Severity
 # Regex patterns
 RE_H1 = re.compile(r"^#\s+(.+)$")
 RE_H2 = re.compile(r"^##\s+(.+)$")
+RE_H3_HINT = re.compile(r"^###\s+Hint(?:\s*:\s*(.*)|\s*)$", re.IGNORECASE)
+RE_H3_FEEDBACK = re.compile(r"^###\s+Feedback(?:\s*:\s*(.*)|\s*)$", re.IGNORECASE)
+RE_H3_OTHER = re.compile(r"^###\s+(.+)$")
 RE_META = re.compile(r"^(points|type|feedback|hint|identifier|topic|keywords|tags|additional_info|additionalinformations|version|language|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
 RE_TASK_LIST = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$")
 RE_ORDER_TASK = re.compile(r"^\d+\.\s*\[([ xX])\]\s*(.*)$")
@@ -95,6 +98,14 @@ class RawQuestionBlock:
         self.kprim_items: List[Tuple[bool, str, int]] = []  # (is_true, text, line_no)
         self.numerical: Optional[Tuple[float, float, int]] = None  # (val, tol, line_no)
         self.is_kprim_mode = False
+        self.hint_lines: List[str] = []
+        self.hint_title: Optional[str] = None
+        self.has_h3_hint = False
+        self.feedback_lines: List[str] = []
+        self.feedback_title: Optional[str] = None
+        self.has_h3_feedback = False
+        self.legacy_leak_warning: Optional[str] = None
+        self.legacy_leak_line: Optional[int] = None
 
 
 RE_TOP_META = re.compile(r"^(version|language|title|description|topic|keywords|tags|additional_info|additionalinformations|shuffle|scoring):\s*(.+)$", re.IGNORECASE)
@@ -753,6 +764,16 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         elif quiz_version is not None:
                             q.additional_info = f"Version: {quiz_version}"
 
+                    if block.legacy_leak_warning:
+                        diagnostics.append(
+                            Diagnostic(
+                                block.legacy_leak_warning,
+                                Severity.WARNING,
+                                block.legacy_leak_line or block.start_line,
+                                global_q_idx,
+                            )
+                        )
+
                     sec_questions.append(q)
             except QuizValidationError as e:
                 # Retain invalid questions for preview with error diagnostics
@@ -817,33 +838,87 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
 
 def _classify_block_lines(block: RawQuestionBlock) -> None:
-    """Classify lines inside a question block into metadata, choices, or prompt."""
+    """Classify lines inside a question block into prompt, choices, metadata, or hint/feedback sections."""
     in_code_block = False
+    active_mode = "prompt"  # "prompt" | "hint" | "feedback"
+    saw_legacy_feedback = False
+    legacy_feedback_line = None
+    saw_legacy_hint = False
+    legacy_hint_line = None
+
     for line_no, line in block.raw_lines:
         stripped = line.strip()
 
         # Handle fenced code block toggle: ```lang ... ```
         if stripped.startswith("```"):
             in_code_block = not in_code_block
-            block.prompt_lines.append(line)
+            if active_mode == "hint":
+                block.hint_lines.append(line)
+            elif active_mode == "feedback":
+                block.feedback_lines.append(line)
+            else:
+                block.prompt_lines.append(line)
             continue
 
-        # Lines inside a fenced code block belong exclusively to the prompt
+        # Lines inside a fenced code block belong exclusively to the active section
         if in_code_block:
-            block.prompt_lines.append(line)
+            if active_mode == "hint":
+                block.hint_lines.append(line)
+            elif active_mode == "feedback":
+                block.feedback_lines.append(line)
+            else:
+                block.prompt_lines.append(line)
             continue
 
+        # Check Level 3 headings: ### Hint and ### Feedback
+        hint_match = RE_H3_HINT.match(stripped)
+        if hint_match:
+            active_mode = "hint"
+            block.has_h3_hint = True
+            inline_title = hint_match.group(1)
+            if inline_title and inline_title.strip():
+                block.hint_title = inline_title.strip()
+            continue
+
+        feedback_match = RE_H3_FEEDBACK.match(stripped)
+        if feedback_match:
+            active_mode = "feedback"
+            block.has_h3_feedback = True
+            inline_title = feedback_match.group(1)
+            if inline_title and inline_title.strip():
+                block.feedback_title = inline_title.strip()
+            continue
+
+        # If we encounter another ### heading while in hint or feedback, it ends hint/feedback
+        if stripped.startswith("###") and active_mode in ("hint", "feedback"):
+            active_mode = "prompt"
+
+        # Route lines if currently in ### Hint or ### Feedback mode
+        if active_mode == "hint":
+            block.hint_lines.append(line)
+            continue
+        elif active_mode == "feedback":
+            block.feedback_lines.append(line)
+            continue
+
+        # In prompt mode:
         if not stripped:
             if not block.is_kprim_mode and block.prompt_lines:
                 block.prompt_lines.append("")
             continue
 
-        # Check metadata lines: Points, Type, Feedback, Identifier
+        # Check metadata lines: Points, Type, Feedback, Hint, Identifier, etc.
         meta_match = RE_META.match(stripped)
         if meta_match:
             key = meta_match.group(1).lower()
             val = meta_match.group(2).strip()
             block.metadata[key] = val
+            if key == "feedback":
+                saw_legacy_feedback = True
+                legacy_feedback_line = line_no
+            elif key == "hint":
+                saw_legacy_hint = True
+                legacy_hint_line = line_no
             continue
 
         # Check optional Kprim header (for backwards compatibility)
@@ -890,6 +965,16 @@ def _classify_block_lines(block: RawQuestionBlock) -> None:
         # Otherwise, line is part of question prompt / description
         block.prompt_lines.append(line)
 
+        # Detect leakage: if regular text lines appear AFTER a legacy single-line Feedback: or Hint:
+        if (saw_legacy_feedback or saw_legacy_hint) and not block.legacy_leak_warning:
+            leaked_field = "Feedback:" if saw_legacy_feedback else "Hint:"
+            leak_line = legacy_feedback_line if saw_legacy_feedback else legacy_hint_line
+            block.legacy_leak_warning = (
+                f"Content following '{leaked_field}' was absorbed into the question prompt. "
+                f"To write multi-line explanations or solutions, use '### Feedback' or '### Hint'."
+            )
+            block.legacy_leak_line = leak_line
+
 
 def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
     """Infer the question type and build the strongly typed Question object."""
@@ -905,8 +990,23 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
             )
 
     identifier = block.metadata.get("identifier") or generate_id("item")
-    feedback = block.metadata.get("feedback") or DEFAULTS["feedback"]
-    hint = block.metadata.get("hint") or DEFAULTS["hint"]
+
+    # Feedback: prefer ### Feedback section over legacy single-line Feedback:
+    if block.has_h3_feedback:
+        feedback = "\n".join(block.feedback_lines).strip() or None
+        feedback_title = block.feedback_title
+    else:
+        feedback = block.metadata.get("feedback") or DEFAULTS["feedback"]
+        feedback_title = None
+
+    # Hint: prefer ### Hint section over legacy single-line Hint:
+    if block.has_h3_hint:
+        hint = "\n".join(block.hint_lines).strip() or None
+        hint_title = block.hint_title
+    else:
+        hint = block.metadata.get("hint") or DEFAULTS["hint"]
+        hint_title = None
+
     explicit_type = block.metadata.get("type", "").lower().replace("-", "").replace("_", "")
 
     # Question-level metadata overrides
@@ -940,7 +1040,9 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "prompt": prompt,
         "points": points,
         "feedback": feedback,
+        "feedback_title": feedback_title,
         "hint": hint,
+        "hint_title": hint_title,
         "identifier": identifier,
         "line_number": block.start_line,
         "topic": topic,
@@ -948,6 +1050,7 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         "additional_info": additional_info,
         "language": language,
         "shuffle": q_shuffle,
+        "warning_message": block.legacy_leak_warning,
         "raw_markdown": question_markdown,
     }
 

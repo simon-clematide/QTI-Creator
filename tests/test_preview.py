@@ -383,6 +383,35 @@ The colour is {{gray | grey | greie}}.
         self.assertNotIn("(alternatives:", html_out)
 
 
+    def test_preview_hint_and_feedback_titles_and_leak_warning(self):
+        text = """## Leaky Test
+Feedback: First line of feedback.
+
+Second line of feedback leaking into question prompt.
+- [X] Choice 1
+- [ ] Choice 2
+
+### Hint: Special Hint Title
+This is the hint content.
+
+### Feedback: Detailed Solution Explanation
+First paragraph of solution.
+
+Second paragraph of solution.
+"""
+        quiz, diags = parse_quizmd(text)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Verify custom titles in preview
+        self.assertIn("💡 Hint: Special Hint Title", html_out)
+        self.assertIn("Feedback: Detailed Solution Explanation", html_out)
+
+        # Verify warning alert box in card body
+        self.assertIn("Potential Content Leak:", html_out)
+        self.assertIn("Content following &#x27;Feedback:&#x27; was absorbed into the question prompt", html_out)
+        self.assertIn("To write multi-line explanations or solutions, use &#x27;### Feedback&#x27; or &#x27;### Hint&#x27;", html_out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

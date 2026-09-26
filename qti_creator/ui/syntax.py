@@ -228,10 +228,10 @@ def render_syntax_page() -> None:
         with gr.Accordion("Question-level settings", open=False):
             gr.Markdown(
                 """
-                Question metadata can be placed **before or after** choices/statements to override global quiz settings (case-insensitive):
+                Question metadata and sections can be placed to configure question settings or add hints and post-submission explanations:
                 - `Points: <number>` (default: 1)
-                - `Hint: <text>` (pre-submission hint shown during test-taking; supports Markdown & math)
-                - `Feedback: <text>` (post-submission explanation shown after test submission; supports Markdown & math)
+                - `### Hint` or `### Hint: <Title>` (pre-submission hint section; captures all lines/paragraphs, math, and code until the next heading)
+                - `### Feedback` or `### Feedback: <Title>` (post-submission explanation and solution section; captures all lines/paragraphs, math, and code until the next heading)
                 - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
                 - `Shuffle: yes / no` (controls answer scrambling; default: `yes`)
                 - `Topic: <text>` (overrides quiz-level Topic in OpenOLAT)
@@ -240,6 +240,8 @@ def render_syntax_page() -> None:
                 - `Language: <iso-code>` (e.g. `en`, `de`, `fr`)
                 - `Type: <type-name>` (optional explicit question type override)
                 - `Identifier: <custom_id>` (optional, default: auto-generated)
+
+                > **Note on Hints and Solutions:** Always use `### Hint` and `### Feedback` for multi-paragraph explanations and worked solutions. Single-line `Hint:` or `Feedback:` metadata only covers a single line and warns if subsequent paragraphs could leak into the student prompt.
 
                 ```markdown
                 ## Order the biological taxonomy ranks
@@ -250,7 +252,14 @@ def render_syntax_page() -> None:
                 1. [ ] Kingdom
                 1. [ ] Phylum
                 1. [ ] Class
-                Feedback: Remember "Dear King Philip Came Over For Good Soup".
+
+                ### Hint
+                Think of the mnemonic starting with "Dear King Philip".
+
+                ### Feedback: Taxonomy Mnemonic
+                Remember "Dear King Philip Came Over For Good Soup".
+
+                This mnemonic represents: Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species.
                 ```
                 """
             )

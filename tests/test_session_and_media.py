@@ -113,3 +113,22 @@ def test_safe_extract_zip_guards_traversal():
         if os.path.exists(target_dir):
             import shutil
             shutil.rmtree(target_dir, ignore_errors=True)
+
+
+def test_render_editor_view_diagnostics_jump_buttons():
+    from qti_creator.ui.editor import render_editor_view
+
+    session = QuizSession()
+    session.source = """## Question 1
+Feedback: First line of feedback.
+
+Second line of feedback leaking into question prompt.
+- [X] Choice 1
+- [ ] Choice 2
+"""
+    preview_html, status_bar_html, diag_html, dl_update, gen_update = render_editor_view(session)
+
+    assert "Validation Warnings" in diag_html
+    assert 'class="quiz-diag-jump-btn"' in diag_html
+    assert 'data-line="2"' in diag_html
+    assert "window.quizJumpToLine" in diag_html

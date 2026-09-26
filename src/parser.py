@@ -971,7 +971,7 @@ def _classify_block_lines(block: RawQuestionBlock) -> None:
             leak_line = legacy_feedback_line if saw_legacy_feedback else legacy_hint_line
             block.legacy_leak_warning = (
                 f"Content following '{leaked_field}' was absorbed into the question prompt. "
-                f"To write multi-line explanations or solutions, use '### Feedback' or '### Hint'."
+                f"To write multi-paragraph explanations or solutions, use '### Feedback' or '### Hint'."
             )
             block.legacy_leak_line = leak_line
 

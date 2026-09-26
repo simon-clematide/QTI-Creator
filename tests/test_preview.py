@@ -409,7 +409,7 @@ Second paragraph of solution.
         # Verify warning alert box in card body
         self.assertIn("Potential Content Leak:", html_out)
         self.assertIn("Content following &#x27;Feedback:&#x27; was absorbed into the question prompt", html_out)
-        self.assertIn("To write multi-line explanations or solutions, use &#x27;### Feedback&#x27; or &#x27;### Hint&#x27;", html_out)
+        self.assertIn("To write multi-paragraph explanations or solutions, use &#x27;### Feedback&#x27; or &#x27;### Hint&#x27;", html_out)
 
 
 if __name__ == "__main__":

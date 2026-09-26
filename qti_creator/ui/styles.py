@@ -262,6 +262,31 @@ table.table tbody tr:nth-child(even) {
   padding: 16px;
   min-height: 380px;
 }
+
+/* ── Jump to Line button in Diagnostics ── */
+.quiz-diag-jump-btn {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0284c7 !important;
+  border-radius: 4px !important;
+  padding: 1px 6px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: 4px !important;
+  vertical-align: middle !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.quiz-diag-jump-btn:hover {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #0369a1 !important;
+}
 """
 
 MATHJAX_HEAD = """

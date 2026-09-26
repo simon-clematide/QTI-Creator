@@ -172,21 +172,42 @@ def render_editor_view(
 
     diag_lines = []
     if all_errors:
-        diag_lines.append("⚠️ **Validation Errors:**")
+        diag_lines.append('<div style="margin-bottom: 8px; font-weight: 700; color: #dc2626;">⚠️ Validation Errors:</div><ul style="margin: 0; padding-left: 18px; line-height: 1.6;">')
         for err in all_errors:
-            diag_lines.append(f"- {str(err)}")
+            line_attr = f' data-line="{err.line_number}"' if err.line_number else ''
+            jump_btn = (
+                f' <button type="button" class="quiz-diag-jump-btn" title="Jump to line {err.line_number}" data-line="{err.line_number}" onclick="var l = parseInt(this.getAttribute(\'data-line\'), 10); if (window.quizJumpToLine) window.quizJumpToLine(l, null);">line {err.line_number} ↗</button>'
+                if err.line_number
+                else ""
+            )
+            # Replace 'line X' in error string with jump button if applicable
+            err_str = html.escape(str(err))
+            if err.line_number and f"line {err.line_number}" in err_str:
+                err_str = err_str.replace(f"line {err.line_number}", f"line {err.line_number} {jump_btn}")
+            diag_lines.append(f'<li style="margin-bottom: 4px; color: #991b1b;">{err_str}</li>')
+        diag_lines.append('</ul>')
     elif all_warnings:
-        diag_lines.append(f"⚠️ **Validation Warnings** ({len(all_warnings)}):")
+        diag_lines.append(f'<div style="margin-bottom: 8px; font-weight: 700; color: #d97706;">⚠️ Validation Warnings ({len(all_warnings)}):</div><ul style="margin: 0; padding-left: 18px; line-height: 1.6;">')
         for warn in all_warnings:
-            diag_lines.append(f"- {str(warn)}")
+            jump_btn = (
+                f' <button type="button" class="quiz-diag-jump-btn" title="Jump to line {warn.line_number}" data-line="{warn.line_number}" onclick="var l = parseInt(this.getAttribute(\'data-line\'), 10); if (window.quizJumpToLine) window.quizJumpToLine(l, null);">line {warn.line_number} ↗</button>'
+                if warn.line_number
+                else ""
+            )
+            warn_str = html.escape(str(warn))
+            if warn.line_number and f"line {warn.line_number}" in warn_str:
+                warn_str = warn_str.replace(f"line {warn.line_number}", f"line {warn.line_number} {jump_btn}")
+            diag_lines.append(f'<li style="margin-bottom: 4px; color: #92400e;">{warn_str}</li>')
+        diag_lines.append('</ul>')
 
     if session.media.missing:
-        diag_lines.append("\n⚠️ **Missing Media References (check Media page):**")
+        diag_lines.append('<div style="margin-top: 10px; margin-bottom: 6px; font-weight: 700; color: #dc2626;">⚠️ Missing Media References (check Media page):</div><ul style="margin: 0; padding-left: 18px; line-height: 1.6;">')
         for m in session.media.missing:
-            refs = ", ".join(m.referenced_by)
-            diag_lines.append(f"- `{m.relative_path}` referenced by {refs}")
+            refs = html.escape(", ".join(m.referenced_by))
+            diag_lines.append(f'<li style="margin-bottom: 4px; color: #991b1b;"><code>{html.escape(m.relative_path)}</code> referenced by {refs}</li>')
+        diag_lines.append('</ul>')
 
-    diag_md = "\n".join(diag_lines)
+    diag_md = "".join(diag_lines)
 
     download_update = (
         gr.update(value=session.package.output_path, visible=True)
@@ -303,7 +324,7 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 btn_download = gr.DownloadButton("📥 Download ZIP", visible=False, size="sm", variant="primary")
 
         # Validation diagnostics (collapsible / alert when errors exist)
-        diagnostics_box = gr.Markdown("", elem_classes=["no-scroll-block"])
+        diagnostics_box = gr.HTML("", elem_classes=["no-scroll-block"])
 
         # Workspace: Source (Left) | Preview (Right)
         with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True):

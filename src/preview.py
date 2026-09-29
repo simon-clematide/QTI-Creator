@@ -24,7 +24,7 @@ from src.model import (
 
 
 from typing import Dict, Optional
-from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_DROPDOWN_GAP
+from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_GAP, RE_DROPDOWN_GAP
 
 
 
@@ -154,9 +154,52 @@ def render_quiz_preview_html(
                     else ""
                 )
 
-            else:
+            elif isinstance(q, FillBlankQuestion):
+                # Render fill-in-the-blank prompt with styled input fields representing gaps
+                base_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)
+                gap_counter = 0
+
+                def _replace_preview_gap(match):
+                    nonlocal gap_counter
+                    gap_idx = gap_counter
+                    gap_counter += 1
+                    val = ""
+                    alts_title = ""
+                    if gap_idx < len(q.gaps):
+                        g = q.gaps[gap_idx]
+                        val = g.expected_value
+                        if g.alternatives:
+                            alts_desc = ", ".join(g.alternatives)
+                            alts_title = f" title='Alternatives: {html.escape(alts_desc, quote=True)}'"
+                    width_ch = max(8, min(30, len(val) + 4))
+                    return (
+                        f"<input type='text' disabled value='{html.escape(val, quote=True)}'{alts_title} "
+                        f"style='display: inline-block; vertical-align: middle; margin: 0 4px; padding: 2px 8px; "
+                        f"width: {width_ch}ch; border-radius: 4px; border: 1.5px solid #10b981; background: #f0fdf4; "
+                        f"color: #166534; font-weight: 600; font-size: 0.9em; text-align: center;' />"
+                    )
+
+                rendered_prompt = RE_GAP.sub(_replace_preview_gap, base_html)
                 prompt_html = (
-                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)}</div>"
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.8;'>{rendered_prompt}</div>"
+                    if (has_distinct_prompt or is_invalid)
+                    else ""
+                )
+
+            else:
+                base_html = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map, render_math=render_math)
+                if is_invalid and RE_GAP.search(base_html):
+                    def _replace_invalid_gap(match):
+                        inner = match.group(1).split("|")[0].strip()
+                        return (
+                            f"<input type='text' disabled value='{html.escape(inner, quote=True)}' "
+                            f"style='display: inline-block; vertical-align: middle; margin: 0 4px; padding: 2px 8px; "
+                            f"border-radius: 4px; border: 1.5px solid #ef4444; background: #fef2f2; "
+                            f"color: #991b1b; font-weight: 600; font-size: 0.9em; text-align: center;' />"
+                        )
+                    base_html = RE_GAP.sub(_replace_invalid_gap, base_html)
+                prompt_html = (
+                    f"<div style='color: #334155; margin-bottom: 12px; line-height: 1.5;'>{base_html}</div>"
                     if (has_distinct_prompt or is_invalid)
                     else ""
                 )

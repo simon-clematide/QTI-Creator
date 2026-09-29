@@ -49,7 +49,14 @@ from src.model import (
     generate_id,
 )
 
-from src.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts, is_table_separator_row, split_table_row
+from src.markdown import (
+    RE_GAP,
+    RE_DROPDOWN_GAP,
+    extract_hottexts,
+    find_gaps_in_math,
+    is_table_separator_row,
+    split_table_row,
+)
 from src.validation import Diagnostic, QuizValidationError, Severity
 
 
@@ -832,7 +839,10 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
 
     # Add any global quiz diagnostics
     quiz_diags = quiz.validate()
-    diagnostics.extend(quiz_diags)
+    existing_set = {(d.message, d.line_number, d.question_index) for d in diagnostics}
+    for qd in quiz_diags:
+        if (qd.message, qd.line_number, qd.question_index) not in existing_set:
+            diagnostics.append(qd)
 
     return quiz, diagnostics
 
@@ -1088,6 +1098,25 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
                 q_idx,
             )],
         )
+
+    # Check for gaps illegally placed inside LaTeX math spans ($...$, $$...$$, etc.)
+    gaps_in_math = find_gaps_in_math(prompt)
+    if gaps_in_math:
+        diagnostics_list = []
+        for g_type, g_tok, m_span in gaps_in_math:
+            target_line = block.start_line
+            for l_no, l_txt in block.raw_lines:
+                if g_tok in l_txt:
+                    target_line = l_no
+                    break
+            g_desc = "Dropdown gap" if g_type == "dropdown_gap" else "Gap"
+            msg = (
+                f"{g_desc} '{g_tok}' is located inside LaTeX math delimiters ('{m_span}'). "
+                f"OpenOLAT cannot render interactive input widgets inside MathJax formulas. "
+                f"Move the gap outside the math delimiters (e.g. place the gap in plain text next to the math symbol)."
+            )
+            diagnostics_list.append(Diagnostic(msg, Severity.ERROR, target_line, q_idx))
+        raise QuizValidationError(diagnostics_list[0].message, diagnostics_list)
 
     # Check for text entry vs dropdown gaps vs hottext mutual exclusivity
     has_text_gaps = bool(RE_GAP.search(prompt))

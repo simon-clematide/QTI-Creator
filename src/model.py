@@ -10,6 +10,7 @@ from typing import List, Literal, Optional
 import uuid
 
 from src.defaults import DEFAULTS
+from src.markdown import find_gaps_in_math
 from src.validation import Diagnostic, QuizValidationError, Severity
 
 
@@ -203,6 +204,19 @@ class FillBlankQuestion(Question):
                 "Fill-in-the-Blank question requires at least one {{gap}}.",
                 [Diagnostic("Fill-in-the-Blank question requires at least one {{gap}}.", Severity.ERROR, self.line_number)],
             )
+        gaps_in_math = find_gaps_in_math(self.prompt)
+        if gaps_in_math:
+            diagnostics_list = [
+                Diagnostic(
+                    f"Gap '{g_tok}' is located inside LaTeX math delimiters ('{m_span}'). "
+                    f"OpenOLAT cannot render interactive input widgets inside MathJax formulas. "
+                    f"Move the gap outside the math delimiters.",
+                    Severity.ERROR,
+                    self.line_number,
+                )
+                for _, g_tok, m_span in gaps_in_math
+            ]
+            raise QuizValidationError(diagnostics_list[0].message, diagnostics_list)
 
 
 @dataclass
@@ -217,6 +231,19 @@ class InlineChoiceQuestion(Question):
                 "Inline Choice question requires at least one {[...]} dropdown gap.",
                 [Diagnostic("Inline Choice question requires at least one {[...]} dropdown gap.", Severity.ERROR, self.line_number)],
             )
+        gaps_in_math = find_gaps_in_math(self.prompt)
+        if gaps_in_math:
+            diagnostics_list = [
+                Diagnostic(
+                    f"Dropdown gap '{g_tok}' is located inside LaTeX math delimiters ('{m_span}'). "
+                    f"OpenOLAT cannot render interactive input widgets inside MathJax formulas. "
+                    f"Move the gap outside the math delimiters.",
+                    Severity.ERROR,
+                    self.line_number,
+                )
+                for _, g_tok, m_span in gaps_in_math
+            ]
+            raise QuizValidationError(diagnostics_list[0].message, diagnostics_list)
         for idx, gap in enumerate(self.gaps):
             if len(gap.choices) < 2:
                 raise QuizValidationError(

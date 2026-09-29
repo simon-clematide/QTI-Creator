@@ -23,6 +23,46 @@ RE_GAP = re.compile(r"\{\{((?:\\.|[^\}\\]|\}(?!\})*?)*?)\}\}")
 RE_DROPDOWN_GAP = re.compile(r"\{\[((?:\\.|[^\]\\]|\](?!\})*?)*?)\]\}")
 
 
+def find_gaps_in_math(text: str) -> List[Tuple[str, str, str]]:
+    """Scan text for interactive gaps or widgets nested inside LaTeX math delimiters.
+
+    In OpenOLAT (and standard MathJax), interactive widgets like <input> or <select>
+    cannot be rendered inside LaTeX math formulas. MathJax will fail, corrupt the DOM,
+    or fail to display math expressions across the assessment item.
+
+    Returns:
+        List of tuples: (gap_type, gap_token, math_span)
+        e.g. [("text_gap", "{{24}}", "$\\bar x={{24}}$")]
+    """
+    found: List[Tuple[str, str, str]] = []
+    if not text:
+        return found
+
+    # Mask code blocks and inline code so we don't inspect verbatim code
+    masked = re.sub(r"```[\s\S]*?```", lambda m: " " * len(m.group(0)), text)
+    masked = re.sub(r"`[^`\n]+`", lambda m: " " * len(m.group(0)), masked)
+
+    def _check_inner(inner: str, full_math: str) -> None:
+        for g in RE_GAP.finditer(inner):
+            found.append(("text_gap", g.group(0), full_math))
+        for g in RE_DROPDOWN_GAP.finditer(inner):
+            found.append(("dropdown_gap", g.group(0), full_math))
+
+    # 1. Display math: $$...$$ and \[...\]
+    for m in re.finditer(r"\$\$([\s\S]+?)\$\$", masked):
+        _check_inner(m.group(1), m.group(0))
+    for m in re.finditer(r"\\\[([\s\S]+?)\\\]", masked):
+        _check_inner(m.group(1), m.group(0))
+
+    # 2. Inline math: \(...\) and $...$
+    for m in re.finditer(r"\\\(([\s\S]+?)\\\)", masked):
+        _check_inner(m.group(1), m.group(0))
+    for m in re.finditer(r"(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\$)\$(?!\$)", masked):
+        _check_inner(m.group(1), m.group(0))
+
+    return found
+
+
 def extract_hottexts(text: str) -> List[Tuple[int, int, str, str, bool]]:
     """Extract hottext tokens from text without false positives from math, code, or templates.
 

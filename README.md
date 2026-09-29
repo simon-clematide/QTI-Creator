@@ -491,19 +491,48 @@ python3 scripts/validate_qti.py my_quiz_qti21.zip
 
 ---
 
-## 🔌 Programmatic API Access (Gradio API)
+## 🔌 Programmatic API Access (Hugging Face / Gradio API)
 
-Integrate QTI-Creator directly into automated workflows:
+Integrate QTI-Creator directly into automated workflows, LLM agents, or CI/CD pipelines. The Hugging Face Space exposes three headless API endpoints:
+
+| Endpoint | Input Parameter | Output | Purpose |
+| :--- | :--- | :--- | :--- |
+| `/check_quiz` | `quiz_markdown: str` | JSON `dict` | Fast AST & semantic validation (invariants, point sums, gap/math syntax checks). |
+| `/validate_jqti` | `quiz_markdown: str` | JSON `dict` | Full XML generation + OpenOLAT native Java `jqtiplus` engine validation. |
+| `/export_qti` | `quiz_markdown: str` | `.zip` File | Headless compilation & download of the QTI 2.1 ZIP archive. |
+
+### Python (`gradio_client`)
 
 ```python
 from gradio_client import Client
 
 client = Client("simon-clmtd/qti-creator")
-zip_path, status = client.predict(
-    quiz_text="# Quick Quiz\n## What is 2 + 2?\n- [X] 4\n- [ ] 5",
-    api_name="/convert"
-)
+
+markdown = """# Quick Quiz
+## What is 2 + 2?
+- [X] 4
+- [ ] 5
+"""
+
+# 1. Quick lint check
+report = client.predict(quiz_markdown=markdown, api_name="/check_quiz")
+print("Valid:", report["valid"], "Total questions:", report["total_questions"])
+
+# 2. Formal OpenOLAT JQTI+ engine validation
+jqti_report = client.predict(quiz_markdown=markdown, api_name="/validate_jqti")
+print("OpenOLAT JQTI+ valid:", jqti_report["jqti_valid"])
+
+# 3. Direct QTI 2.1 package download
+zip_path = client.predict(quiz_markdown=markdown, api_name="/export_qti")
 print("Saved QTI package to:", zip_path)
+```
+
+### Direct HTTP (`curl`)
+
+```bash
+curl -X POST https://simon-clmtd-qti-creator.hf.space/gradio_api/call/check_quiz \
+  -H "Content-Type: application/json" \
+  -d '{"data": ["## Capital of France\n- [ ] Berlin\n- [X] Paris"]}'
 ```
 
 ---

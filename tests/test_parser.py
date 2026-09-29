@@ -1001,6 +1001,49 @@ Here is why other choices were wrong:
         self.assertIn("- [ ] Fake Choice 1", q.feedback)
 
 
+    def test_gap_inside_inline_math_error(self):
+        text = """## Math Cloze
+For $out=(x\\cdot x)y$ at $x=3$, the accumulated adjoint is $\\bar x={{24}}$.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 1)
+        self.assertEqual(diags[0].line_number, 2)
+        self.assertIn("Gap '{{24}}' is located inside LaTeX math delimiters", diags[0].message)
+        self.assertIn("Move the gap outside the math delimiters", diags[0].message)
+        self.assertEqual(len(quiz.questions), 1)
+        self.assertEqual(quiz.questions[0].__class__.__name__, "InvalidQuestion")
+
+    def test_gap_inside_display_math_error(self):
+        text = """## Display Math Cloze
+Calculate the result:
+$$ \\bar x = {{42}} $$
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 1)
+        self.assertIn("Gap '{{42}}' is located inside LaTeX math delimiters", diags[0].message)
+
+    def test_dropdown_inside_math_error(self):
+        text = """## Dropdown Math Cloze
+Select: $x = {[a|b]}$
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 1)
+        self.assertIn("Dropdown gap '{[a|b]}' is located inside LaTeX math delimiters", diags[0].message)
+
+    def test_gap_adjacent_to_math_is_valid(self):
+        text = """## Valid Math Cloze
+For $out=(x\\cdot x)y$, the accumulated adjoint of $\\bar x$ is {{24}} and $\\bar y$ is {{10}}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0, [str(d) for d in diags])
+        self.assertEqual(len(quiz.questions), 1)
+        q = quiz.questions[0]
+        self.assertIsInstance(q, FillBlankQuestion)
+        self.assertEqual(len(q.gaps), 2)
+        self.assertEqual(q.gaps[0].expected_value, "24")
+        self.assertEqual(q.gaps[1].expected_value, "10")
+
+
 if __name__ == "__main__":
     unittest.main()
 

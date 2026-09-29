@@ -136,6 +136,15 @@ The spelling may be {{gray | grey}}.
 
 All listed alternatives are accepted as correct answers.
 
+**Never place a gap inside math delimiters** (`$...$`, `$$...$$`, `\(...\)`,
+`\[...\]`). OpenOLAT cannot render an interactive input widget inside a
+MathJax formula, so `$\bar x={{24}}$` is rejected with an error. Put the gap
+in plain text next to the math instead:
+
+```markdown
+The accumulated adjoint of $\bar x$ is {{24}}.
+```
+
 ---
 
 ### Dropdown / Inline Choice
@@ -163,6 +172,10 @@ However, **do not use this shorthand when generating quizzes automatically**. Ex
 QTI-Creator shuffles the displayed dropdown alternatives.
 
 Do not mix open text gaps `{{...}}` and dropdown gaps `{[...]}` in the same question, because OpenOLAT does not support that combination.
+
+Like `{{...}}`, never place a dropdown gap inside math delimiters — the same
+MathJax/interactive-widget conflict applies. Put the dropdown in plain text
+next to the math instead.
 
 ---
 
@@ -428,6 +441,8 @@ When generating questions automatically, follow these rules.
 
 10. **Keep headings simple.** Do not put Markdown formatting, code, or mathematical notation inside `#` or `##` headings. Put such content in the question body.
 
+11. **Never nest a gap inside math.** A fill-in-the-blank gap (`{{...}}`) or dropdown gap (`{[...]}`) must never sit inside `$...$`, `$$...$$`, `\(...\)`, or `\[...\]`. Write the surrounding math as plain rendered math and place the gap in ordinary text immediately next to it (e.g. `The accumulated adjoint of $\bar x$ is {{24}}.`, not `$\bar x={{24}}$`).
+
 ---
 
 ## 7. Syntax Validation Checklist
@@ -442,6 +457,7 @@ Before returning a generated quiz, check all of the following:
 - Fill-in answers use `{{...}}`.
 - Dropdown answers use `{[...]}` and explicitly mark exactly one correct alternative with `**...**`.
 - Open text gaps and dropdown gaps are not mixed in the same question.
+- No `{{...}}` or `{[...]}` gap sits inside `$...$`, `$$...$$`, `\(...\)`, or `\[...\]` math delimiters.
 - Numerical answers use `= value` or `= value ± tolerance`.
 - Ordering uses an ordered list with `[ ]`, written in the correct source order.
 - Essay questions contain no answer specification.

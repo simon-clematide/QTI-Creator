@@ -412,6 +412,35 @@ Second paragraph of solution.
         self.assertIn("To write multi-paragraph explanations or solutions, use &#x27;### Feedback&#x27; or &#x27;### Hint&#x27;", html_out)
 
 
+    def test_preview_fill_in_the_blank_renders_input_fields(self):
+        text = """## Chemistry Cloze
+Water consists of {{hydrogen}} and {{oxygen|O2}}.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Prompt must contain disabled input widgets representing the gaps
+        self.assertIn("<input type='text' disabled value='hydrogen'", html_out)
+        self.assertIn("<input type='text' disabled value='oxygen'", html_out)
+        self.assertIn("title='Alternatives: O2'", html_out)
+
+    def test_preview_invalid_gap_inside_math_renders_input_and_diagnostic(self):
+        text = """## Math Cloze
+For $x=3$, the accumulated adjoint is $\\bar x={{24}}$.
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 1)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Validation alert box must be visible
+        self.assertIn("⚠️ Validation Errors:", html_out)
+        self.assertIn("Gap &#x27;{{24}}&#x27; is located inside LaTeX math delimiters", html_out)
+
+        # Input field must be rendered inside the prompt (nested in math span) so preview highlights conflict
+        self.assertIn("<input type='text' disabled value='24'", html_out)
+
+
 if __name__ == "__main__":
     unittest.main()
 

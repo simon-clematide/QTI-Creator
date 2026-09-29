@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gradio as gr
 
+from qti_creator.api import register_api_endpoints
 from qti_creator.session import QuizSession, cleanup_session_callback
 from qti_creator.ui.editor import render_editor_page
 from qti_creator.ui.home import render_home_page
@@ -59,6 +60,9 @@ def create_demo() -> gr.Blocks:
     # Route 6: OpenOLAT Import (/openolat)
     with demo.route("OpenOLAT Import", path="/openolat"):
         render_openolat_page()
+
+    # Headless API endpoints (/check_quiz, /validate_jqti, /export_qti)
+    register_api_endpoints(demo)
 
     return demo
 

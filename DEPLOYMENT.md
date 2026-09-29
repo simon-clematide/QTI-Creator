@@ -180,3 +180,56 @@ Before pushing a new release:
 2. Verify git working tree: `git status`
 3. Push to Hugging Face: `./scripts/push_to_hf.sh` (or `git push space main`)
 4. Sync GitHub with the release commit: `git push origin main`
+
+---
+
+## 7. Programmatic API Endpoints (Hugging Face / Headless)
+
+QTI-Creator exposes public headless API endpoints on the Hugging Face Space for automated linting, CI/CD validation, and LLM quiz generation workflows.
+
+The Space automatically provisions Java via `packages.txt` (`default-jdk`), enabling OpenOLAT's native JQTI+ engine in the cloud.
+
+### Available Endpoints
+
+| Endpoint | Input | Output | Description |
+|---|---|---|---|
+| `/check_quiz` | `quiz_markdown: str` | JSON `dict` | Fast AST & semantic validation (invariants, point sums, gap/math syntax checks). |
+| `/validate_jqti` | `quiz_markdown: str` | JSON `dict` | Compiles to QTI 2.1 and runs OpenOLAT's native Java `jqtiplus` engine. |
+| `/export_qti` | `quiz_markdown: str` | `.zip` File | Compiles and downloads an OpenOLAT-compatible QTI 2.1 ZIP package. |
+
+### Usage with Python (`gradio_client`)
+
+```python
+from gradio_client import Client
+
+client = Client("simon-clmtd/qti-creator")
+
+markdown = """# Sample Quiz
+## Capital of France
+- [ ] Berlin
+- [X] Paris
+- [ ] Rome
+"""
+
+# 1. Quick lint check
+report = client.predict(quiz_markdown=markdown, api_name="/check_quiz")
+print("Valid:", report["valid"], "Total questions:", report["total_questions"])
+
+# 2. Formal OpenOLAT JQTI+ engine validation
+jqti_report = client.predict(quiz_markdown=markdown, api_name="/validate_jqti")
+print("JQTI+ valid:", jqti_report["jqti_valid"], "Errors:", jqti_report["errors"])
+
+# 3. Direct QTI package export
+zip_path = client.predict(quiz_markdown=markdown, api_name="/export_qti")
+print("Downloaded package to:", zip_path)
+```
+
+### Usage with `curl`
+
+```bash
+# Check quiz syntax
+curl -X POST https://simon-clmtd-qti-creator.hf.space/gradio_api/call/check_quiz \
+  -H "Content-Type: application/json" \
+  -d '{"data": ["## Capital of France\n- [ ] Berlin\n- [X] Paris"]}'
+```
+

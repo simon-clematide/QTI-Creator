@@ -9,9 +9,9 @@ from src.version import __version__ as ver, __release_date__ as rdate
 class TestVersionManagement(unittest.TestCase):
 
     def test_version_format(self):
-        # Version must follow semver v0.X.Y
+        # Version must follow semver X.Y.Z
         self.assertEqual(__version__, ver)
-        self.assertTrue(bool(re.match(r"^0\.\d+\.\d+$", __version__)), f"Version '{__version__}' does not match 0.X.Y")
+        self.assertTrue(bool(re.match(r"^\d+\.\d+\.\d+$", __version__)), f"Version '{__version__}' is not valid SemVer X.Y.Z")
 
     def test_release_date_format(self):
         # Release date must follow YYYY-MM-DD

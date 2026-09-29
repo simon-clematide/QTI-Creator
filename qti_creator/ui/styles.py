@@ -405,6 +405,33 @@ MATHJAX_TYPESET_JS = """() => {
   const mathSpans = document.querySelectorAll('span.math:not([data-mathjax-typeset])');
   mathSpans.forEach(span => {
     span.setAttribute('data-mathjax-typeset', 'true');
+    // Detect interactive form widgets (e.g. gaps) inside math spans
+    const hasWidget = span.querySelector('input, select, textarea');
+    if (hasWidget) {
+      span.setAttribute('data-mathjax-error', 'widget-in-math');
+      span.style.border = '1.5px solid #ef4444';
+      span.style.background = '#fef2f2';
+      span.style.padding = '2px 6px';
+      span.style.borderRadius = '4px';
+      span.style.display = 'inline-flex';
+      span.style.alignItems = 'center';
+      span.style.gap = '6px';
+
+      const flag = document.createElement('span');
+      flag.style.color = '#b91c1c';
+      flag.style.fontWeight = '700';
+      flag.style.fontSize = '0.82em';
+      flag.style.cursor = 'help';
+      flag.style.background = '#fee2e2';
+      flag.style.padding = '1px 5px';
+      flag.style.borderRadius = '3px';
+      flag.style.border = '1px solid #fca5a5';
+      flag.title = 'Syntax Error: Form widget / gap placed inside LaTeX math ($...$). OpenOLAT MathJax cannot render widgets inside math.';
+      flag.textContent = '⚠️ [MathJax Gap Conflict]';
+      span.prepend(flag);
+      return;
+    }
+
     const isDisplay = span.closest('p') && span.closest('p').style.textAlign === 'center';
     const rawLatex = span.getAttribute('title') ? decodeURIComponent(span.getAttribute('title')) : span.textContent;
     if (isDisplay) {
@@ -414,6 +441,8 @@ MATHJAX_TYPESET_JS = """() => {
     }
   });
   if (window.MathJax.typesetPromise) {
-    window.MathJax.typesetPromise();
+    window.MathJax.typesetPromise().catch(err => {
+      console.warn('MathJax typesetting error:', err);
+    });
   }
 }"""

@@ -266,7 +266,7 @@ def markdown_to_qti_xhtml(
             if render_math:
                 title_val = urllib.parse.quote(math_text)
                 escaped_latex = html.escape(math_text, quote=False)
-                output_blocks.append(f'<p style="text-align:center"><span class="math" title="{title_val}">{escaped_latex}</span></p>')
+                output_blocks.append(f'<p class="text-center"><span class="math" title="{title_val}">{escaped_latex}</span></p>')
             else:
                 output_blocks.append(f"<pre class='math-raw'>$${html.escape(math_text)}$$</pre>")
             continue
@@ -412,7 +412,7 @@ def _render_table(
     for i in range(num_cols):
         val = header_cols[i] if i < len(header_cols) else ""
         cell_html = _format_inlines(val, asset_map=asset_map, render_math=render_math)
-        align_attr = f' style="text-align: {alignments[i]};"'
+        align_attr = f' class="text-{alignments[i]}"'
         thead_cells.append(f"<th{align_attr}>{cell_html}</th>")
     thead_html = f"  <thead>\n    <tr>{''.join(thead_cells)}</tr>\n  </thead>"
 
@@ -424,13 +424,13 @@ def _render_table(
         for i in range(num_cols):
             val = row_cols[i] if i < len(row_cols) else ""
             cell_html = _format_inlines(val, asset_map=asset_map, render_math=render_math)
-            align_attr = f' style="text-align: {alignments[i]};"'
+            align_attr = f' class="text-{alignments[i]}"'
             row_cells.append(f"<td{align_attr}>{cell_html}</td>")
         tbody_rows.append(f"    <tr>{''.join(row_cells)}</tr>")
 
     tbody_html = f"  <tbody>\n{chr(10).join(tbody_rows)}\n  </tbody>" if tbody_rows else "  <tbody/>"
 
-    return f'<table class="b_default" style="border-collapse:collapse;width:100%;">\n{thead_html}\n{tbody_html}\n</table>'
+    return f'<table class="b_default">\n{thead_html}\n{tbody_html}\n</table>'
 
 
 def _format_inlines(
@@ -510,29 +510,23 @@ def _format_inlines(
 
         # Parse HackMD size spec: e.g. 300x, 30%x, 500x300, x200, 50%
         extra_attrs = []
-        style_parts = []
 
         if size_spec:
-            style_parts.append("max-width: 100%")
             if "x" in size_spec:
                 w_str, h_str = size_spec.split("x", 1)
                 if w_str:
-                    w_val = w_str if (w_str.endswith("%") or w_str.endswith("px")) else f"{w_str}px"
+                    w_val = w_str if w_str.endswith("%") else w_str.removesuffix("px")
                     extra_attrs.append(f'width="{html.escape(w_val)}"')
                 if h_str:
-                    h_val = h_str if (h_str.endswith("%") or h_str.endswith("px")) else f"{h_str}px"
+                    h_val = h_str if h_str.endswith("%") else h_str.removesuffix("px")
                     extra_attrs.append(f'height="{html.escape(h_val)}"')
-                else:
-                    style_parts.append("height: auto")
             else:
-                w_val = size_spec if (size_spec.endswith("%") or size_spec.endswith("px")) else f"{size_spec}px"
+                w_val = size_spec if size_spec.endswith("%") else size_spec.removesuffix("px")
                 extra_attrs.append(f'width="{html.escape(w_val)}"')
-                style_parts.append("height: auto")
 
         extra_attrs_str = (" " + " ".join(extra_attrs)) if extra_attrs else ""
-        style_str = f' style="{"; ".join(style_parts)};"' if style_parts else ""
 
-        placeholders[key] = f'<img src="{escaped_src}" alt="{escaped_alt}"{extra_attrs_str}{style_str} />'
+        placeholders[key] = f'<img src="{escaped_src}" alt="{escaped_alt}"{extra_attrs_str} />'
         return key
 
     text = re.sub(

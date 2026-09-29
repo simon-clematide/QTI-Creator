@@ -49,9 +49,9 @@ class TestMediaSupport(unittest.TestCase):
         # Fixed width
         md_fixed = "![Diagram](diagram.png =300x)"
         html_fixed = markdown_to_qti_xhtml(md_fixed)
-        self.assertIn('width="300px"', html_fixed)
+        self.assertIn('width="300"', html_fixed)
         self.assertIn('alt="Diagram"', html_fixed)
-        self.assertIn('max-width: 100%', html_fixed)
+        self.assertNotIn('style=', html_fixed)
 
         # Proportional width
         md_prop = "![Chart](chart.png =30%x)"
@@ -62,8 +62,8 @@ class TestMediaSupport(unittest.TestCase):
         # Dimension width and height
         md_dim = "![Photo](photo.png =400x250)"
         html_dim = markdown_to_qti_xhtml(md_dim)
-        self.assertIn('width="400px"', html_dim)
-        self.assertIn('height="250px"', html_dim)
+        self.assertIn('width="400"', html_dim)
+        self.assertIn('height="250"', html_dim)
 
         # Media extraction parses the source URL cleanly without =size
         refs = extract_media_references(md_fixed)

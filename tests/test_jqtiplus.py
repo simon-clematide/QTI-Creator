@@ -176,6 +176,21 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
             f"Expected 'Cannot find mapping' error, got: {errors}",
         )
 
+    def test_tables_display_math_and_sized_images_validate_in_jqti(self):
+        """QTI 2.1 forbids style attributes in item bodies; use classes instead."""
+        md = (
+            "# Q\n## A\nConsider:\n\n| | a | b |\n|---|:-:|---:|\n| x | 1 | 2 |\n\n"
+            "$$\\frac{a}{b}$$\n\n![D](d.png =300x)\n\nWhich?\n\n- [X] 1\n- [ ] 2\n"
+        )
+        quiz, diags = parse_quizmd(md)
+        self.assertEqual(len(diags), 0)
+        xml_str = generate_item_xml(quiz.questions[0])
+        self.assertNotIn("style=", xml_str)
+        self.assertIn('<td class="text-center">', xml_str)
+        self.assertIn('<p class="text-center"><span class="math"', xml_str)
+        is_valid, errors = validate_qti_xml_string(xml_str, "item_table.xml")
+        self.assertTrue(is_valid, errors)
+
     def test_all_sample_quizzes_pass_jqti_validation(self):
         """Validate all generated sample zip packages against OpenOLAT JQTI+."""
         sample_dir = Path(__file__).resolve().parent.parent / "sample_quizzes"

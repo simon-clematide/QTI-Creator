@@ -314,11 +314,11 @@ def greet():
         
         # Display math block ($$ and \[)
         disp_text = "$$\\frac{a}{b}$$"
-        self.assertEqual(markdown_to_qti_xhtml(disp_text), '<p style="text-align:center"><span class="math" title="%5Cfrac%7Ba%7D%7Bb%7D">\\frac{a}{b}</span></p>')
+        self.assertEqual(markdown_to_qti_xhtml(disp_text), '<p class="text-center"><span class="math" title="%5Cfrac%7Ba%7D%7Bb%7D">\\frac{a}{b}</span></p>')
         self.assertEqual(markdown_to_qti_xhtml(disp_text, render_math=False), "<pre class='math-raw'>$$\\frac{a}{b}$$</pre>")
 
         bracket_disp_text = "\\[\\frac{c}{d}\\]"
-        self.assertEqual(markdown_to_qti_xhtml(bracket_disp_text), '<p style="text-align:center"><span class="math" title="%5Cfrac%7Bc%7D%7Bd%7D">\\frac{c}{d}</span></p>')
+        self.assertEqual(markdown_to_qti_xhtml(bracket_disp_text), '<p class="text-center"><span class="math" title="%5Cfrac%7Bc%7D%7Bd%7D">\\frac{c}{d}</span></p>')
 
         # Inline math wrapped in <span class="math" title="...">latex</span> (no dollar signs)
         inl_text = "The solution is $x=\\frac{a}{b}$."
@@ -657,12 +657,12 @@ What is water?
 What is the fastest?
 """
         html_out = markdown_to_qti_xhtml(md)
-        self.assertIn('<table class="b_default" style="border-collapse:collapse;width:100%;">', html_out)
+        self.assertIn('<table class="b_default">', html_out)
         self.assertIn('<thead>', html_out)
         self.assertIn('<tbody>', html_out)
-        self.assertIn('<th style="text-align: left;">Function</th>', html_out)
-        self.assertIn('<th style="text-align: center;">Complexity</th>', html_out)
-        self.assertIn('<th style="text-align: right;">Description</th>', html_out)
+        self.assertIn('<th class="text-left">Function</th>', html_out)
+        self.assertIn('<th class="text-center">Complexity</th>', html_out)
+        self.assertIn('<th class="text-right">Description</th>', html_out)
         self.assertIn('<code>sort()</code>', html_out)
         self.assertIn('<strong>Linear</strong>', html_out)
         self.assertIn('<span class="math"', html_out)

@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import gradio as gr
 
+from src.difficulty import quiz_difficulty
 from src.jqti_validator import is_java_available, is_javac_available, validate_qti_zip_bytes
 from src.model import InvalidQuestion
 from src.packager import create_qti_package
@@ -88,14 +89,24 @@ def _check_quiz_full(quiz_markdown: str) -> Dict[str, Any]:
 
     total_pts = sum(getattr(q, "points", 0.0) for q in quiz.questions)
 
+    diff = quiz_difficulty(quiz)
+
     return {
         "valid": is_valid,
         "total_questions": len(quiz.questions),
         "total_points": round(total_pts, 2),
         "quiz_title": quiz.title,
         "sections_count": len(quiz.sections),
+        "difficulty": {
+            "random_score": diff.random_score,
+            "shortest_bias": diff.shortest_bias,
+            "longest_bias": diff.longest_bias,
+            "scorable_questions": diff.scorable_questions,
+            "skipped_questions": diff.skipped_questions,
+        },
         "diagnostics": diag_list,
         "questions": question_list,
+        "_difficulty_report": diff,  # internal use only (UI); not serialised to JSON
     }
 
 
@@ -118,6 +129,10 @@ def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
             - total_points (float): Sum of points across all questions.
             - quiz_title (str): Parsed or default quiz title.
             - sections_count (int): Number of sections.
+            - difficulty (dict): Heuristic difficulty scores with keys
+              ``random_score``, ``shortest_bias``, ``longest_bias``,
+              ``scorable_questions``, ``skipped_questions`` (all floats/ints,
+              scores in [0, 1]).
 
         On failure (``valid: false``), the above fields plus:
             - diagnostics (list[dict]): Diagnostic objects with severity,
@@ -133,8 +148,11 @@ def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
             "total_points": full["total_points"],
             "quiz_title": full["quiz_title"],
             "sections_count": full["sections_count"],
+            "difficulty": full["difficulty"],
         }
-    return full
+    # On failure also include difficulty so callers can see scores even for partial quizzes
+    result = {k: v for k, v in full.items() if k != "_difficulty_report"}
+    return result
 
 
 def validate_jqti_api(quiz_markdown: str) -> Dict[str, Any]:

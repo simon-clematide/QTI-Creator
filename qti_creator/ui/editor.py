@@ -15,6 +15,7 @@ import gradio as gr
 from qti_creator.media_service import analyze_session_media
 from qti_creator.session import PackageState, QuizSession
 from qti_creator.ui.styles import MATHJAX_TYPESET_JS
+from src.difficulty import quiz_difficulty
 from src.examples import EXAMPLES, SAMPLE_ALL_TYPES
 from src.media import preflight_media
 from src.packager import create_qti_package
@@ -56,6 +57,7 @@ def format_editor_status_html(
     media_info: str,
     package_status: str,  # "none" | "ready" | "outdated"
     package_filename: str | None = None,
+    difficulty_report=None,
 ) -> str:
     """Produce the compact horizontal command/status bar HTML."""
     if not is_valid:
@@ -89,11 +91,25 @@ def format_editor_status_html(
         </span>
         """
 
+    diff_part = ""
+    if difficulty_report is not None and difficulty_report.scorable_questions > 0:
+        r = difficulty_report
+        skip_note = f" · {r.skipped_questions} skipped" if r.skipped_questions else ""
+        diff_part = (
+            f'<span style="color: #64748b; font-size: 0.85rem;" title="Expected score fraction for random / shortest / longest answer selection">'
+            f'🎲 Random: <strong>{r.random_score * 100:.0f}&thinsp;%</strong>'
+            f'&ensp;↔&ensp;Shortest: <strong>{r.shortest_bias * 100:.0f}&thinsp;%</strong>'
+            f'&ensp;Longest: <strong>{r.longest_bias * 100:.0f}&thinsp;%</strong>'
+            f'&ensp;<span style="opacity:.7;">({r.scorable_questions}/{r.scorable_questions + r.skipped_questions} scored{skip_note})</span>'
+            f'</span>'
+        )
+
     return f"""
     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
       {status_part}
       {media_part}
       {pkg_part}
+      {diff_part}
     </div>
     """
 
@@ -161,6 +177,8 @@ def render_editor_view(
         else:
             pkg_status = "outdated"
 
+    diff_report = quiz_difficulty(quiz) if is_valid else None
+
     status_bar_html = format_editor_status_html(
         is_valid=is_valid,
         question_count=len(quiz.questions),
@@ -168,6 +186,7 @@ def render_editor_view(
         media_info=media_info,
         package_status=pkg_status,
         package_filename=pkg_filename,
+        difficulty_report=diff_report,
     )
 
     diag_lines = []

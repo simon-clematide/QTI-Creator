@@ -113,6 +113,15 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
             self.assertEqual(len(errors), 0)
 
 
+    def test_inline_math_span_title_is_tolerated(self):
+        """OpenOLAT stores LaTeX in span@title, which the QTI XSD forbids."""
+        quiz, diags = parse_quizmd("# Q\n## A\nWhat is $2+2$?\n\n- [X] 4\n- [ ] 5\n")
+        self.assertEqual(len(diags), 0)
+        xml_str = generate_item_xml(quiz.questions[0])
+        self.assertIn('class="math" title=', xml_str)
+        is_valid, errors = validate_qti_xml_string(xml_str, "item_math.xml")
+        self.assertTrue(is_valid, errors)
+
     def test_multiple_choice_partial_scoring_with_hint_validates_in_jqti(self):
         """Regression test for the OpenOLAT runtime crash."""
         q = MultipleChoiceQuestion(

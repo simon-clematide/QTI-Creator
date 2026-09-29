@@ -6,6 +6,8 @@ Java QTI 2.1 runtime (JQTI+ / qtiworks).
 
 import json
 import os
+import re
+import zipfile
 import shutil
 import subprocess
 import tempfile
@@ -101,6 +103,44 @@ def ensure_jqti_environment(cache_dir: Optional[Path] = None) -> Path:
     return target_dir
 
 
+# OpenOLAT's own editor stores the LaTeX source of a formula in the ``title``
+# attribute of ``<span class="math">``. The QTI 2.1 XSD does not allow ``title``
+# on ``span``, so JQTI+ rejects every item containing math before any semantic
+# check runs. OpenOLAT imports such items fine, so the validator strips this one
+# known attribute from a temporary copy and validates everything else strictly.
+_MATH_SPAN_TITLE = re.compile(r'(<span\b[^>]*\bclass="math"[^>]*?)\s+title="[^"]*"')
+
+
+def _strip_math_span_titles(xml: str) -> str:
+    """Remove ``title`` attributes from ``<span class="math">`` elements.
+
+    OpenOLAT stores the original LaTeX source in the ``title`` attribute so
+    that its own editor can round-trip formulas.  The QTI 2.1 XSD does not
+    permit ``title`` on ``<span>``, so JQTI+ rejects any item containing math
+    before it can perform any semantic checks.  OpenOLAT's own importer is
+    lenient about this attribute, so stripping it for validation purposes does
+    not affect the correctness of the validation result for everything else.
+    """
+    return _MATH_SPAN_TITLE.sub(r"\1", xml)
+
+
+def _prepare_for_jqti(path: Path, workdir: Path) -> Path:
+    """Return a copy of ``path`` with the math-span ``title`` quirk removed."""
+    dest = workdir / path.name
+    if path.suffix == ".zip":
+        with zipfile.ZipFile(path) as zin, zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zout:
+            for info in zin.infolist():
+                data = zin.read(info.filename)
+                if info.filename.endswith(".xml"):
+                    data = _strip_math_span_titles(data.decode("utf-8")).encode("utf-8")
+                zout.writestr(info, data)
+    elif path.suffix == ".xml":
+        dest.write_text(_strip_math_span_titles(path.read_text(encoding="utf-8")), encoding="utf-8")
+    else:
+        return path
+    return dest
+
+
 def validate_with_jqti(paths: List[Union[str, Path]]) -> Tuple[bool, List[str]]:
     """Validate a list of XML files or ZIP packages against the JQTI+ runtime.
 
@@ -112,15 +152,20 @@ def validate_with_jqti(paths: List[Union[str, Path]]) -> Tuple[bool, List[str]]:
     jar_paths = list(target_dir.glob("*.jar"))
     classpath = f"{classes_dir}:" + ":".join(str(p) for p in jar_paths)
 
-    cmd = [
-        "java",
-        "-cp",
-        classpath,
-        "org.qticreator.validator.QtiValidator",
-        "--json",
-    ] + [str(p) for p in paths]
-
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    with tempfile.TemporaryDirectory() as td:
+        prepared = []
+        for i, p in enumerate(paths):
+            sub = Path(td) / str(i)
+            sub.mkdir()
+            prepared.append(_prepare_for_jqti(Path(p), sub))
+        cmd = [
+            "java",
+            "-cp",
+            classpath,
+            "org.qticreator.validator.QtiValidator",
+            "--json",
+        ] + [str(p) for p in prepared]
+        res = subprocess.run(cmd, capture_output=True, text=True)
     try:
         data = json.loads(res.stdout)
         is_valid = bool(data.get("valid", False))

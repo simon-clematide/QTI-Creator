@@ -3,5 +3,5 @@
 Central source of truth for version and release date.
 """
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 __release_date__ = "2026-09-30"

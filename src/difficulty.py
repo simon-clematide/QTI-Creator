@@ -70,6 +70,13 @@ class DifficultyReport:
     scorable_questions: int = 0
     skipped_questions: int = 0
     per_question: List[QuestionDifficulty] = field(default_factory=list)
+    bias_warnings: List[str] = field(default_factory=list)
+    """Non-empty when a length-bias strategy outperforms random guessing.
+
+    Each string is a human-readable warning, e.g.:
+    ``"Shortest-answer bias (45 %) beats random baseline (31 %): answer length
+    may be cueing correct choices."``
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -443,11 +450,33 @@ def quiz_difficulty(quiz: Quiz) -> DifficultyReport:
     def _weighted_mean(attr: str) -> float:
         return sum(getattr(qd, attr) for qd in scorable) / total_pts
 
+    random = round(_weighted_mean("random_score"), 4)
+    shortest = round(_weighted_mean("shortest_score"), 4)
+    longest = round(_weighted_mean("longest_score"), 4)
+
+    # Warn when a length-bias strategy meaningfully outperforms random guessing.
+    # A 0.5 pp noise floor avoids false positives from floating-point rounding.
+    _EPS = 0.005
+    warnings: List[str] = []
+    if shortest - random > _EPS:
+        warnings.append(
+            f"Shortest-answer bias ({shortest * 100:.0f}\u202f%) beats the random "
+            f"baseline ({random * 100:.0f}\u202f%): answer length may be cueing "
+            f"correct choices."
+        )
+    if longest - random > _EPS:
+        warnings.append(
+            f"Longest-answer bias ({longest * 100:.0f}\u202f%) beats the random "
+            f"baseline ({random * 100:.0f}\u202f%): answer length may be cueing "
+            f"correct choices."
+        )
+
     return DifficultyReport(
-        random_score=round(_weighted_mean("random_score"), 4),
-        shortest_bias=round(_weighted_mean("shortest_score"), 4),
-        longest_bias=round(_weighted_mean("longest_score"), 4),
+        random_score=random,
+        shortest_bias=shortest,
+        longest_bias=longest,
         scorable_questions=len(scorable),
         skipped_questions=len(skipped),
         per_question=per_q,
+        bias_warnings=warnings,
     )

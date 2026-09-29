@@ -95,13 +95,39 @@ def format_editor_status_html(
     if difficulty_report is not None and difficulty_report.scorable_questions > 0:
         r = difficulty_report
         skip_note = f" · {r.skipped_questions} skipped" if r.skipped_questions else ""
+
+        def _fmt(score: float, is_warned: bool) -> str:
+            pct = f"{score * 100:.0f}&thinsp;%"
+            if is_warned:
+                return (
+                    f'<strong style="color: #d97706;" title="Beats the random baseline">'
+                    f'{pct} ⚠</strong>'
+                )
+            return f"<strong>{pct}</strong>"
+
+        short_warned = r.shortest_bias - r.random_score > 0.005
+        long_warned = r.longest_bias - r.random_score > 0.005
+
+        warn_html = ""
+        if r.bias_warnings:
+            items = "".join(
+                f'<li style="margin:2px 0;">{w}</li>' for w in r.bias_warnings
+            )
+            warn_html = (
+                f'<ul style="margin:4px 0 0 0; padding-left:1.2em; '
+                f'color:#92400e; font-size:0.82rem; list-style:disc;">{items}</ul>'
+            )
+
         diff_part = (
-            f'<span style="color: #64748b; font-size: 0.85rem;" title="Expected score fraction for random / shortest / longest answer selection">'
+            f'<span style="color: #64748b; font-size: 0.85rem;" '
+            f'title="Expected score fraction for random / shortest / longest answer selection">'
             f'🎲 Random: <strong>{r.random_score * 100:.0f}&thinsp;%</strong>'
-            f'&ensp;↔&ensp;Shortest: <strong>{r.shortest_bias * 100:.0f}&thinsp;%</strong>'
-            f'&ensp;Longest: <strong>{r.longest_bias * 100:.0f}&thinsp;%</strong>'
-            f'&ensp;<span style="opacity:.7;">({r.scorable_questions}/{r.scorable_questions + r.skipped_questions} scored{skip_note})</span>'
+            f'&ensp;↔&ensp;Shortest: {_fmt(r.shortest_bias, short_warned)}'
+            f'&ensp;Longest: {_fmt(r.longest_bias, long_warned)}'
+            f'&ensp;<span style="opacity:.7;">({r.scorable_questions}/'
+            f'{r.scorable_questions + r.skipped_questions} scored{skip_note})</span>'
             f'</span>'
+            f'{warn_html}'
         )
 
     return f"""

@@ -343,5 +343,54 @@ class TestQuizAggregation(unittest.TestCase):
         self.assertEqual(report.per_question[1].question_index, 1)
 
 
+class TestBiasWarnings(unittest.TestCase):
+
+    def test_shortest_bias_warning_fires(self):
+        # All correct answers are the shortest → shortest_bias = 1.0 >> random 0.5
+        q1 = _sc([("A", True), ("BB", False)])   # shortest is correct
+        q2 = _sc([("X", True), ("YY", False)])   # shortest is correct
+        quiz = Quiz(title="T", questions=[q1, q2])
+        report = quiz_difficulty(quiz)
+        self.assertGreater(report.shortest_bias, report.random_score + 0.005)
+        self.assertTrue(any("Shortest" in w for w in report.bias_warnings))
+
+    def test_longest_bias_warning_fires(self):
+        # All correct answers are the longest → longest_bias = 1.0 >> random 0.5
+        q1 = _sc([("AA", False), ("BBB", True)])
+        q2 = _sc([("X", False), ("YYY", True)])
+        quiz = Quiz(title="T", questions=[q1, q2])
+        report = quiz_difficulty(quiz)
+        self.assertGreater(report.longest_bias, report.random_score + 0.005)
+        self.assertTrue(any("Longest" in w for w in report.bias_warnings))
+
+    def test_no_warning_when_random_wins(self):
+        # Random 1/4 > any deterministic bias (correct is in the middle length-wise)
+        # Single choice 4 options, correct has mid-length → no length advantage
+        q = _sc([("A", False), ("BB", True), ("CCC", False), ("DDDD", False)])
+        quiz = Quiz(title="T", questions=[q])
+        report = quiz_difficulty(quiz)
+        # shortest bias picks "A" (wrong) → 0; longest picks "DDDD" (wrong) → 0
+        # random = 0.25 > both biases → no warning
+        self.assertEqual(report.bias_warnings, [])
+
+    def test_kprim_no_warning_tied(self):
+        # Kprim ± always tied → bias == random → no warning
+        stmts = [KprimStatement(text=f"S{i}", is_correct=(i < 2)) for i in range(4)]
+        q = KprimQuestion(prompt="Q?", title="Q", statements=stmts, points=1.0)
+        quiz = Quiz(title="T", questions=[q])
+        report = quiz_difficulty(quiz)
+        self.assertEqual(report.bias_warnings, [])
+
+    def test_both_warnings_can_fire(self):
+        # All choices same length → tied → both shortest and longest pick all → correct included
+        # 2-choice SC: tied lengths → both biases = 1.0 >> random 0.5
+        q1 = _sc([("AA", True), ("BB", False)])   # both length 2, correct included in tie
+        q2 = _sc([("XX", True), ("YY", False)])
+        quiz = Quiz(title="T", questions=[q1, q2])
+        report = quiz_difficulty(quiz)
+        # shortest_bias = longest_bias = 1.0 > random 0.5 → both warn
+        self.assertEqual(len(report.bias_warnings), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

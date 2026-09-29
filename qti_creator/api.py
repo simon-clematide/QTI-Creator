@@ -103,6 +103,7 @@ def _check_quiz_full(quiz_markdown: str) -> Dict[str, Any]:
             "longest_bias": diff.longest_bias,
             "scorable_questions": diff.scorable_questions,
             "skipped_questions": diff.skipped_questions,
+            "bias_warnings": diff.bias_warnings,
         },
         "diagnostics": diag_list,
         "questions": question_list,

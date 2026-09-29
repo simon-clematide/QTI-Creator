@@ -63,26 +63,47 @@ class TestSingleChoice(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 0.25)
 
     def test_bias_shortest_wins(self):
-        # Correct answer is the shortest one
-        q = _sc([("A", True), ("BBBB", False), ("CCC", False)])
+        # Correct answer is the shortest one, >12 chars shorter than the others
+        short = "A"
+        long_wrong = "B" * 14          # 14 chars — outside the 12-char tolerance
+        q = _sc([(short, True), (long_wrong, False)])
         d = question_difficulty(q, 0)
         self.assertAlmostEqual(d.shortest_score, 1.0)
         self.assertAlmostEqual(d.longest_score, 0.0)
 
     def test_bias_shortest_loses(self):
-        # Correct answer is the longest one
-        q = _sc([("A", False), ("BBBB", True), ("CC", False)])
+        # Correct answer is the longest one, >12 chars longer than the others
+        q = _sc([("A", False), ("B" * 14, True)])
         d = question_difficulty(q, 0)
         self.assertAlmostEqual(d.shortest_score, 0.0)
         self.assertAlmostEqual(d.longest_score, 1.0)
 
     def test_bias_tie_all_tied_lengths(self):
         # All choices same length — all are tied shortest AND longest
-        # correct is among them → score = 1.0
         q = _sc([("AA", True), ("BB", False), ("CC", False)])
         d = question_difficulty(q, 0)
         self.assertAlmostEqual(d.shortest_score, 1.0)
         self.assertAlmostEqual(d.longest_score, 1.0)
+
+    def test_bias_within_tolerance_treated_as_tied(self):
+        # Choices differ by exactly 12 chars → both inside tolerance window
+        # → shortest and longest both pick all choices → correct is included → 1.0
+        short = "A"           # length 1
+        long_c = "B" * 13    # length 13 — diff = 12, i.e. ≤ min_len + 12
+        q = _sc([(short, True), (long_c, False)])
+        d = question_difficulty(q, 0)
+        # Both choices selected → SC logic: correct is among selected → score = 1.0
+        self.assertAlmostEqual(d.shortest_score, 1.0)
+        self.assertAlmostEqual(d.longest_score, 1.0)
+
+    def test_bias_just_outside_tolerance(self):
+        # Choices differ by 13 chars → outside tolerance → strict split
+        short = "A"           # length 1
+        long_c = "B" * 14    # length 14 — diff = 13 > 12
+        q = _sc([(short, True), (long_c, False)])
+        d = question_difficulty(q, 0)
+        self.assertAlmostEqual(d.shortest_score, 1.0)   # short is correct
+        self.assertAlmostEqual(d.longest_score, 0.0)    # long is wrong
 
     def test_points_scaling(self):
         q = _sc([("A", True), ("B", False)], points=4.0)
@@ -129,8 +150,8 @@ class TestMultipleChoicePartial(unittest.TestCase):
         self.assertGreaterEqual(d.random_score, 0.0)
 
     def test_bias_shortest_selects_correct(self):
-        # Shortest text is the only correct one → full points for shortest bias
-        q = _mc([("A", True), ("BBBB", False)], scoring="partial", points=2.0)
+        # Shortest text is the only correct one, >12 chars shorter than the wrong one
+        q = _mc([("A", True), ("B" * 14, False)], scoring="partial", points=2.0)
         d = question_difficulty(q, 0)
         # selecting "A" only → 1 correct, 0 wrong → 2.0 points
         self.assertAlmostEqual(d.shortest_score, 2.0)
@@ -149,10 +170,9 @@ class TestMultipleChoiceAllCorrect(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 0.125)  # (0.5)^3
 
     def test_bias_matches_correct_set(self):
-        # Only "A" is shortest and it is the only correct choice
-        q = _mc([("A", True), ("BBBB", False)], scoring="all-correct")
+        # Only "A" is shortest (>12 chars shorter than wrong) → selecting {A} == correct set
+        q = _mc([("A", True), ("B" * 14, False)], scoring="all-correct")
         d = question_difficulty(q, 0)
-        # selecting {A} == correct set {A} → 1.0
         self.assertAlmostEqual(d.shortest_score, 1.0)
 
 
@@ -164,10 +184,10 @@ class TestMultipleChoicePerAnswer(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 1.0)  # points/2
 
     def test_bias_selects_one_correct(self):
-        # Shortest is correct, 2 correct total → 1/2 points
-        q = _mc([("A", True), ("BB", True), ("CCC", False)], scoring="per-answer", points=2.0)
+        # Shortest is correct (>12 chars shorter than others), 2 correct total
+        q = _mc([("A", True), ("B" * 14, True), ("C" * 14, False)], scoring="per-answer", points=2.0)
         d = question_difficulty(q, 0)
-        # shortest = "A" (correct) → 1 correct selected out of 2 → 1.0 pts
+        # shortest = "A" only → 1 correct selected out of 2 → 1.0 pts
         self.assertAlmostEqual(d.shortest_score, 1.0)
 
 
@@ -199,14 +219,14 @@ class TestInlineChoice(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 1.0)  # 1/3 × 3 pts
 
     def test_two_gaps_average(self):
-        # Gap 1: correct is shortest → bias 1.0; Gap 2: correct is longest → bias 1.0
-        g1 = self._gap([("A", True), ("BBBB", False)])
-        g2 = self._gap([("CC", False), ("DDDD", True)])
+        # Gap 1: correct is shortest (>12 chars shorter); Gap 2: correct is longest
+        g1 = self._gap([("A", True), ("B" * 14, False)])
+        g2 = self._gap([("C" * 14, False), ("D" * 28, True)])
         q = InlineChoiceQuestion(prompt="Q?", title="Q", gaps=[g1, g2], points=2.0)
         d = question_difficulty(q, 0)
-        # avg shortest: (1+0)/2 → 0.5 fraction × 2 pts = 1.0
+        # avg shortest: gap1 correct (1) + gap2 wrong (0) → 0.5 fraction × 2 pts = 1.0
         self.assertAlmostEqual(d.shortest_score, 1.0)
-        # avg longest: (0+1)/2 → 0.5 fraction × 2 pts = 1.0
+        # avg longest: gap1 wrong (0) + gap2 correct (1) → 0.5 fraction × 2 pts = 1.0
         self.assertAlmostEqual(d.longest_score, 1.0)
 
     def test_random_two_gaps(self):
@@ -240,7 +260,8 @@ class TestHottext(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 0.25)  # (0.5)^2
 
     def test_partial_bias_shortest_correct(self):
-        q = self._ht([("A", True), ("BBBB", False)], scoring="partial", points=1.0)
+        # >12-char difference ensures "A" is the only selected item
+        q = self._ht([("A", True), ("B" * 14, False)], scoring="partial", points=1.0)
         d = question_difficulty(q, 0)
         # selecting "A" only → 1 correct, 0 wrong → full points
         self.assertAlmostEqual(d.shortest_score, 1.0)
@@ -275,8 +296,8 @@ class TestAssociation(unittest.TestCase):
         self.assertAlmostEqual(d.random_score, 1.0)
 
     def test_bias_shortest_target_correct(self):
-        t1 = AssociationTarget(text="A")      # shortest
-        t2 = AssociationTarget(text="BBBBB")  # longest
+        t1 = AssociationTarget(text="A")           # length 1 — shortest
+        t2 = AssociationTarget(text="B" * 14)      # length 14 — >12 apart → outside tolerance
         i1 = AssociationItem(text="Item1", target_ids=[t1.identifier])  # correct = shortest
         q = AssociationQuestion(prompt="Q?", title="Q", items=[i1], targets=[t1, t2], points=1.0)
         d = question_difficulty(q, 0)
@@ -364,13 +385,15 @@ class TestBiasWarnings(unittest.TestCase):
         self.assertTrue(any("Longest" in w for w in report.bias_warnings))
 
     def test_no_warning_when_random_wins(self):
-        # Random 1/4 > any deterministic bias (correct is in the middle length-wise)
-        # Single choice 4 options, correct has mid-length → no length advantage
-        q = _sc([("A", False), ("BB", True), ("CCC", False), ("DDDD", False)])
+        # 3 choices each >12 chars apart so each bias picks exactly one.
+        # Correct is the middle-length choice → neither shortest nor longest is correct.
+        # shortest picks "A" (wrong), longest picks "C"*28 (wrong).
+        # random = 1/3 > both biases (0) → no warning.
+        q = _sc([("A", False), ("B" * 14, True), ("C" * 28, False)])
         quiz = Quiz(title="T", questions=[q])
         report = quiz_difficulty(quiz)
-        # shortest bias picks "A" (wrong) → 0; longest picks "DDDD" (wrong) → 0
-        # random = 0.25 > both biases → no warning
+        self.assertAlmostEqual(report.shortest_bias, 0.0)
+        self.assertAlmostEqual(report.longest_bias, 0.0)
         self.assertEqual(report.bias_warnings, [])
 
     def test_kprim_no_warning_tied(self):

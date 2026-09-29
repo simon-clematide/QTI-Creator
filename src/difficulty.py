@@ -90,20 +90,29 @@ def _pct(value: float, points: float) -> float:
     return max(0.0, min(1.0, value / points))
 
 
-def _shortest_indices(texts: List[str]) -> List[int]:
-    """Return indices of all strings that share the minimum length."""
+def _shortest_indices(texts: List[str], tol: int = 12) -> List[int]:
+    """Return indices of strings within *tol* characters of the minimum length.
+
+    A guesser who "always picks the shortest answer" cannot reliably distinguish
+    choices that differ by fewer than *tol* characters, so all choices within that
+    band are treated as equally-likely selections.  Default tolerance is 12 chars.
+    """
     if not texts:
         return []
     min_len = min(len(t) for t in texts)
-    return [i for i, t in enumerate(texts) if len(t) == min_len]
+    return [i for i, t in enumerate(texts) if len(t) <= min_len + tol]
 
 
-def _longest_indices(texts: List[str]) -> List[int]:
-    """Return indices of all strings that share the maximum length."""
+def _longest_indices(texts: List[str], tol: int = 12) -> List[int]:
+    """Return indices of strings within *tol* characters of the maximum length.
+
+    Symmetric counterpart to :func:`_shortest_indices`.  Default tolerance is
+    12 chars.
+    """
     if not texts:
         return []
     max_len = max(len(t) for t in texts)
-    return [i for i, t in enumerate(texts) if len(t) == max_len]
+    return [i for i, t in enumerate(texts) if len(t) >= max_len - tol]
 
 
 # ---------------------------------------------------------------------------

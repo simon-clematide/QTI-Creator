@@ -435,9 +435,9 @@ MATHJAX_TYPESET_JS = """() => {
     const isDisplay = span.closest('p') && span.closest('p').style.textAlign === 'center';
     const rawLatex = span.getAttribute('title') ? decodeURIComponent(span.getAttribute('title')) : span.textContent;
     if (isDisplay) {
-      span.innerHTML = '$$' + rawLatex + '$$';
+      span.textContent = '$$' + rawLatex + '$$';
     } else {
-      span.innerHTML = '\\\\(' + rawLatex + '\\\\)';
+      span.textContent = '\\\\(' + rawLatex + '\\\\)';
     }
   });
   if (window.MathJax.typesetPromise) {

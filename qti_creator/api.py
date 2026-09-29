@@ -20,8 +20,12 @@ from src.parser import parse_quizmd
 from src.validation import Severity
 
 
-def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
-    """Validate QuizMD markdown syntax, structure, and question invariants.
+def _check_quiz_full(quiz_markdown: str) -> Dict[str, Any]:
+    """Internal verbose quiz check — always returns diagnostics and question list.
+
+    Used by :func:`validate_jqti_api` and other internal callers that need the
+    full payload regardless of validity.  External API callers should use
+    :func:`check_quiz_api` instead, which returns a minimal response on success.
 
     Args:
         quiz_markdown: Raw QuizMD markdown string.
@@ -33,8 +37,8 @@ def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
             - total_points (float): Sum of points across all questions.
             - quiz_title (str): Parsed or default quiz title.
             - sections_count (int): Number of sections.
-            - diagnostics (list[dict]): List of diagnostic objects with severity, line_number, etc.
-            - questions (list[dict]): List of question summaries.
+            - diagnostics (list[dict]): All diagnostic objects (may be empty).
+            - questions (list[dict]): Per-question summaries (may be empty).
     """
     if not quiz_markdown or not quiz_markdown.strip():
         return {
@@ -95,6 +99,44 @@ def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
     }
 
 
+def check_quiz_api(quiz_markdown: str) -> Dict[str, Any]:
+    """Validate QuizMD markdown syntax, structure, and question invariants.
+
+    This is the public ``/check_quiz`` API endpoint.  On success the response
+    is intentionally minimal — ``diagnostics`` and ``questions`` are omitted
+    when the quiz is valid so that callers are not flooded with per-question
+    detail they do not need.  When ``valid`` is ``false`` the full diagnostic
+    list is always included so callers can pinpoint the problem.
+
+    Args:
+        quiz_markdown: Raw QuizMD markdown string.
+
+    Returns:
+        On success (``valid: true``):
+            - valid (bool): ``true``
+            - total_questions (int): Number of parsed questions.
+            - total_points (float): Sum of points across all questions.
+            - quiz_title (str): Parsed or default quiz title.
+            - sections_count (int): Number of sections.
+
+        On failure (``valid: false``), the above fields plus:
+            - diagnostics (list[dict]): Diagnostic objects with severity,
+              message, line_number, and question_index.
+            - questions (list[dict]): Per-question summaries (useful when
+              some questions are individually invalid).
+    """
+    full = _check_quiz_full(quiz_markdown)
+    if full["valid"]:
+        return {
+            "valid": True,
+            "total_questions": full["total_questions"],
+            "total_points": full["total_points"],
+            "quiz_title": full["quiz_title"],
+            "sections_count": full["sections_count"],
+        }
+    return full
+
+
 def validate_jqti_api(quiz_markdown: str) -> Dict[str, Any]:
     """Compile quiz to QTI 2.1 and validate with OpenOLAT's native JQTI+ engine.
 
@@ -110,7 +152,7 @@ def validate_jqti_api(quiz_markdown: str) -> Dict[str, Any]:
             - errors (list[str]): JQTI+ error messages.
             - diagnostics (list[dict]): Parser/linter diagnostics.
     """
-    check_result = check_quiz_api(quiz_markdown)
+    check_result = _check_quiz_full(quiz_markdown)
     if not check_result["valid"]:
         return {
             "valid": False,

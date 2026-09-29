@@ -29,8 +29,8 @@ class TestQtiCreatorApi(unittest.TestCase):
         self.assertEqual(res["quiz_title"], "My Quiz")
         self.assertEqual(res["total_questions"], 1)
         self.assertEqual(res["total_points"], 1.0)
-        self.assertEqual(len(res["diagnostics"]), 0)
-        self.assertEqual(res["questions"][0]["type"], "SingleChoiceQuestion")
+        self.assertNotIn("diagnostics", res, "Success response should omit diagnostics")
+        self.assertNotIn("questions", res, "Success response should omit questions")
 
     def test_check_quiz_gap_in_math_error(self):
         md = """## Math Question

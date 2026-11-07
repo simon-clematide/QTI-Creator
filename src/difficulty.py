@@ -25,6 +25,7 @@ from src.model import (
     AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
+    HotspotQuestion,
     HottextQuestion,
     InlineChoiceQuestion,
     InvalidQuestion,
@@ -396,6 +397,17 @@ def question_difficulty(q, idx: int) -> QuestionDifficulty:
             shortest_score=0.0,
             longest_score=0.0,
             skipped=True,
+        )
+    if isinstance(q, HotspotQuestion):
+        return QuestionDifficulty(
+            question_index=idx,
+            question_type=type(q).__name__,
+            points=q.points,
+            random_score=0.0,
+            shortest_score=0.0,
+            longest_score=0.0,
+            skipped=True,
+            note="Difficulty estimate unavailable for image-based hotspot questions",
         )
 
     if isinstance(q, (SingleChoiceQuestion, TrueFalseQuestion)):

@@ -32,9 +32,11 @@ def create_demo() -> gr.Blocks:
         # Multipage navigation bar
         gr.Navbar(main_page_name="QTI-Creator")
 
-        # Session state stored across pages for a user session
+        # Session state stored across pages for a user session.
+        # Use value=None so Gradio does not attach a per-route .load() lambda
+        # that overwrites the state on every multipage navigation.
         shared_session = gr.State(
-            value=lambda: QuizSession(source=SAMPLE_ALL_TYPES),
+            value=None,
             delete_callback=cleanup_session_callback,
         )
 

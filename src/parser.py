@@ -29,6 +29,9 @@ from src.model import (
     EssayQuestion,
     FillBlankQuestion,
     Gap,
+    HotspotQuestion,
+    HotspotRegion,
+    HotspotSourceLocation,
     HottextItem,
     HottextQuestion,
     InlineChoice,
@@ -45,6 +48,7 @@ from src.model import (
     Quiz,
     Section,
     SingleChoiceQuestion,
+    SourceSpan,
     TrueFalseQuestion,
     generate_id,
 )
@@ -76,6 +80,15 @@ RE_KPRIM_ITEM = re.compile(r"^-\s*\[([+-])\]\s*(.*)$")
 RE_NUMERICAL = re.compile(
     r"^=\s*([+-]?\d+(?:\.\d+)?)\s*(?:(?:±|\+-|\+/-)\s*(\d+(?:\.\d+)?))?$"
 )
+RE_STANDALONE_IMAGE = re.compile(
+    r"^!\[([^\]]*)\]\(\s*(\S+?)(?:\s+=((?:\d+(?:%|px)?x\d*(?:%|px)?|\d*x\d+(?:%|px)?|\d+(?:%|px)?)))?\s*\)$"
+)
+RE_HOTSPOT_FUNC_PREFIX = re.compile(r"^(rect|rectangle|circle|poly|polygon)\s*\(", re.IGNORECASE)
+RE_HOTSPOT_SHAPE_CALL = re.compile(
+    r"^(rect|rectangle|circle|poly|polygon)\s*\(([^)]*)\)(?:\s+(.*))?$",
+    re.IGNORECASE,
+)
+RE_COORD_TOKEN = re.compile(r"^([+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*(%|px)?$", re.IGNORECASE)
 
 
 
@@ -93,9 +106,10 @@ class RawSectionBlock:
 class RawQuestionBlock:
     """Intermediate container for segmented question lines before typing."""
 
-    def __init__(self, title: str, start_line: int):
+    def __init__(self, title: str, start_line: int, line_offsets: Optional[Dict[int, int]] = None):
         self.title = title
         self.start_line = start_line
+        self.line_offsets: Dict[int, int] = line_offsets or {}
         self.raw_lines: List[Tuple[int, str]] = []
         self.metadata: Dict[str, Any] = {}
         self.prompt_lines: List[str] = []
@@ -409,6 +423,296 @@ def _extract_association_table(
     return interaction_type, remaining_prompt_lines, items, targets, multiple
 
 
+def _extract_standalone_images(
+    prompt_lines: List[str],
+) -> List[Tuple[int, str, str, Optional[int], Optional[int]]]:
+    """Find standalone Markdown image lines ![alt](src =WxH) outside fenced code blocks.
+
+    Returns:
+      List of (line_index_in_prompt_lines, image_src, image_alt, declared_width, declared_height).
+    """
+    found: List[Tuple[int, str, str, Optional[int], Optional[int]]] = []
+    in_code_block = False
+    for idx, line in enumerate(prompt_lines):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+        m = RE_STANDALONE_IMAGE.match(stripped)
+        if m:
+            alt = m.group(1).strip()
+            src = m.group(2).strip()
+            size_spec = m.group(3)
+            decl_w: Optional[int] = None
+            decl_h: Optional[int] = None
+            if size_spec:
+                if "x" in size_spec:
+                    w_str, h_str = size_spec.split("x", 1)
+                    if w_str and not w_str.endswith("%"):
+                        try:
+                            decl_w = int(w_str.removesuffix("px"))
+                        except ValueError:
+                            pass
+                    if h_str and not h_str.endswith("%"):
+                        try:
+                            decl_h = int(h_str.removesuffix("px"))
+                        except ValueError:
+                            pass
+                elif not size_spec.endswith("%"):
+                    try:
+                        decl_w = int(size_spec.removesuffix("px"))
+                    except ValueError:
+                        pass
+            found.append((idx, src, alt, decl_w, decl_h))
+    return found
+
+
+def _is_hotspot_candidate(
+    standalone_images: List[Tuple[int, str, str, Optional[int], Optional[int]]],
+    choices: List[Tuple[bool, str, str, int]],
+) -> bool:
+    """Stage 1 Hotspot candidate detection (when Type: is omitted).
+
+    A question is a Hotspot candidate when its prompt contains a standalone Markdown image
+    and at least one task-list choice begins with a recognized shape-function name.
+    """
+    if not standalone_images or not choices:
+        return False
+    return any(bool(RE_HOTSPOT_FUNC_PREFIX.match(text.strip())) for _, _, text, _ in choices)
+
+
+def _build_hotspot_question(
+    block: RawQuestionBlock,
+    common_kwargs: Dict[str, Any],
+    q_scoring: Optional[str],
+    q_idx: int,
+    standalone_images: List[Tuple[int, str, str, Optional[int], Optional[int]]],
+    is_explicit: bool,
+) -> HotspotQuestion:
+    """Validate and construct a HotspotQuestion from a segmented RawQuestionBlock."""
+    if len(standalone_images) == 0:
+        raise QuizValidationError(
+            "Hotspot question requires a standalone Markdown image line '![alt](src)' in the prompt.",
+            [Diagnostic(
+                "Hotspot question requires a standalone Markdown image line '![alt](src)' in the prompt.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+    if len(standalone_images) > 1:
+        raise QuizValidationError(
+            f"Hotspot question allows only 1 standalone background image in the prompt, found {len(standalone_images)}.",
+            [Diagnostic(
+                f"Hotspot question allows only 1 standalone background image in the prompt, found {len(standalone_images)}.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+    if not block.choices:
+        raise QuizValidationError(
+            "Hotspot question requires at least 1 hotspot region choice (- [X] or - [x]).",
+            [Diagnostic(
+                "Hotspot question requires at least 1 hotspot region choice (- [X] or - [x]).",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
+    raw_line_map = dict(block.raw_lines)
+    regions: List[HotspotRegion] = []
+    syntax_diags: List[Diagnostic] = []
+
+    for r_idx, (is_corr, mark, choice_text, line_no) in enumerate(block.choices, start=1):
+        cleaned = choice_text.strip()
+        prefix_m = RE_HOTSPOT_FUNC_PREFIX.match(cleaned)
+        if not prefix_m:
+            if is_explicit:
+                msg = (
+                    f"Invalid hotspot region '{cleaned}': expected a shape expression "
+                    f"such as 'rect(x1, y1, x2, y2)' or 'circle(cx, cy, r)'."
+                )
+            else:
+                msg = (
+                    f"Ambiguous Hotspot question: choice '{cleaned}' is not a valid hotspot shape expression "
+                    f"('rect(...)' or 'circle(...)'). All choices in a Hotspot question must define shapes, "
+                    f"or add 'Type: single-choice' / 'Type: multiple-choice' if ordinary text choices were intended."
+                )
+            syntax_diags.append(Diagnostic(msg, Severity.ERROR, line_no, q_idx))
+            continue
+
+        call_m = RE_HOTSPOT_SHAPE_CALL.match(cleaned)
+        if not call_m:
+            syntax_diags.append(
+                Diagnostic(
+                    f"Malformed hotspot shape expression '{cleaned}': missing closing parenthesis ')' or invalid trailing syntax.",
+                    Severity.ERROR,
+                    line_no,
+                    q_idx,
+                )
+            )
+            continue
+
+        func_name = call_m.group(1).lower()
+        args_str = call_m.group(2)
+        author_label = (call_m.group(3) or "").strip()
+
+        if func_name in ("rect", "rectangle"):
+            canonical_shape = "rect"
+            expected_arity = 4
+        elif func_name == "circle":
+            canonical_shape = "circle"
+            expected_arity = 3
+        else:
+            syntax_diags.append(
+                Diagnostic(
+                    "Polygon hotspot shape ('poly') is not yet supported in Milestone 1. Use 'rect(x1, y1, x2, y2)' or 'circle(cx, cy, r)'.",
+                    Severity.ERROR,
+                    line_no,
+                    q_idx,
+                )
+            )
+            continue
+
+        raw_args = [a.strip() for a in args_str.split(",")] if args_str.strip() else []
+        if len(raw_args) != expected_arity:
+            arg_desc = "(x1, y1, x2, y2)" if canonical_shape == "rect" else "(cx, cy, r)"
+            syntax_diags.append(
+                Diagnostic(
+                    f"Hotspot '{func_name}' requires {expected_arity} coordinates {arg_desc}, got {len(raw_args)} in '{cleaned}'.",
+                    Severity.ERROR,
+                    line_no,
+                    q_idx,
+                )
+            )
+            continue
+
+        coords: List[float] = []
+        units: List[str] = []
+        arg_error = False
+        for tok in raw_args:
+            tm = RE_COORD_TOKEN.match(tok)
+            if not tm:
+                syntax_diags.append(
+                    Diagnostic(
+                        f"Invalid coordinate value '{tok}' in hotspot shape '{cleaned}'. Expected a number with optional '%' or 'px' unit.",
+                        Severity.ERROR,
+                        line_no,
+                        q_idx,
+                    )
+                )
+                arg_error = True
+                break
+            coords.append(float(tm.group(1)))
+            unit_suffix = (tm.group(2) or "").lower()
+            units.append("pct" if unit_suffix == "%" else "px")
+
+        if arg_error:
+            continue
+
+        if len(set(units)) > 1:
+            syntax_diags.append(
+                Diagnostic(
+                    f"Mixed coordinate units in '{cleaned}': all coordinates in a shape must use percentages ('%') or all use pixels.",
+                    Severity.ERROR,
+                    line_no,
+                    q_idx,
+                )
+            )
+            continue
+
+        # Compute character offsets for choice_span and shape_span
+        raw_line = raw_line_map.get(line_no, "")
+        line_start = block.line_offsets.get(line_no, 0)
+        choice_span = SourceSpan(
+            start_offset=line_start,
+            end_offset=line_start + len(raw_line),
+            line_number=line_no,
+        )
+        line_task_m = re.match(r"^(\s*-\s*\[[ xX]\]\s*)", raw_line)
+        prefix_offset = len(line_task_m.group(1)) if line_task_m else 0
+        shape_expr_end = call_m.end(2) + 1  # index right after closing ')'
+        shape_span = SourceSpan(
+            start_offset=line_start + prefix_offset,
+            end_offset=line_start + prefix_offset + shape_expr_end,
+            line_number=line_no,
+        )
+        source_loc = HotspotSourceLocation(choice_span=choice_span, shape_span=shape_span)
+
+        regions.append(
+            HotspotRegion(
+                shape=canonical_shape,  # type: ignore[arg-type]
+                coordinates=tuple(coords),
+                unit=units[0],  # type: ignore[arg-type]
+                correct=is_corr,
+                author_label=author_label,
+                identifier=f"hc_{r_idx}",
+                source_location=source_loc,
+            )
+        )
+
+    if syntax_diags:
+        raise QuizValidationError(syntax_diags[0].message, syntax_diags)
+
+    # Check [X] vs [x] marker consistency
+    count_X = sum(1 for _, mark, _, _ in block.choices if mark == "X")
+    count_x = sum(1 for _, mark, _, _ in block.choices if mark == "x")
+
+    if count_X > 0 and count_x > 0:
+        raise QuizValidationError(
+            "Mixed markers: cannot combine single-choice [X] and multiple-choice [x] in the same Hotspot question.",
+            [Diagnostic(
+                "Mixed markers: cannot combine single-choice [X] and multiple-choice [x] in the same Hotspot question.",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+    if count_X > 1:
+        raise QuizValidationError(
+            f"Single-choice Hotspot question has {count_X} [X] regions; exactly 1 is required (use lowercase [x] for multiple-choice Hotspot).",
+            [Diagnostic(
+                f"Single-choice Hotspot question has {count_X} [X] regions; exactly 1 is required (use lowercase [x] for multiple-choice Hotspot).",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+    if count_X == 0 and count_x == 0:
+        raise QuizValidationError(
+            "No correct hotspot region is marked with [X] or [x].",
+            [Diagnostic(
+                "No correct hotspot region is marked with [X] or [x].",
+                Severity.ERROR,
+                block.start_line,
+                q_idx,
+            )],
+        )
+
+    img_idx, image_src, image_alt, decl_w, decl_h = standalone_images[0]
+    rem_prompt_lines = block.prompt_lines[:img_idx] + block.prompt_lines[img_idx + 1 :]
+    hs_prompt = "\n".join(rem_prompt_lines).strip() or block.title
+
+    hs_kwargs = dict(common_kwargs)
+    hs_kwargs["prompt"] = hs_prompt
+    if q_scoring is not None:
+        hs_kwargs["scoring"] = q_scoring
+
+    return HotspotQuestion(
+        **hs_kwargs,
+        image_src=image_src,
+        image_alt=image_alt,
+        declared_width=decl_w,
+        declared_height=decl_h,
+        regions=regions,
+        multiple=(count_x >= 1),
+    )
+
+
 
 def _split_keywords(val: Any) -> List[str]:
     """Parse keywords into a list of strings from string or list."""
@@ -462,6 +766,11 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
     """Parse a QuizMD Markdown string into a typed Quiz and diagnostic messages."""
     diagnostics: List[Diagnostic] = []
     lines = text.splitlines()
+    line_offsets: Dict[int, int] = {}
+    _char_pos = 0
+    for _idx, _raw_line in enumerate(text.splitlines(True), start=1):
+        line_offsets[_idx] = _char_pos
+        _char_pos += len(_raw_line)
 
     # Step 0: Extract YAML Frontmatter if present at start of document
     frontmatter: Dict[str, Any] = {}
@@ -556,6 +865,7 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
             current_question = RawQuestionBlock(
                 title=h2_match.group(1).strip(),
                 start_line=line_idx,
+                line_offsets=line_offsets,
             )
             continue
 
@@ -762,9 +1072,10 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
                         for gap in q.gaps:
                             if gap.shuffle is None:
                                 gap.shuffle = q.shuffle
-                    if (isinstance(q, (MultipleChoiceQuestion, HottextQuestion, AssociationQuestion))) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
+                    if (isinstance(q, (MultipleChoiceQuestion, HottextQuestion, AssociationQuestion, HotspotQuestion))) and (q.scoring is None or q.scoring == DEFAULTS["mc_scoring"]):
                         if quiz_mc_scoring != DEFAULTS["mc_scoring"] and "scoring" not in block.metadata:
                             q.scoring = quiz_mc_scoring
+                            q.validate()
                     if q.additional_info is None:
                         if quiz_additional_info is not None:
                             q.additional_info = quiz_additional_info
@@ -1254,6 +1565,26 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         elif explicit_type in ("order", "sequence", "sequencing"):
             items = [OrderItem(text=it[0]) for it in block.order_items]
             return OrderQuestion(**common_kwargs, items=items)
+        elif explicit_type in ("hotspot", "hs"):
+            if has_text_gaps or has_dropdown_gaps or has_hottexts or has_assoc_table:
+                raise QuizValidationError(
+                    "Cannot combine Hotspot question with cloze gaps, hottext, or association tables.",
+                    [Diagnostic(
+                        "Cannot combine Hotspot question with cloze gaps, hottext, or association tables.",
+                        Severity.ERROR,
+                        block.start_line,
+                        q_idx,
+                    )],
+                )
+            standalone_imgs = _extract_standalone_images(block.prompt_lines)
+            return _build_hotspot_question(
+                block=block,
+                common_kwargs=common_kwargs,
+                q_scoring=q_scoring,
+                q_idx=q_idx,
+                standalone_images=standalone_imgs,
+                is_explicit=True,
+            )
 
     # 2. Inferred: Association Table (Match / Drag & Drop)
     if has_assoc_table:
@@ -1299,13 +1630,24 @@ def _build_question_from_block(block: RawQuestionBlock, q_idx: int) -> Question:
         return HottextQuestion(**ht_kwargs, items=hottext_items)
 
 
-    # 5. Inferred: Numerical
+    # 8. Inferred: Numerical
     if block.numerical is not None:
         val, tol = block.numerical[0], block.numerical[1]
         return NumericalQuestion(**common_kwargs, answer=val, tolerance=tol)
 
-    # 5. Inferred: Task-list choices (Single Choice [X], Multiple Choice [x], True/False)
+    # 9. Inferred: Task-list choices (Hotspot, Single Choice [X], Multiple Choice [x], True/False)
     if block.choices:
+        if not explicit_type:
+            standalone_imgs = _extract_standalone_images(block.prompt_lines)
+            if _is_hotspot_candidate(standalone_imgs, block.choices):
+                return _build_hotspot_question(
+                    block=block,
+                    common_kwargs=common_kwargs,
+                    q_scoring=q_scoring,
+                    q_idx=q_idx,
+                    standalone_images=standalone_imgs,
+                    is_explicit=False,
+                )
         count_X = sum(1 for _, mark, _, _ in block.choices if mark == "X")
         count_x = sum(1 for _, mark, _, _ in block.choices if mark == "x")
 

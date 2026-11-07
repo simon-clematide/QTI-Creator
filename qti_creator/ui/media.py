@@ -6,12 +6,14 @@ import base64
 import html
 import os
 from pathlib import Path
+import shutil
 from typing import Tuple
 
 import gradio as gr
 
 from qti_creator.media_service import analyze_session_media, safe_extract_media_zip
-from qti_creator.session import MediaFile, QuizSession
+from qti_creator.session import MediaFile, QuizSession, resolve_session
+from src.examples import SAMPLE_ALL_TYPES
 
 
 def format_file_size(size_bytes: int) -> str:
@@ -266,9 +268,11 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     variant="primary",
                 )
 
+        empty_session = QuizSession(session_id="")
+
         # Summary Banner
         summary_banner = gr.HTML(
-            value=build_media_summary_html(QuizSession()),
+            value=build_media_summary_html(empty_session),
             elem_classes=["no-scroll-block"],
         )
 
@@ -278,7 +282,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
             with gr.Column(scale=5, min_width=380, elem_classes=["quiz-pane"]):
                 gr.Markdown("**📂 Files & References**", elem_classes=["no-scroll-block"])
                 tree_display = gr.HTML(
-                    value=build_media_tree_html(QuizSession()),
+                    value=build_media_tree_html(empty_session),
                 )
 
             # Right: File Detail Panel
@@ -291,7 +295,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     container=False,
                 )
                 detail_display = gr.HTML(
-                    value=render_file_detail_html(QuizSession(), ""),
+                    value=render_file_detail_html(empty_session, ""),
                 )
 
         # Package settings row
@@ -308,8 +312,10 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
         # Event: Upload Media ZIP
         def on_upload_media_zip(
             filepath: str,
-            session: QuizSession,
-        ) -> Tuple[QuizSession, str, str, gr.update, str]:
+            session: QuizSession | None,
+            request: gr.Request | None = None,
+        ) -> Tuple[QuizSession, str, str, gr.update, str, bool]:
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             if not filepath or not os.path.exists(filepath):
                 return (
                     session,
@@ -317,15 +323,27 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     build_media_tree_html(session),
                     gr.update(choices=build_media_files_dropdown_choices(session), value=None),
                     render_file_detail_html(session, ""),
+                    session.media.include_in_package,
                 )
 
-            # Extract to session-specific media root
-            media_extract_root = str(Path(session.session_id) / "media")
-            ok, msg, extracted = safe_extract_media_zip(filepath, media_extract_root)
+            sess_dir = session.ensure_session_dir()
+            media_extract_root = str(sess_dir / "media")
+            if os.path.exists(media_extract_root):
+                shutil.rmtree(media_extract_root, ignore_errors=True)
+
+            persisted_zip = str(sess_dir / "uploaded_media.zip")
+            try:
+                if os.path.abspath(filepath) != os.path.abspath(persisted_zip):
+                    shutil.copy2(filepath, persisted_zip)
+            except Exception:
+                persisted_zip = filepath
+
+            ok, msg, extracted = safe_extract_media_zip(persisted_zip, media_extract_root)
             if ok:
-                session.media.zip_path = filepath
+                session.media.zip_path = persisted_zip
                 session.media.zip_filename = os.path.basename(filepath)
                 session.media.extracted_root = media_extract_root
+                session.media.include_in_package = True
                 analyze_session_media(session)
 
             choices = build_media_files_dropdown_choices(session)
@@ -337,23 +355,33 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 build_media_tree_html(session),
                 gr.update(choices=choices, value=first_val),
                 render_file_detail_html(session, first_val or ""),
+                session.media.include_in_package,
             )
 
         btn_upload_media_zip.upload(
             fn=on_upload_media_zip,
             inputs=[btn_upload_media_zip, shared_session],
-            outputs=[shared_session, summary_banner, tree_display, file_selector, detail_display],
+            outputs=[
+                shared_session,
+                summary_banner,
+                tree_display,
+                file_selector,
+                detail_display,
+                include_media_cb,
+            ],
             api_name=False,
         )
 
         # Event: Select File from dropdown
         def on_file_selected(
             selected_path: str,
-            session: QuizSession,
+            session: QuizSession | None,
+            request: gr.Request | None = None,
         ) -> str:
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             return render_file_detail_html(session, selected_path)
 
-        file_selector.change(
+        file_selector.input(
             fn=on_file_selected,
             inputs=[file_selector, shared_session],
             outputs=[detail_display],
@@ -361,33 +389,48 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
         )
 
         # Checkbox settings handlers
-        def on_include_media_changed(val: bool, session: QuizSession) -> QuizSession:
+        def on_include_media_changed(
+            val: bool,
+            session: QuizSession | None,
+            request: gr.Request | None = None,
+        ) -> QuizSession:
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             session.media.include_in_package = bool(val)
             return session
 
-        include_media_cb.change(
+        include_media_cb.input(
             fn=on_include_media_changed,
             inputs=[include_media_cb, shared_session],
             outputs=[shared_session],
             api_name=False,
         )
 
-        def on_resolve_preview_changed(val: bool, session: QuizSession) -> QuizSession:
+        def on_resolve_preview_changed(
+            val: bool,
+            session: QuizSession | None,
+            request: gr.Request | None = None,
+        ) -> QuizSession:
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             session.media.resolve_in_preview = bool(val)
             return session
 
-        resolve_preview_cb.change(
+        resolve_preview_cb.input(
             fn=on_resolve_preview_changed,
             inputs=[resolve_preview_cb, shared_session],
             outputs=[shared_session],
             api_name=False,
         )
 
-        def on_media_loaded(session: QuizSession):
+        def on_media_loaded(
+            session: QuizSession | None,
+            request: gr.Request | None = None,
+        ):
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             analyze_session_media(session)
             choices = build_media_files_dropdown_choices(session)
             first_val = choices[0][1] if choices else None
             return (
+                session,
                 build_media_summary_html(session),
                 build_media_tree_html(session),
                 gr.update(choices=choices, value=first_val),
@@ -400,6 +443,14 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
             route_context.load(
                 fn=on_media_loaded,
                 inputs=[shared_session],
-                outputs=[summary_banner, tree_display, file_selector, detail_display, include_media_cb, resolve_preview_cb],
+                outputs=[
+                    shared_session,
+                    summary_banner,
+                    tree_display,
+                    file_selector,
+                    detail_display,
+                    include_media_cb,
+                    resolve_preview_cb,
+                ],
                 api_name=False,
             )

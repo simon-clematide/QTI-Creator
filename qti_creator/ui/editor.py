@@ -13,7 +13,7 @@ from typing import Tuple
 import gradio as gr
 
 from qti_creator.media_service import analyze_session_media
-from qti_creator.session import PackageState, QuizSession
+from qti_creator.session import PackageState, QuizSession, resolve_session
 from qti_creator.ui.styles import MATHJAX_TYPESET_JS
 from src.difficulty import quiz_difficulty
 from src.examples import EXAMPLES, SAMPLE_ALL_TYPES
@@ -173,7 +173,18 @@ def render_editor_view(
     asset_map = get_preview_asset_map(session)
 
     # Check media preflight diagnostics
-    media_res = preflight_media(quiz, include_media=session.media.include_in_package)
+    media_zip_bytes = None
+    if session.media.include_in_package and session.media.zip_path and os.path.exists(session.media.zip_path):
+        try:
+            with open(session.media.zip_path, "rb") as f:
+                media_zip_bytes = f.read()
+        except Exception:
+            pass
+    media_res = preflight_media(
+        quiz,
+        include_media=session.media.include_in_package,
+        media_zip_bytes=media_zip_bytes,
+    )
     diagnostics.extend(media_res.diagnostics)
     all_errors = [d for d in diagnostics if d.severity == Severity.ERROR]
     all_warnings = [d for d in diagnostics if d.severity == Severity.WARNING]
@@ -268,9 +279,11 @@ def render_editor_view(
 
 
 def handle_generate_package(
-    session: QuizSession,
+    session: QuizSession | None,
+    request: gr.Request | None = None,
 ) -> Tuple[QuizSession, gr.update, str, str, gr.update]:
     """Generate the QTI 2.1 package for the current session."""
+    session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
     source = session.source
     if not source or not source.strip():
         preview, status_bar, diag, dl, gen = render_editor_view(session)
@@ -296,7 +309,7 @@ def handle_generate_package(
         include_media=session.media.include_in_package,
         media_zip_bytes=media_zip_bytes,
     )
-    if session.media.include_in_package and media_res.has_errors:
+    if media_res.has_errors:
         preview, status_bar, diag, dl, gen = render_editor_view(session)
         return session, dl, status_bar, "❌ Media preflight failed. Check the Media page for missing assets.", gen
 
@@ -415,9 +428,11 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
         # Helper: Sync source change to session and re-render
         def on_source_changed(
             new_text: str,
-            session: QuizSession,
+            session: QuizSession | None,
             render_math: bool,
+            request: gr.Request | None = None,
         ) -> Tuple[QuizSession, str, str, str, gr.update, gr.update]:
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             session.source = new_text or ""
             preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
             return session, preview, status_bar, diag, dl, gen
@@ -444,13 +459,19 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
         ).then(js=MATHJAX_TYPESET_JS)
 
         # Example loading
-        def on_load_example(name: str, session: QuizSession, render_math: bool):
+        def on_load_example(
+            name: str,
+            session: QuizSession | None,
+            render_math: bool,
+            request: gr.Request | None = None,
+        ):
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             text = EXAMPLES.get(name, "")
             session.source = text
             preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
             return text, session, preview, status_bar, diag, dl, gen
 
-        example_dd.change(
+        example_dd.input(
             fn=on_load_example,
             inputs=[example_dd, shared_session, render_math_cb],
             outputs=[quiz_source, shared_session, preview_display, status_bar_html, diagnostics_box, btn_download, btn_generate],
@@ -458,7 +479,13 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
         ).then(js=MATHJAX_TYPESET_JS)
 
         # File upload via UploadButton
-        def on_upload_file(filepath: str, session: QuizSession, render_math: bool):
+        def on_upload_file(
+            filepath: str,
+            session: QuizSession | None,
+            render_math: bool,
+            request: gr.Request | None = None,
+        ):
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             if not filepath or not os.path.exists(filepath):
                 preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
                 return session.source, session, preview, status_bar, diag, dl, gen
@@ -486,14 +513,41 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             api_name="generate_package",
         )
 
-        def on_editor_loaded(session: QuizSession, render_math: bool):
+        def on_editor_loaded(
+            session: QuizSession | None,
+            render_math: bool,
+            request: gr.Request | None = None,
+        ):
+            session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
+            matched_example = next(
+                (k for k, v in EXAMPLES.items() if v == session.source),
+                None,
+            )
             preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
-            return session.source, preview, status_bar, diag, dl, gen
+            return (
+                session,
+                session.source,
+                gr.update(value=matched_example),
+                preview,
+                status_bar,
+                diag,
+                dl,
+                gen,
+            )
 
         if route_context is not None and hasattr(route_context, "load"):
             route_context.load(
                 fn=on_editor_loaded,
                 inputs=[shared_session, render_math_cb],
-                outputs=[quiz_source, preview_display, status_bar_html, diagnostics_box, btn_download, btn_generate],
+                outputs=[
+                    shared_session,
+                    quiz_source,
+                    example_dd,
+                    preview_display,
+                    status_bar_html,
+                    diagnostics_box,
+                    btn_download,
+                    btn_generate,
+                ],
                 api_name=False,
             ).then(js=MATHJAX_TYPESET_JS)

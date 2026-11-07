@@ -1,11 +1,13 @@
 """QTI 2.1 generation package for OpenOLAT."""
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence
 
+from src.media import ResolvedHotspotImage, ResolvedHotspotRegion
 from src.model import (
     AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
+    HotspotQuestion,
     HottextQuestion,
     InlineChoiceQuestion,
     KprimQuestion,
@@ -19,15 +21,22 @@ from src.model import (
 from src.qti21.association import generate_association_xml
 from src.qti21.choice import generate_single_choice_xml, generate_multiple_choice_xml, generate_true_false_xml
 from src.qti21.essay import generate_essay_xml
+from src.qti21.hotspot import generate_hotspot_xml
 from src.qti21.hottext import generate_hottext_xml
 from src.qti21.inline_choice import generate_inline_choice_xml
 from src.qti21.text_entry import generate_fill_blank_xml
 from src.qti21.numerical import generate_numerical_xml
 from src.qti21.kprim import generate_kprim_xml
 from src.qti21.order import generate_order_xml
+from src.validation import Diagnostic, QuizValidationError, Severity
 
 
-def generate_item_xml(question: Question, asset_map: Optional[Dict[str, str]] = None) -> str:
+def generate_item_xml(
+    question: Question,
+    asset_map: Optional[Dict[str, str]] = None,
+    resolved_image: Optional[ResolvedHotspotImage] = None,
+    resolved_regions: Optional[Sequence[ResolvedHotspotRegion]] = None,
+) -> str:
     """Dispatch question to its specific QTI 2.1 generator."""
     if isinstance(question, SingleChoiceQuestion):
         return generate_single_choice_xml(question, asset_map=asset_map)
@@ -51,5 +60,21 @@ def generate_item_xml(question: Question, asset_map: Optional[Dict[str, str]] = 
         return generate_order_xml(question, asset_map=asset_map)
     elif isinstance(question, AssociationQuestion):
         return generate_association_xml(question, asset_map=asset_map)
+    elif isinstance(question, HotspotQuestion):
+        if resolved_image is None or resolved_regions is None:
+            raise QuizValidationError(
+                "Hotspot question requires resolved image metadata and validated pixel coordinates from media preflight.",
+                [Diagnostic(
+                    "Hotspot question requires resolved image metadata and validated pixel coordinates from media preflight.",
+                    Severity.ERROR,
+                    question.line_number,
+                )],
+            )
+        return generate_hotspot_xml(
+            question,
+            resolved_image=resolved_image,
+            resolved_regions=resolved_regions,
+            asset_map=asset_map,
+        )
     else:
         raise NotImplementedError(f"No QTI 2.1 generator for {type(question).__name__}")

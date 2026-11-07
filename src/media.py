@@ -13,6 +13,7 @@ import ipaddress
 import os
 import re
 import socket
+import struct
 import urllib.parse
 import urllib.request
 import zipfile
@@ -21,6 +22,7 @@ from typing import Dict, List, Literal, Optional, Set, Tuple
 from src.model import (
     EssayQuestion,
     FillBlankQuestion,
+    HotspotQuestion,
     HottextQuestion,
     InlineChoiceQuestion,
     KprimQuestion,
@@ -78,6 +80,26 @@ class ResolvedAsset:
         return f"data:{self.content_type};base64,{b64}"
 
 
+@dataclass(frozen=True)
+class ResolvedHotspotImage:
+    """Resolved and validated hotspot background image metadata."""
+    package_path: str
+    mime_type: str
+    width: int
+    height: int
+    content_hash: str
+
+
+@dataclass(frozen=True)
+class ResolvedHotspotRegion:
+    """Resolved and validated hotspot region in integer pixel coordinates."""
+    identifier: str
+    shape: Literal["rect", "circle"]
+    pixel_coords: Tuple[int, ...]
+    correct: bool
+    author_label: str = ""
+
+
 @dataclass
 class MediaPreflightResult:
     """The result of preflighting media references for a quiz."""
@@ -89,6 +111,9 @@ class MediaPreflightResult:
     question_asset_map: Dict[str, List[str]] = field(default_factory=dict)
     # Mapping of source -> relative package filename
     source_to_package_path: Dict[str, str] = field(default_factory=dict)
+    # Resolved hotspot images and region pixel coordinates keyed by question_identifier
+    resolved_hotspot_images: Dict[str, ResolvedHotspotImage] = field(default_factory=dict)
+    resolved_hotspot_regions: Dict[str, Tuple[ResolvedHotspotRegion, ...]] = field(default_factory=dict)
 
     @property
     def has_errors(self) -> bool:
@@ -197,6 +222,18 @@ def extract_quiz_media_references(quiz: Quiz) -> List[MediaReference]:
         elif isinstance(q, HottextQuestion):
             for it in q.items:
                 q_refs.extend(extract_media_references(it.text, question_id=q.identifier))
+        elif isinstance(q, HotspotQuestion) and q.image_src:
+            parsed = urllib.parse.urlparse(q.image_src)
+            kind: Literal["remote", "relative"] = "remote" if parsed.scheme in ("http", "https") else "relative"
+            q_refs.append(
+                MediaReference(
+                    source=q.image_src,
+                    alt_text=q.image_alt,
+                    kind=kind,
+                    question_id=q.identifier,
+                    line_number=q.line_number,
+                )
+            )
 
         all_refs.extend(q_refs)
 
@@ -243,6 +280,193 @@ def _detect_image_mime(data: bytes) -> Optional[Tuple[str, str]]:
     if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "image/webp", ".webp"
     return None
+
+
+def _extract_image_dimensions(data: bytes, mime_type: str) -> Optional[Tuple[int, int]]:
+    """Extract intrinsic (width, height) in pixels from PNG or JPEG bytes."""
+    if mime_type == "image/png":
+        if len(data) >= 24 and data.startswith(b"\x89PNG\r\n\x1a\n") and data[12:16] == b"IHDR":
+            width, height = struct.unpack(">II", data[16:24])
+            if 0 < width <= 32768 and 0 < height <= 32768:
+                return int(width), int(height)
+        return None
+
+    elif mime_type == "image/jpeg":
+        if len(data) < 4 or data[:2] != b"\xff\xd8":
+            return None
+        i = 2
+        n = len(data)
+        sof_markers = {
+            0xC0, 0xC1, 0xC2, 0xC3,
+            0xC5, 0xC6, 0xC7,
+            0xC9, 0xCA, 0xCB,
+            0xCD, 0xCE, 0xCF,
+        }
+        while i < n:
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            while i < n and data[i] == 0xFF:
+                i += 1
+            if i >= n:
+                break
+            marker = data[i]
+            i += 1
+            if marker in (0xD9, 0xDA):  # EOI or SOS
+                break
+            if marker == 0x01 or (0xD0 <= marker <= 0xD7):
+                continue
+            if i + 2 > n:
+                return None
+            seg_len = struct.unpack(">H", data[i : i + 2])[0]
+            if seg_len < 2 or i + seg_len > n:
+                return None
+            if marker in sof_markers:
+                if seg_len < 7 or i + 7 > n:
+                    return None
+                height, width = struct.unpack(">HH", data[i + 3 : i + 7])
+                if 0 < width <= 32768 and 0 < height <= 32768:
+                    return int(width), int(height)
+                return None
+            i += seg_len
+        return None
+
+    return None
+
+
+def _get_jpeg_exif_orientation(data: bytes) -> Optional[int]:
+    """Extract JPEG EXIF Orientation tag (0x0112) from APP1 segment if present."""
+    if len(data) < 4 or data[:2] != b"\xff\xd8":
+        return None
+    i = 2
+    n = len(data)
+    while i < n:
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        while i < n and data[i] == 0xFF:
+            i += 1
+        if i >= n:
+            break
+        marker = data[i]
+        i += 1
+        if marker in (0xD9, 0xDA):
+            break
+        if marker == 0x01 or (0xD0 <= marker <= 0xD7):
+            continue
+        if i + 2 > n:
+            break
+        seg_len = struct.unpack(">H", data[i : i + 2])[0]
+        if seg_len < 2 or i + seg_len > n:
+            break
+        if marker == 0xE1 and seg_len >= 16:  # APP1
+            seg_data = data[i + 2 : i + seg_len]
+            if seg_data.startswith(b"Exif\x00\x00"):
+                tiff = seg_data[6:]
+                if len(tiff) >= 8:
+                    byte_order = tiff[:2]
+                    endian = "<" if byte_order == b"II" else (">" if byte_order == b"MM" else None)
+                    if endian:
+                        magic = struct.unpack(endian + "H", tiff[2:4])[0]
+                        ifd_offset = struct.unpack(endian + "I", tiff[4:8])[0]
+                        if magic == 42 and ifd_offset + 2 <= len(tiff):
+                            num_entries = struct.unpack(endian + "H", tiff[ifd_offset : ifd_offset + 2])[0]
+                            for idx in range(num_entries):
+                                entry_pos = ifd_offset + 2 + idx * 12
+                                if entry_pos + 12 > len(tiff):
+                                    break
+                                tag = struct.unpack(endian + "H", tiff[entry_pos : entry_pos + 2])[0]
+                                if tag == 0x0112:
+                                    orientation = struct.unpack(endian + "H", tiff[entry_pos + 8 : entry_pos + 10])[0]
+                                    return int(orientation)
+        i += seg_len
+    return 1
+
+
+def resolve_and_validate_hotspots(
+    question: HotspotQuestion,
+    resolved_image: ResolvedHotspotImage,
+    question_index: Optional[int] = None,
+) -> Tuple[Tuple[ResolvedHotspotRegion, ...], List[Diagnostic]]:
+    """Stage 2 hotspot resolution: convert regions to intrinsic pixels and validate bounds/duplicates."""
+    diagnostics: List[Diagnostic] = []
+    resolved_regions: List[ResolvedHotspotRegion] = []
+    seen_resolved: Set[Tuple[str, Tuple[int, ...]]] = set()
+    w, h = resolved_image.width, resolved_image.height
+
+    for idx, region in enumerate(question.regions, start=1):
+        r_id = region.identifier or f"hc_{idx}"
+        r_line = (
+            region.source_location.choice_span.line_number
+            if (region.source_location and region.source_location.choice_span.line_number)
+            else question.line_number
+        )
+        px_coords = region.resolve_pixel_coords(w, h)
+
+        if region.shape == "rect":
+            x1, y1, x2, y2 = px_coords
+            if x1 < 0 or y1 < 0 or x2 > w or y2 > h:
+                diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot region {idx} ({r_id}): rectangle coordinates ({x1}, {y1}, {x2}, {y2}) exceed image bounds ({w}x{h} px).",
+                        Severity.ERROR,
+                        r_line,
+                        question_index,
+                    )
+                )
+            elif x1 >= x2 or y1 >= y2:
+                diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot region {idx} ({r_id}): resolved rectangle ({x1}, {y1}, {x2}, {y2}) has zero or negative width/height on {w}x{h} px image.",
+                        Severity.ERROR,
+                        r_line,
+                        question_index,
+                    )
+                )
+        elif region.shape == "circle":
+            cx, cy, r = px_coords
+            if r < 1:
+                diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot region {idx} ({r_id}): resolved circle radius ({r} px) must be at least 1 px.",
+                        Severity.ERROR,
+                        r_line,
+                        question_index,
+                    )
+                )
+            elif cx - r < 0 or cy - r < 0 or cx + r > w or cy + r > h:
+                diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot region {idx} ({r_id}): circle (cx={cx}, cy={cy}, r={r}) extends outside image bounds ({w}x{h} px).",
+                        Severity.ERROR,
+                        r_line,
+                        question_index,
+                    )
+                )
+
+        resolved_key = (region.shape, px_coords)
+        if resolved_key in seen_resolved:
+            diagnostics.append(
+                Diagnostic(
+                    f"Hotspot region {idx} ({r_id}): resolved pixel coordinates {px_coords} duplicate another region on this {w}x{h} px image.",
+                    Severity.ERROR,
+                    r_line,
+                    question_index,
+                )
+            )
+        seen_resolved.add(resolved_key)
+
+        resolved_regions.append(
+            ResolvedHotspotRegion(
+                identifier=r_id,
+                shape=region.shape,  # type: ignore[arg-type]
+                pixel_coords=px_coords,
+                correct=region.correct,
+                author_label=region.author_label,
+            )
+        )
+
+    return tuple(resolved_regions), diagnostics
 
 
 def _is_safe_relative_path(path: str) -> bool:
@@ -295,6 +519,16 @@ def preflight_media(
             )
 
     if not include_media:
+        for q_idx, q in enumerate(quiz.questions):
+            if isinstance(q, HotspotQuestion):
+                result.diagnostics.append(
+                    Diagnostic(
+                        "Hotspot images must be packaged. Enable media packaging to download remote images or upload a media ZIP containing the referenced image.",
+                        Severity.ERROR,
+                        q.line_number,
+                        q_idx,
+                    )
+                )
         return result
 
     # Active preflight: resolve assets
@@ -457,5 +691,81 @@ def preflight_media(
         result.source_to_package_path[src] = package_path
         if ref.question_id:
             result.question_asset_map.setdefault(ref.question_id, []).append(package_path)
+
+    # Resolve and validate Hotspot background images and pixel coordinates
+    for q_idx, q in enumerate(quiz.questions):
+        if isinstance(q, HotspotQuestion):
+            asset = result.resolved_assets.get(q.image_src)
+            if asset is None:
+                continue
+
+            if asset.content_type not in ("image/png", "image/jpeg"):
+                result.diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot background image '{q.image_src}' has unsupported format '{asset.content_type}'. Only PNG and JPEG are supported for Hotspot questions in Milestone 1.",
+                        Severity.ERROR,
+                        q.line_number,
+                        q_idx,
+                    )
+                )
+                continue
+
+            if asset.content_type == "image/jpeg":
+                orientation = _get_jpeg_exif_orientation(asset.data)
+                if orientation is not None and orientation != 1:
+                    result.diagnostics.append(
+                        Diagnostic(
+                            f"Hotspot JPEG image '{q.image_src}' has non-normal EXIF Orientation ({orientation}). Please normalize/rotate the image to Orientation=1 so hotspot coordinates align across browsers and OpenOLAT.",
+                            Severity.ERROR,
+                            q.line_number,
+                            q_idx,
+                        )
+                    )
+                    continue
+
+            dims = _extract_image_dimensions(asset.data, asset.content_type)
+            if dims is None:
+                result.diagnostics.append(
+                    Diagnostic(
+                        f"Could not extract intrinsic pixel dimensions from Hotspot image '{q.image_src}'.",
+                        Severity.ERROR,
+                        q.line_number,
+                        q_idx,
+                    )
+                )
+                continue
+
+            img_w, img_h = dims
+            if (
+                q.declared_width is not None
+                and q.declared_height is not None
+                and q.declared_width > 0
+                and q.declared_height > 0
+            ):
+                intrinsic_ratio = img_w / img_h
+                declared_ratio = q.declared_width / q.declared_height
+                if abs(declared_ratio - intrinsic_ratio) / intrinsic_ratio > 0.01:
+                    result.diagnostics.append(
+                        Diagnostic(
+                            f"Hotspot image '{q.image_src}' has intrinsic dimensions {img_w}x{img_h} (aspect ratio {intrinsic_ratio:.3f}), "
+                            f"which differs by more than 1% from declared display dimensions {q.declared_width}x{q.declared_height} (aspect ratio {declared_ratio:.3f}). "
+                            f"Hotspot coordinates are always resolved against intrinsic dimensions {img_w}x{img_h}.",
+                            Severity.WARNING,
+                            q.line_number,
+                            q_idx,
+                        )
+                    )
+
+            resolved_img = ResolvedHotspotImage(
+                package_path=asset.filename,
+                mime_type=asset.content_type,
+                width=img_w,
+                height=img_h,
+                content_hash=asset.content_hash,
+            )
+            resolved_regs, reg_diags = resolve_and_validate_hotspots(q, resolved_img, question_index=q_idx)
+            result.diagnostics.extend(reg_diags)
+            result.resolved_hotspot_images[q.identifier] = resolved_img
+            result.resolved_hotspot_regions[q.identifier] = resolved_regs
 
     return result

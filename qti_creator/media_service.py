@@ -105,6 +105,8 @@ def analyze_session_media(session: QuizSession) -> None:
             q_label = f"Q{idx} ({q.title})" if getattr(q, "title", None) else f"Q{idx}"
             # Extract references from prompt, choices, hint, feedback, etc.
             text_sources = [getattr(q, "prompt", "") or ""]
+            if getattr(q, "image_src", None):
+                text_sources.append(f"![{getattr(q, 'image_alt', '')}]({q.image_src})")
             if hasattr(q, "choices"):
                 for c in getattr(q, "choices", []):
                     text_sources.append(getattr(c, "text", "") or "")

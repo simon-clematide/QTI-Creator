@@ -8,12 +8,12 @@ import io
 import zipfile
 from typing import Optional, Union
 from src.media import MediaPreflightResult
-from src.model import Quiz
+from src.model import HotspotQuestion, Quiz
 from src.qti21 import generate_item_xml
 from src.qti21.manifest import generate_manifest_xml
 from src.qti21.package_config import generate_package_config_xml
 from src.qti21.test import generate_test_xml
-from src.validation import QuizValidationError, Severity
+from src.validation import Diagnostic, QuizValidationError, Severity
 
 
 def create_qti_package(
@@ -28,9 +28,22 @@ def create_qti_package(
     if fatal_errors:
         raise QuizValidationError("Cannot build package with validation errors.", fatal_errors)
 
-    if media_preflight and media_preflight.include_media and media_preflight.has_errors:
+    if media_preflight and media_preflight.has_errors:
         media_errors = [d for d in media_preflight.diagnostics if d.severity == Severity.ERROR]
         raise QuizValidationError("Cannot build package with media preflight errors.", media_errors)
+
+    hotspot_questions = [(idx, q) for idx, q in enumerate(quiz.questions) if isinstance(q, HotspotQuestion)]
+    if hotspot_questions and (media_preflight is None or not media_preflight.include_media):
+        hs_diags = [
+            Diagnostic(
+                "Hotspot images must be packaged. Enable media packaging to download remote images or upload a media ZIP containing the referenced image.",
+                Severity.ERROR,
+                q.line_number,
+                idx,
+            )
+            for idx, q in hotspot_questions
+        ]
+        raise QuizValidationError("Cannot build package: Hotspot questions require packaged media.", hs_diags)
 
 
     asset_map: Optional[dict] = None
@@ -55,7 +68,22 @@ def create_qti_package(
 
         # 4. Assessment items
         for q in quiz.questions:
-            item_xml = generate_item_xml(q, asset_map=asset_map)
+            resolved_img = (
+                media_preflight.resolved_hotspot_images.get(q.identifier)
+                if media_preflight
+                else None
+            )
+            resolved_regs = (
+                media_preflight.resolved_hotspot_regions.get(q.identifier)
+                if media_preflight
+                else None
+            )
+            item_xml = generate_item_xml(
+                q,
+                asset_map=asset_map,
+                resolved_image=resolved_img,
+                resolved_regions=resolved_regs,
+            )
             zf.writestr(f"{q.identifier}.xml", item_xml.encode("utf-8"))
 
         # 5. Packaged media files (if include_media is ON)

@@ -6,7 +6,8 @@ model where each question class enforces its own domain invariants.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Literal, Optional
+import math
+from typing import List, Literal, Optional, Tuple
 import uuid
 
 from src.defaults import DEFAULTS
@@ -414,6 +415,220 @@ class AssociationQuestion(Question):
                 )
 
 
+@dataclass(frozen=True)
+class SourceSpan:
+    """Character offset span within the QuizMD document."""
+    start_offset: int
+    end_offset: int
+    line_number: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class HotspotSourceLocation:
+    """Source spans for a hotspot region choice and its shape(...) expression."""
+    choice_span: SourceSpan
+    shape_span: SourceSpan
+
+
+@dataclass
+class HotspotRegion:
+    """A clickable region in a HotspotQuestion."""
+    shape: Literal["rect", "circle", "poly"]
+    coordinates: Tuple[float, ...]
+    unit: Literal["px", "pct"]
+    correct: bool
+    author_label: str = ""
+    identifier: str = ""
+    source_location: Optional[HotspotSourceLocation] = None
+
+    def resolve_pixel_coords(self, width: int, height: int) -> Tuple[int, ...]:
+        """Convert region coordinates to integer pixel coordinates for an image of (width, height)."""
+        if self.unit == "px":
+            if self.shape == "circle":
+                cx, cy, r = self.coordinates
+                return (int(round(cx)), int(round(cy)), max(1, int(round(r))))
+            return tuple(int(round(v)) for v in self.coordinates)
+        # Percentage conversion:
+        if self.shape == "rect":
+            x1_pct, y1_pct, x2_pct, y2_pct = self.coordinates
+            return (
+                int(round((x1_pct / 100.0) * width)),
+                int(round((y1_pct / 100.0) * height)),
+                int(round((x2_pct / 100.0) * width)),
+                int(round((y2_pct / 100.0) * height)),
+            )
+        elif self.shape == "circle":
+            cx_pct, cy_pct, r_pct = self.coordinates
+            min_dim = min(width, height)
+            return (
+                int(round((cx_pct / 100.0) * width)),
+                int(round((cy_pct / 100.0) * height)),
+                max(1, int(round((r_pct / 100.0) * min_dim))),
+            )
+        else:
+            pts = []
+            for idx, val in enumerate(self.coordinates):
+                dim = width if idx % 2 == 0 else height
+                pts.append(int(round((val / 100.0) * dim)))
+            return tuple(pts)
+
+
+@dataclass
+class HotspotQuestion(Question):
+    """Hotspot Image question: Clickable graphical regions over a packaged image."""
+    image_src: str = ""
+    image_alt: str = ""
+    declared_width: Optional[int] = None
+    declared_height: Optional[int] = None
+    regions: List[HotspotRegion] = field(default_factory=list)
+    multiple: bool = False
+    scoring: str = field(default_factory=lambda: DEFAULTS["mc_scoring"])  # 'partial' or 'all-correct'
+
+    def validate(self) -> None:
+        super().validate()
+        if not self.image_src or not self.image_src.strip():
+            raise QuizValidationError(
+                "Hotspot question requires a standalone background image ![alt](src).",
+                [Diagnostic("Hotspot question requires a standalone background image ![alt](src).", Severity.ERROR, self.line_number)],
+            )
+        if not self.regions:
+            raise QuizValidationError(
+                "Hotspot question requires at least 1 hotspot region.",
+                [Diagnostic("Hotspot question requires at least 1 hotspot region.", Severity.ERROR, self.line_number)],
+            )
+
+        # Deterministic identifier assignment & uniqueness check within question
+        seen_ids = set()
+        for idx, region in enumerate(self.regions, start=1):
+            if not region.identifier:
+                region.identifier = f"hc_{idx}"
+            if region.identifier in seen_ids:
+                line_no = (
+                    region.source_location.choice_span.line_number
+                    if (region.source_location and region.source_location.choice_span.line_number)
+                    else self.line_number
+                )
+                raise QuizValidationError(
+                    f"Duplicate hotspot region identifier '{region.identifier}'.",
+                    [Diagnostic(f"Duplicate hotspot region identifier '{region.identifier}'.", Severity.ERROR, line_no)],
+                )
+            seen_ids.add(region.identifier)
+
+        correct_count = sum(1 for r in self.regions if r.correct)
+        if not self.multiple:
+            if correct_count != 1:
+                raise QuizValidationError(
+                    f"Single-choice Hotspot question requires exactly 1 correct region, found {correct_count}.",
+                    [Diagnostic(f"Single-choice Hotspot question requires exactly 1 correct region, found {correct_count}.", Severity.ERROR, self.line_number)],
+                )
+            if len(self.regions) == 1 and not self.warning_message:
+                self.warning_message = "Single-choice Hotspot question has only 1 region (no distractor regions defined)."
+        else:
+            if correct_count < 1:
+                raise QuizValidationError(
+                    "Multiple-choice Hotspot question requires at least 1 correct region.",
+                    [Diagnostic("Multiple-choice Hotspot question requires at least 1 correct region.", Severity.ERROR, self.line_number)],
+                )
+
+        # Stage 1 raw coordinate validation (no cross-axis percentage subtraction at parse time)
+        seen_raw_regions = set()
+        for idx, r in enumerate(self.regions, start=1):
+            r_line = (
+                r.source_location.choice_span.line_number
+                if (r.source_location and r.source_location.choice_span.line_number)
+                else self.line_number
+            )
+            if r.shape == "poly":
+                raise QuizValidationError(
+                    f"Hotspot region {idx}: polygon shape ('poly') is not yet supported in Milestone 1. Use 'rect(...)' or 'circle(...)'.",
+                    [Diagnostic(f"Hotspot region {idx}: polygon shape ('poly') is not yet supported in Milestone 1. Use 'rect(...)' or 'circle(...)'.", Severity.ERROR, r_line)],
+                )
+            if r.shape not in ("rect", "circle"):
+                raise QuizValidationError(
+                    f"Hotspot region {idx}: unsupported shape '{r.shape}'. Supported shapes: 'rect', 'circle'.",
+                    [Diagnostic(f"Hotspot region {idx}: unsupported shape '{r.shape}'. Supported shapes: 'rect', 'circle'.", Severity.ERROR, r_line)],
+                )
+            if r.unit not in ("px", "pct"):
+                raise QuizValidationError(
+                    f"Hotspot region {idx}: invalid coordinate unit '{r.unit}'.",
+                    [Diagnostic(f"Hotspot region {idx}: invalid coordinate unit '{r.unit}'.", Severity.ERROR, r_line)],
+                )
+            if any(not math.isfinite(c) for c in r.coordinates):
+                raise QuizValidationError(
+                    f"Hotspot region {idx}: coordinates must be finite numbers.",
+                    [Diagnostic(f"Hotspot region {idx}: coordinates must be finite numbers.", Severity.ERROR, r_line)],
+                )
+
+            if r.shape == "rect":
+                if len(r.coordinates) != 4:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: 'rect' requires 4 coordinates (x1, y1, x2, y2), got {len(r.coordinates)}.",
+                        [Diagnostic(f"Hotspot region {idx}: 'rect' requires 4 coordinates (x1, y1, x2, y2), got {len(r.coordinates)}.", Severity.ERROR, r_line)],
+                    )
+                x1, y1, x2, y2 = r.coordinates
+                if x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: rectangle coordinates must be non-negative, got ({x1}, {y1}, {x2}, {y2}).",
+                        [Diagnostic(f"Hotspot region {idx}: rectangle coordinates must be non-negative, got ({x1}, {y1}, {x2}, {y2}).", Severity.ERROR, r_line)],
+                    )
+                if x1 >= x2 or y1 >= y2:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: rectangle requires x1 < x2 and y1 < y2, got ({x1}, {y1}, {x2}, {y2}).",
+                        [Diagnostic(f"Hotspot region {idx}: rectangle requires x1 < x2 and y1 < y2, got ({x1}, {y1}, {x2}, {y2}).", Severity.ERROR, r_line)],
+                    )
+                if r.unit == "pct" and (x2 > 100.0 or y2 > 100.0):
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: percentage rectangle coordinates must be within 0%..100%, got ({x1}%, {y1}%, {x2}%, {y2}%).",
+                        [Diagnostic(f"Hotspot region {idx}: percentage rectangle coordinates must be within 0%..100%, got ({x1}%, {y1}%, {x2}%, {y2}%).", Severity.ERROR, r_line)],
+                    )
+            elif r.shape == "circle":
+                if len(r.coordinates) != 3:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: 'circle' requires 3 coordinates (cx, cy, r), got {len(r.coordinates)}.",
+                        [Diagnostic(f"Hotspot region {idx}: 'circle' requires 3 coordinates (cx, cy, r), got {len(r.coordinates)}.", Severity.ERROR, r_line)],
+                    )
+                cx, cy, rad = r.coordinates
+                if cx < 0 or cy < 0:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: circle center coordinates must be non-negative, got ({cx}, {cy}).",
+                        [Diagnostic(f"Hotspot region {idx}: circle center coordinates must be non-negative, got ({cx}, {cy}).", Severity.ERROR, r_line)],
+                    )
+                if rad <= 0:
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: circle radius must be positive (> 0), got {rad}.",
+                        [Diagnostic(f"Hotspot region {idx}: circle radius must be positive (> 0), got {rad}.", Severity.ERROR, r_line)],
+                    )
+                if r.unit == "pct" and (cx > 100.0 or cy > 100.0 or rad > 100.0):
+                    raise QuizValidationError(
+                        f"Hotspot region {idx}: percentage circle values must be within 0%..100%, got ({cx}%, {cy}%, {rad}%).",
+                        [Diagnostic(f"Hotspot region {idx}: percentage circle values must be within 0%..100%, got ({cx}%, {cy}%, {rad}%).", Severity.ERROR, r_line)],
+                    )
+
+            raw_key = (r.shape, r.unit, tuple(round(c, 6) for c in r.coordinates))
+            if raw_key in seen_raw_regions:
+                raise QuizValidationError(
+                    f"Hotspot region {idx}: duplicate region definition ({r.shape} with identical coordinates).",
+                    [Diagnostic(f"Hotspot region {idx}: duplicate region definition ({r.shape} with identical coordinates).", Severity.ERROR, r_line)],
+                )
+            seen_raw_regions.add(raw_key)
+
+        scoring_raw = (self.scoring or "").strip().lower()
+        if scoring_raw in ("all-correct", "all_correct", "allcorrect"):
+            self.scoring = "all-correct"
+        elif scoring_raw in ("partial", ""):
+            self.scoring = "partial"
+        elif scoring_raw in ("points-per-answer", "per-answer", "points_per_answer", "per_answer"):
+            raise QuizValidationError(
+                f"Scoring method '{self.scoring}' is not supported for Hotspot questions in Milestone 1. Supported: 'partial', 'all-correct'.",
+                [Diagnostic(f"Scoring method '{self.scoring}' is not supported for Hotspot questions in Milestone 1. Supported: 'partial', 'all-correct'.", Severity.ERROR, self.line_number)],
+            )
+        else:
+            raise QuizValidationError(
+                f"Invalid scoring method '{self.scoring}' for Hotspot question. Supported: 'partial', 'all-correct'.",
+                [Diagnostic(f"Invalid scoring method '{self.scoring}' for Hotspot question. Supported: 'partial', 'all-correct'.", Severity.ERROR, self.line_number)],
+            )
+
+
 @dataclass
 class InvalidQuestion(Question):
     """Question that failed validation during parsing but is retained for preview."""
@@ -465,6 +680,15 @@ class Section:
                 )
             try:
                 q.validate()
+                if isinstance(q, HotspotQuestion) and not q.multiple and len(q.regions) == 1:
+                    diagnostics.append(
+                        Diagnostic(
+                            "Single-choice Hotspot question has only 1 region (no distractor regions defined).",
+                            Severity.WARNING,
+                            q.line_number,
+                            question_index=idx,
+                        )
+                    )
             except QuizValidationError as e:
                 for diag in e.diagnostics:
                     diag.question_index = idx

@@ -291,6 +291,19 @@ table.table tbody tr:nth-child(even) {
 
 MATHJAX_HEAD = """
 <script>
+(function() {
+  try {
+    var key = 'qti_creator_sid';
+    var sid = window.sessionStorage.getItem(key) || window.localStorage.getItem(key);
+    if (!sid) {
+      sid = 'qti_' + Math.random().toString(36).substring(2) + '_' + Date.now().toString(36);
+    }
+    window.sessionStorage.setItem(key, sid);
+    window.localStorage.setItem(key, sid);
+    document.cookie = key + '=' + encodeURIComponent(sid) + '; path=/; SameSite=Lax; max-age=86400';
+  } catch (e) {}
+})();
+
 window.MathJax = {
   tex: {
     inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],

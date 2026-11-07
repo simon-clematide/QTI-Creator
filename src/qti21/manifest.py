@@ -11,6 +11,7 @@ from src.model import (
     AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
+    HotspotQuestion,
     HottextQuestion,
     InlineChoiceQuestion,
     KprimQuestion,
@@ -34,6 +35,8 @@ def _get_qti_interaction_type(q: Question) -> str:
         return "inlineChoiceInteraction"
     elif isinstance(q, HottextQuestion):
         return "hottextInteraction"
+    elif isinstance(q, HotspotQuestion):
+        return "hotspotInteraction"
     elif isinstance(q, (FillBlankQuestion, NumericalQuestion)):
         return "textEntryInteraction"
     elif isinstance(q, EssayQuestion):
@@ -61,6 +64,8 @@ def _get_openolat_question_type(q: Question) -> str:
         return "inlinechoice"
     elif isinstance(q, HottextQuestion):
         return "hottext"
+    elif isinstance(q, HotspotQuestion):
+        return "hotspot"
     elif isinstance(q, NumericalQuestion):
         return "numerical"
     elif isinstance(q, EssayQuestion):

@@ -8,6 +8,7 @@ from src.model import (
     Choice,
     EssayQuestion,
     FillBlankQuestion,
+    HotspotQuestion,
     HottextItem,
     HottextQuestion,
     InlineChoiceQuestion,
@@ -495,6 +496,8 @@ def _get_type_label(q: Question) -> str:
         return "Order / Sequencing"
     elif isinstance(q, AssociationQuestion):
         return "Drag & Drop" if q.interaction == "drag" else "Match"
+    elif isinstance(q, HotspotQuestion):
+        return "Hotspot (MC)" if q.multiple else "Hotspot (SC)"
     return "Question"
 
 
@@ -523,6 +526,8 @@ def _get_badge_color(q: Question) -> str:
         return "#0ea5e9"  # Sky
     elif isinstance(q, AssociationQuestion):
         return "#8b5cf6" if q.interaction == "drag" else "#2563eb"
+    elif isinstance(q, HotspotQuestion):
+        return "#0284c7"  # Sky Blue
     return "#64748b"
 
 
@@ -680,5 +685,28 @@ def _render_question_body(
             scoring_str = f", Scoring: {q.scoring}" if q.scoring else ""
             desc = f"<div style='font-size: 0.85em; color: #64748b; margin-bottom: 6px;'>Drag & Drop Categories ({type_mode}{scoring_str}):</div>"
             return f"{desc}{''.join(cards)}"
+
+    elif isinstance(q, HotspotQuestion):
+        target_src = asset_map.get(q.image_src, q.image_src) if asset_map else q.image_src
+        img_html = (
+            f"<div style='margin-bottom: 8px;'><img src='{html.escape(target_src, quote=True)}' "
+            f"alt='{html.escape(q.image_alt, quote=True)}' style='max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1;' /></div>"
+        )
+        bullet = "□" if q.multiple else "○"
+        checked_bullet = "■" if q.multiple else "●"
+        reg_items = []
+        for idx, r in enumerate(q.regions, start=1):
+            icon = checked_bullet if r.correct else bullet
+            style = "color: #16a34a; font-weight: 600;" if r.correct else "color: #475569;"
+            unit_suffix = "%" if r.unit == "pct" else ""
+            coords_fmt = ", ".join(f"{int(c) if c == int(c) else c}{unit_suffix}" for c in r.coordinates)
+            label_part = f" — {html.escape(r.author_label)}" if r.author_label else ""
+            tag = " (Correct)" if r.correct else ""
+            reg_items.append(
+                f"<li style='margin-bottom: 4px; list-style: none; {style}'>"
+                f"{icon} <code>#{idx} ({html.escape(r.identifier)})</code>: "
+                f"<code>{html.escape(r.shape)}({coords_fmt})</code>{label_part}{tag}</li>"
+            )
+        return f"{img_html}<ul style='padding-left: 4px; margin: 0;'>{''.join(reg_items)}</ul>"
 
     return ""

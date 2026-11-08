@@ -71,7 +71,7 @@ def build_media_files_dropdown_choices(session: QuizSession) -> list[tuple[str, 
 def build_media_tree_html(session: QuizSession) -> str:
     """Build an interactive hierarchy view of extracted files and missing references."""
     if not session.media.files and not session.media.missing:
-        return "<p style='color: #94a3b8; font-style: italic; padding: 12px;'>No media uploaded.</p>"
+        return ""
 
     # Build tree from relative paths
     tree: dict = {}
@@ -153,6 +153,8 @@ def build_media_tree_html(session: QuizSession) -> str:
 
 def render_file_detail_html(session: QuizSession, selected_path: str) -> str:
     """Build the details panel HTML for a selected file."""
+    if not session.media.files:
+        return ""
     if not selected_path:
         return """
         <div style="color: #94a3b8; font-style: italic; padding: 24px; text-align: center;">
@@ -291,6 +293,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 gr.Markdown("**🔍 File Details & Preview**", elem_classes=["no-scroll-block"])
                 file_selector = gr.Dropdown(
                     choices=[],
+                    visible=False,
                     value=None,
                     label="Select file to inspect",
                     container=False,
@@ -322,7 +325,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     session,
                     build_media_summary_html(session),
                     build_media_tree_html(session),
-                    gr.update(choices=build_media_files_dropdown_choices(session), value=None),
+                    gr.update(choices=build_media_files_dropdown_choices(session), value=None, visible=bool(session.media.files)),
                     render_file_detail_html(session, ""),
                     session.media.include_in_package,
                 )
@@ -354,7 +357,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 session,
                 build_media_summary_html(session),
                 build_media_tree_html(session),
-                gr.update(choices=choices, value=first_val),
+                gr.update(choices=choices, value=first_val, visible=bool(choices)),
                 render_file_detail_html(session, first_val or ""),
                 session.media.include_in_package,
             )
@@ -434,7 +437,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 session,
                 build_media_summary_html(session),
                 build_media_tree_html(session),
-                gr.update(choices=choices, value=first_val),
+                gr.update(choices=choices, value=first_val, visible=bool(choices)),
                 render_file_detail_html(session, first_val or ""),
                 session.media.include_in_package,
                 session.media.resolve_in_preview,

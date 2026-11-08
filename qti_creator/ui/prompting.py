@@ -3,7 +3,7 @@
 import gradio as gr
 
 PROMPTING_MARKDOWN = """
-## ✨ Prompting Markdown Quizzes
+## Prompting Guide
 
 AI assistants can help you turn existing teaching materials—such as lecture slides, handouts, notes, or textbook excerpts—into a first draft of a QuizMD quiz.
 
@@ -19,7 +19,7 @@ Upload or provide your source material to an AI assistant, tell it what you want
 2. **Describe the quiz** → Specify the audience, topics, number and types of questions, and desired difficulty.
 3. **Generate QuizMD** → Give the AI the QuizMD prompt below and ask for raw literal Markdown only.
 4. **Review and revise** → Check every question and answer against your teaching material.
-5. **Copy into QTI-Creator** → Paste the resulting Markdown directly into the QuizMD Source editor and use Validation and Preview before generating the QTI package.
+5. **Copy into QTI-Creator** → Paste the resulting Markdown directly into the QuizMD Source editor and check the validation status and Preview before generating the QTI package.
 """
 
 AI_PROMPT_TEMPLATE = (
@@ -201,7 +201,7 @@ def render_prompting_page() -> None:
     with gr.Column(elem_classes=["docs-content"]):
         gr.Markdown(PROMPTING_MARKDOWN)
 
-        with gr.Accordion("▶ Prompt template for AI assistants", open=False):
+        with gr.Accordion("Prompt template for AI assistants", open=False):
             gr.Markdown(
                 "Copy this prompt template, fill in your audience and topic requirements, and attach your teaching material in your preferred AI tool:"
             )
@@ -227,7 +227,7 @@ def render_prompting_page() -> None:
                 }""",
             )
 
-        with gr.Accordion("▶ Customize your request", open=False):
+        with gr.Accordion("Customize your request", open=False):
             gr.Markdown(
                 """
                 You can append short, focused requirement blocks to the prompt template. Here are two practical examples:
@@ -250,7 +250,7 @@ def render_prompting_page() -> None:
                 """
             )
 
-        with gr.Accordion("▶ Reviewing AI-generated quizzes", open=False):
+        with gr.Accordion("Reviewing AI-generated quizzes", open=False):
             gr.Markdown(
                 """
                 Before using the quiz in an assessment or course, check:
@@ -261,7 +261,7 @@ def render_prompting_page() -> None:
                 - **Plausible distractors:** Are distractors plausible without being unfairly misleading or ambiguous?
                 - **Learning alignment:** Does the quiz assess your intended learning objectives rather than incidental trivia?
                 - **Difficulty & tone:** Is the difficulty appropriate for your students?
-                - **Validation check:** When pasted into QTI-Creator, does the **Validation** panel report zero issues?
+                - **Validation check:** When pasted into QTI-Creator, does the validation status report zero issues?
 
                 *AI can accelerate drafting, but the instructor remains responsible for the assessment content.*
                 """

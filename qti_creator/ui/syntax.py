@@ -3,7 +3,7 @@
 import gradio as gr
 
 SYNTAX_MARKDOWN = """
-### QuizMD Cheat Sheet
+## Syntax Cheat Sheet
 Question types are inferred automatically from their Markdown syntax.
 
 > **Choice markers are case-sensitive:** Use uppercase `[X]` for Single Choice and lowercase `[x]` for Multiple Choice. Do not mix `[X]` and `[x]` within a question.
@@ -107,7 +107,7 @@ Question types are inferred automatically from their Markdown syntax.
 
 def render_syntax_page() -> None:
     """Render the Syntax Cheat Sheet page."""
-    with gr.Column(elem_classes=["docs-content"]):
+    with gr.Column(elem_classes=["docs-content", "syntax-content"]):
         gr.Markdown(SYNTAX_MARKDOWN)
 
         with gr.Accordion("Quiz-level settings", open=False):

@@ -119,11 +119,11 @@ def format_editor_status_html(
         warn_html = ""
         if r.bias_warnings:
             items = "".join(
-                f'<li style="margin:2px 0;">{w}</li>' for w in r.bias_warnings
+                f'<li style="margin:2px 0;">{html.escape(w)}</li>' for w in r.bias_warnings
             )
             warn_html = (
-                f'<ul style="margin:4px 0 0 0; padding-left:1.2em; '
-                f'color:#92400e; font-size:0.82rem; list-style:disc;">{items}</ul>'
+                f'<details class="bias-details"><summary>{len(r.bias_warnings)} answer-length warnings</summary><ul style="margin:4px 0 0 0; padding-left:1.2em; '
+                f'color:#92400e; font-size:0.82rem; list-style:disc;">{items}</ul></details>'
             )
 
         diff_part = (

@@ -20,6 +20,36 @@ nav.svelte-99kmwu {
   padding: 1.5rem 1.5rem;
 }
 
+/* Shared page titles, primary actions, and reference table layout. */
+.docs-content h2, .editor-header-row h2, .media-header-bar h2 {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin: 0 0 0.75rem !important;
+}
+#btn_open_editor, #btn_generate_package, #btn_download_package,
+#btn_upload_media_zip, #btn_upload_media_zip button {
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  font-size: 0.95rem !important;
+  border-radius: 6px !important;
+}
+.syntax-content table {
+  width: 100%;
+  table-layout: auto;
+}
+.syntax-content th, .syntax-content td {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+.syntax-content th:first-child, .syntax-content td:first-child {
+  min-width: 9rem;
+  width: 18%;
+}
+.syntax-content .prose { overflow-x: auto; }
+.bias-details { width: 100%; font-weight: 400; color: #92400e; }
+.bias-details summary { cursor: pointer; font-size: 0.85rem; }
+
 /* ── No-scroll overrides for static markdown blocks ── */
 .no-scroll-block,
 .no-scroll-block > div,

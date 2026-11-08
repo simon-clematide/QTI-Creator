@@ -30,7 +30,7 @@ def create_demo() -> gr.Blocks:
 
     with demo:
         # Multipage navigation bar
-        gr.Navbar(main_page_name="QTI-Creator")
+        gr.Navbar(main_page_name="Home")
 
         # Session state stored across pages for a user session.
         # Use value=None so Gradio does not attach a per-route .load() lambda

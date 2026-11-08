@@ -6,7 +6,7 @@ from qti_creator.ui.syntax import SYNTAX_MARKDOWN
 
 def test_syntax_cheat_sheet_table_structure():
     """Verify that SYNTAX_MARKDOWN has a valid, unbroken HTML table with no blank lines inside <tbody>."""
-    assert "### QuizMD Cheat Sheet" in SYNTAX_MARKDOWN
+    assert "## Syntax Cheat Sheet" in SYNTAX_MARKDOWN
     assert "<table" in SYNTAX_MARKDOWN
     assert "</table>" in SYNTAX_MARKDOWN
 

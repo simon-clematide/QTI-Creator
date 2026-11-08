@@ -5,6 +5,7 @@ colorFrom: indigo
 colorTo: blue
 sdk: gradio
 app_file: app.py
+header: mini
 pinned: false
 license: mit
 ---

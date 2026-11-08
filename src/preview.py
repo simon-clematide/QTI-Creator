@@ -318,7 +318,7 @@ def render_quiz_preview_html(
             sec_hints = sum(1 for q in sec.questions if q.hint and q.hint.strip())
             sec_feedbacks = sum(1 for q in sec.questions if q.feedback and q.feedback.strip())
 
-            sec_summary_parts = [f"{len(sec.questions)} Qs"]
+            sec_summary_parts = [f"{len(sec.questions)} question{'s' if len(sec.questions) != 1 else ''}"]
             if sec_hints > 0:
                 sec_summary_parts.append(f"💡 {sec_hints}")
             if sec_feedbacks > 0:
@@ -367,9 +367,9 @@ def render_quiz_preview_html(
     total_hints = sum(1 for q in quiz.questions if q.hint and q.hint.strip())
     total_feedbacks = sum(1 for q in quiz.questions if q.feedback and q.feedback.strip())
 
-    summary_meta = [f"{total_questions} Question(s) parsed"]
+    summary_meta = [f"{total_questions} question{'s' if total_questions != 1 else ''} parsed"]
     if len(quiz.sections) > 1:
-        summary_meta[0] += f" across {len(quiz.sections)} section(s)"
+        summary_meta[0] += f" across {len(quiz.sections)} section{'s' if len(quiz.sections) != 1 else ''}"
     if total_hints > 0:
         summary_meta.append(f"💡 {total_hints} hint{'s' if total_hints != 1 else ''}")
     if total_feedbacks > 0:
@@ -755,9 +755,9 @@ def _get_type_label(q: Question) -> str:
     elif isinstance(q, EssayQuestion):
         return "Essay / Free Text"
     elif isinstance(q, FillBlankQuestion):
-        return "Fill-in-the-Blank"
+        return "Fill in the Blank (Text)"
     elif isinstance(q, InlineChoiceQuestion):
-        return "Inline Choice"
+        return "Fill in the Blank (Dropdown)"
     elif isinstance(q, HottextQuestion):
         return "Hottext"
     elif isinstance(q, NumericalQuestion):

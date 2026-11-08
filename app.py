@@ -56,7 +56,7 @@ def create_demo() -> gr.Blocks:
         render_syntax_page()
 
     # Route 5: Prompting (/prompting)
-    with demo.route("Prompting", path="/prompting"):
+    with demo.route("Prompting Guide", path="/prompting"):
         render_prompting_page()
 
     # Route 6: OpenOLAT Import (/openolat)

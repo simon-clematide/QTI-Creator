@@ -20,6 +20,27 @@ nav.svelte-99kmwu {
   padding: 1.5rem 1.5rem;
 }
 
+/* Empty diagnostics should not reserve a row between status and workspace. */
+.editor-diagnostics.block:has(.prose:empty) { display: none !important; }
+.quiz-editor-page-container { gap: 12px !important; }
+.quiz-editor-page-container > .quiz-command-bar { margin-bottom: 0 !important; }
+
+/* Gradio rotates a downward triangle left when closed; use right/down chevrons. */
+.docs-content button.label-wrap > .icon {
+  font-size: 0 !important;
+  transform: rotate(0deg) !important;
+}
+.docs-content button.label-wrap > .icon::after {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+.docs-content button.label-wrap.open > .icon::after { transform: rotate(45deg); }
+
 /* Shared page titles, primary actions, and reference table layout. */
 .docs-content h2, .editor-header-row h2, .media-header-bar h2 {
   font-size: 1.4rem !important;

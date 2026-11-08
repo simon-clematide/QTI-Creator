@@ -280,7 +280,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
         )
 
         # Workspace: Left File Hierarchy | Right File Details
-        with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True):
+        with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True, visible=False) as media_workspace:
             # Left: File Hierarchy
             with gr.Column(scale=5, min_width=380, elem_classes=["quiz-pane"]):
                 gr.Markdown("**📂 Files & References**", elem_classes=["no-scroll-block"])
@@ -318,7 +318,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
             filepath: str,
             session: QuizSession | None,
             request: gr.Request | None = None,
-        ) -> Tuple[QuizSession, str, str, gr.update, str, bool]:
+        ) -> Tuple[QuizSession, str, str, gr.update, str, bool, gr.update]:
             session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
             if not filepath or not os.path.exists(filepath):
                 return (
@@ -328,6 +328,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     gr.update(choices=build_media_files_dropdown_choices(session), value=None, visible=bool(session.media.files)),
                     render_file_detail_html(session, ""),
                     session.media.include_in_package,
+                    gr.update(visible=bool(session.media.files or session.media.missing)),
                 )
 
             sess_dir = session.ensure_session_dir()
@@ -360,6 +361,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 gr.update(choices=choices, value=first_val, visible=bool(choices)),
                 render_file_detail_html(session, first_val or ""),
                 session.media.include_in_package,
+                gr.update(visible=bool(session.media.files or session.media.missing)),
             )
 
         btn_upload_media_zip.upload(
@@ -372,6 +374,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 file_selector,
                 detail_display,
                 include_media_cb,
+                media_workspace,
             ],
             api_name=False,
         )
@@ -440,6 +443,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 gr.update(choices=choices, value=first_val, visible=bool(choices)),
                 render_file_detail_html(session, first_val or ""),
                 session.media.include_in_package,
+                gr.update(visible=bool(session.media.files or session.media.missing)),
                 session.media.resolve_in_preview,
             )
 
@@ -454,6 +458,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     file_selector,
                     detail_display,
                     include_media_cb,
+                    media_workspace,
                     resolve_preview_cb,
                 ],
                 api_name=False,

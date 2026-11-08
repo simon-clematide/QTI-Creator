@@ -376,7 +376,7 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 btn_download = gr.DownloadButton("📥 Download ZIP", visible=False, size="sm", variant="primary", elem_id="btn_download_package")
 
         # Validation diagnostics (collapsible / alert when errors exist)
-        diagnostics_box = gr.HTML("", elem_classes=["no-scroll-block"])
+        diagnostics_box = gr.HTML("", elem_classes=["no-scroll-block", "editor-diagnostics"])
 
         # Workspace: Source (Left) | Preview (Right)
         with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True):

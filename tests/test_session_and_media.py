@@ -199,7 +199,7 @@ def test_cross_tab_session_persistence_and_media_upload():
         zf.writestr("quadrants.png", make_png_bytes(400, 400))
 
     try:
-        sess4, summary_after, tree_after, _, _, include_cb = on_upload_media_zip(
+        sess4, summary_after, tree_after, _, _, include_cb, workspace_update = on_upload_media_zip(
             tmp_upload_path, None, fake_req
         )
     finally:
@@ -208,6 +208,7 @@ def test_cross_tab_session_persistence_and_media_upload():
             os.remove(tmp_upload_path)
 
     assert sess4 is sess1
+    assert workspace_update["visible"] is True
     assert include_cb is True
     assert sess4.media.include_in_package is True
     assert sess4.media.zip_path is not None and os.path.exists(sess4.media.zip_path)

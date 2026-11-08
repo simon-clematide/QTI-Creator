@@ -938,23 +938,8 @@ def parse_quizmd(text: str) -> Tuple[Quiz, List[Diagnostic]]:
             line_number=top_meta_lines.get("title"),
             transform=lambda v: str(v).strip(),
         )
-    elif fm_title is not None and len([s for s in raw_sections if not s.is_implicit]) == 1:
-        # Single-section quiz where user provided frontmatter title AND # Header Title
-        only_section = [s for s in raw_sections if not s.is_implicit][0]
-        if fm_title.strip() != only_section.title.strip():
-            diagnostics.append(
-                Diagnostic(
-                    f"Inconsistent title: frontmatter specifies '{fm_title.strip()}' but header specifies '{only_section.title.strip()}'. Using header title '{only_section.title.strip()}'.",
-                    Severity.WARNING,
-                    only_section.start_line,
-                )
-            )
-            quiz_title = only_section.title.strip()
-            only_section.title = quiz_title
-        else:
-            quiz_title = fm_title.strip()
     elif fm_title is not None:
-        # Multi-section quiz: YAML title strictly defines the overall test title
+        # YAML defines the test title independently of section count and titles
         quiz_title = fm_title.strip()
     elif meta_title is not None:
         quiz_title = meta_title.strip()

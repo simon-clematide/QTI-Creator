@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 *.zip
 !test-examples/*.zip
+!qti_creator/assets/hotspot_media.zip
 .DS_Store
 stacktrace*.txt
 Tokenization_*/

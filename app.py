@@ -41,7 +41,7 @@ def create_demo() -> gr.Blocks:
         )
 
         # Route 1: Home (/)
-        render_home_page()
+        render_home_page(shared_session)
 
     # Route 2: Editor (/editor)
     with demo.route("Editor", path="/editor") as ed_route:

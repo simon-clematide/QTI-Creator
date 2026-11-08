@@ -416,7 +416,7 @@ Version: 2.0.0
         self.assertIn("header metadata specifies '2.0.0'", warnings[0].message)
         self.assertEqual(quiz.version, "2.0.0")
 
-    def test_quiz_title_inconsistent_warning(self):
+    def test_yaml_title_is_independent_of_single_section_title(self):
         text = """---
 title: Front Title
 version: 1.0.0
@@ -429,8 +429,9 @@ version: 1.0.0
 """
         quiz, diags = parse_quizmd(text)
         warnings = [d for d in diags if "Inconsistent title" in d.message]
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(quiz.title, "Header Title")
+        self.assertEqual(len(warnings), 0)
+        self.assertEqual(quiz.title, "Front Title")
+        self.assertEqual(quiz.sections[0].title, "Header Title")
 
     def test_quiz_and_question_metadata_inheritance_and_override(self):
         text = """---

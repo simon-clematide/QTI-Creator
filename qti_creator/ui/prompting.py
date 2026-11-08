@@ -19,7 +19,7 @@ Upload or provide your source material to an AI assistant, tell it what you want
 2. **Describe the quiz** → Specify the audience, topics, number and types of questions, and desired difficulty.
 3. **Generate QuizMD** → Give the AI the QuizMD prompt below and ask for raw literal Markdown only.
 4. **Review and revise** → Check every question and answer against your teaching material.
-5. **Copy into QTI-Creator** → Paste the resulting Markdown directly into the QuizMD Source editor and check the validation status and Preview before generating the QTI package.
+5. **Copy into QTI-Creator** → Paste the resulting Markdown directly into the QuizMD Source editor and check the validation status and Preview. If images are referenced, prepare their media before export. Follow the [Home workflow](/) through Generate package, Download ZIP, and learner preview in OpenOLAT.
 """
 
 AI_PROMPT_TEMPLATE = (
@@ -36,12 +36,12 @@ AI_PROMPT_TEMPLATE = (
     "Return the quiz as Markdown using the QuizMD conventions below.\n\n"
     "QUIZ PARTS AND HEADERS\n\n"
     "A quiz may contain multiple parts or sections.\n\n"
-    "Use a level-1 heading (#) for the quiz title and also for each quiz part:\n"
-    "# Quiz title\n\n"
+    "Use YAML frontmatter for the overall test title and # for each section:\n"
+    "---\ntitle: Quiz title\n---\n\n"
     "# Part or Section Title\n\n"
     "Every level-2 heading (##) starts a question.\n\n"
     "IMPORTANT:\n"
-    "- Do not use level-3 or deeper headings (###, ####, etc.).\n"
+    "- Use ### Hint and ### Feedback (optionally followed by : Title) only after the prompt and answers. Do not use other level-3 or deeper headings.\n"
     "- The text of # and ## headings must be plain text only.\n"
     "- Do not use LaTeX, Markdown formatting, inline code, links, or mathematical\n"
     "  notation inside headings.\n"
@@ -149,6 +149,7 @@ AI_PROMPT_TEMPLATE = (
     "| dog | noun |\n"
     "| run | verb |\n\n"
     "Hotspot (Image Interaction)\n"
+    "Use only an image supplied with the teaching material; do not invent an unavailable image file. The author must package the actual background image for export.\n"
     "Use a standalone image followed by shape-call choices: circle(cx, cy, r) or rect(x1, y1, x2, y2).\n"
     "Use [X] for single-choice and [x] for multiple-choice.\n"
     "Coordinates can use percentages (% recommended) or pixels.\n"

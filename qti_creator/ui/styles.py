@@ -26,11 +26,15 @@ nav.svelte-99kmwu {
 .quiz-editor-page-container > .quiz-command-bar { margin-bottom: 0 !important; }
 
 /* Gradio rotates a downward triangle left when closed; use right/down chevrons. */
-.docs-content button.label-wrap > .icon {
+.docs-content button.label-wrap > .icon,
+.home-container button.label-wrap > .icon,
+.media-page-container button.label-wrap > .icon {
   font-size: 0 !important;
   transform: rotate(0deg) !important;
 }
-.docs-content button.label-wrap > .icon::after {
+.docs-content button.label-wrap > .icon::after,
+.home-container button.label-wrap > .icon::after,
+.media-page-container button.label-wrap > .icon::after {
   content: "";
   display: inline-block;
   width: 0.5rem;
@@ -39,7 +43,9 @@ nav.svelte-99kmwu {
   border-bottom: 2px solid currentColor;
   transform: rotate(-45deg);
 }
-.docs-content button.label-wrap.open > .icon::after { transform: rotate(45deg); }
+.docs-content button.label-wrap.open > .icon::after,
+.home-container button.label-wrap.open > .icon::after,
+.media-page-container button.label-wrap.open > .icon::after { transform: rotate(45deg); }
 
 /* Shared page titles, primary actions, and reference table layout. */
 .docs-content h2, .editor-header-row h2, .media-header-bar h2 {

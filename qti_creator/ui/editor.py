@@ -200,7 +200,7 @@ def render_editor_view(
     # Build media info snippet
     media_parts = []
     if session.media.files:
-        media_parts.append(f"{len(session.media.files)} media files")
+        media_parts.append(f"{len(session.media.files)} media file{'s' if len(session.media.files) != 1 else ''}")
     if session.media.missing:
         media_parts.append(f"⚠ {len(session.media.missing)} missing media ref(s)")
     media_info = " · ".join(media_parts)

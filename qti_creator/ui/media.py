@@ -14,6 +14,7 @@ import gradio as gr
 from qti_creator.media_service import analyze_session_media, safe_extract_media_zip
 from qti_creator.session import MediaFile, QuizSession, resolve_session
 from src.examples import SAMPLE_ALL_TYPES
+from qti_creator.ui.help_content import MEDIA_GUIDE
 
 
 def format_file_size(size_bytes: int) -> str:
@@ -270,6 +271,9 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     variant="primary",
                     elem_id="btn_upload_media_zip",
                 )
+
+        with gr.Accordion("How to prepare images and media", open=False):
+            gr.Markdown(MEDIA_GUIDE)
 
         empty_session = QuizSession(session_id="")
 

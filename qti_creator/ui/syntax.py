@@ -1,10 +1,24 @@
 """Syntax Cheat Sheet documentation page for QTI-Creator."""
 
 import gradio as gr
+from qti_creator.ui.help_content import SINGLE_SECTION_EXAMPLE, MULTI_SECTION_EXAMPLE, MEDIA_GUIDE
 
 SYNTAX_MARKDOWN = """
 ## Syntax Cheat Sheet
 Question types are inferred automatically from their Markdown syntax.
+
+### Start with a complete quiz
+Use YAML `title:` for the overall test title, `#` for a section, and `##` for each question. The only special third-level headings are `### Hint` and `### Feedback`, optionally followed by `: Title`; put them after the prompt and answers.
+
+```markdown
+""" + SINGLE_SECTION_EXAMPLE + """
+```
+
+The title and section name may differ. Without a YAML or `Title:` metadata title, the first section name also becomes the test title. Do not add a separate `# Quiz title` heading before your sections: it would create an empty section. Start YAML frontmatter on the first line of the file.
+
+Follow the [authoring and export workflow on Home](/) when you are ready to try this example.
+
+### Question-type reference
 
 > **Choice markers are case-sensitive:** Use uppercase `[X]` for Single Choice and lowercase `[x]` for Multiple Choice. Do not mix `[X]` and `[x]` within a question.
 
@@ -143,14 +157,17 @@ def render_syntax_page() -> None:
             gr.Markdown(
                 """
                 Long tests can be structured into multiple sections, generating OpenOLAT's native hierarchical navigation tree:
-                - **YAML `title:`** defines the overall test title.
+                - **YAML `title:`** defines the overall test title independently of section names. Alternatively, use `Title:` header metadata; use one title mechanism. If both are supplied and disagree, header metadata takes precedence with a warning.
                 - **`#` always starts an Assessment Section** (e.g. `# Section 1: Listening Comprehension`).
                 - **`##` always starts an Assessment Question** (e.g. `## Question Title`).
                 - **Section instructions / description**: Any content written between `# Section` and its first `## Question` is rendered as an OpenOLAT candidate rubric (`<rubricBlock>`), presented to the student at the beginning of that section.
-                - **Default fallback**: If no test title is given in YAML, the first `#` section title is automatically used as the test title. If questions appear without any `#` heading, an implicit default section is created.
+                - **Default fallback**: If no test title is given in YAML or `Title:` metadata, the first `#` section title is automatically used as the test title. If questions appear without any `#` heading, an implicit default section is created.
                 - *Headings are strictly deterministic: `#` is always a section, `##` is always a question.*
                 """
             )
+
+        with gr.Accordion("Complete multi-section example", open=False):
+            gr.Markdown("```markdown\n" + MULTI_SECTION_EXAMPLE + "\n```")
 
         with gr.Accordion("Multiple Choice Scoring", open=False):
             gr.Markdown(
@@ -184,8 +201,8 @@ def render_syntax_page() -> None:
                 #### 3. Fill in the Blank (Text Entry) with Alternatives
                 - Wrap target blanks in `{{...}}`.
                 - Provide acceptable synonyms or alternate spellings with pipe `|`: `{{gray | grey}}`.
-                - The first value is canonical; all alternatives receive equal full credit.
-                - **Escaping syntax characters**: Within `{{...}}`, use a backslash to escape syntax characters: `\\|` (literal `|`), `\\}` (literal `}`), and `\\\\` (literal `\\`), e.g., `{{answer containing \\}\\} braces | alternative}}`.
+                - The first value is canonical; all alternatives receive equal full credit. Text answers are case-sensitive in the OpenOLAT QTI engine used by this project; this UI has no case-sensitivity switch. List accepted variants explicitly, e.g. `{{DNA | dna}}`, and verify whitespace and capitalization with representative responses in OpenOLAT.
+                - **Escaping syntax characters**: Inside a text gap, write `\|` for a literal pipe, `\}` for a literal closing brace, and `\\` for a literal backslash. For example, `{{a\|b}}` accepts the single answer `a|b`; `{{answer containing \}\} braces | alternative}}` accepts either the text with two closing braces or `alternative`.
 
                 #### 4. Fill in the Blank with Dropdown (Inline Choice)
                 - Embed dropdown options directly in text: `{[option 1|option 2|option 3]}`.
@@ -205,16 +222,16 @@ def render_syntax_page() -> None:
                 #### 6. Numerical Questions
                 - Specify the expected answer and optional tolerance: `= 9.81 ± 0.05` or `= 42` or `= 0.125 +- 0.001`.
 
-                #### 6. Order / Sequencing Questions
+                #### 7. Order / Sequencing Questions
                 - Write an ordered list with empty boxes: `1. [ ] Step A`, `1. [ ] Step B`, `1. [ ] Step C` (minimum 2 items).
                 - **The order written in Markdown is the correct solution.**
                 - Learner-facing tiles are automatically scrambled (`shuffle="true"`).
                 - *Regular numbered lists (`1. Foo`, `2. Bar`) without `[ ]` remain standard Markdown text.*
 
-                #### 7. Essay / Free Text
+                #### 8. Essay / Free Text
                 - Write the prompt without any answer markers. OpenOLAT creates an open text response area for manual grading.
 
-                #### 8. Hotspot (Image Interaction)
+                #### 9. Hotspot (Image Interaction)
                 - Hotspot questions present an image with clickable regions:
                   - Single Choice (one `[X]`): Learner must click the one correct region.
                   - Multiple Choice (one or more `[x]`): Learner selects all correct regions.
@@ -224,14 +241,14 @@ def render_syntax_page() -> None:
                 - Coordinates can use percentages (e.g. `circle(65%, 60%, 10%)`) or pixels (e.g. `rect(100, 200, 300, 400)`).
                 - Trailing text after the shape call becomes an author label shown in the editor/legend, but is **never leaked** into the QTI assessment to the learner.
                 - **Interactive Visual Editor**: In the Preview pane, switch to **✏️ Edit Hotspots** to move, resize with corner/edge handles, add new shapes, or toggle correctness visually without manually calculating coordinates.
-                - *Packaging requirement*: Hotspot questions require packaging the real background image via the **Media** tab (`.zip` upload) to ensure exact intrinsic pixel alignment in OpenOLAT.
+                - *Packaging requirement*: Enable **Include media in exported QTI package** on the **Media** page. Supply the background image in a media ZIP or use a reachable remote image URL; both routes resolve the real image dimensions. Try the bundled hotspot example on [Home](/).
 
-                #### 9. Formulas & Code Blocks
+                #### 10. Formulas & Code Blocks
                 - **Math Formulas**: Use MathJax-compatible TeX syntax — e.g. `$E = mc^2$`, `$$\frac{a}{b}$$`, `\sum`, `\text{...}`. OpenOLAT renders math natively via MathJax 3 (OpenOLAT ≥ 16.2). Arbitrary LaTeX packages and document-level commands are not supported.
                 - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                 - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
 
-                #### 10. Markdown Tables (GFM Pipe Syntax)
+                #### 11. Markdown Tables (GFM Pipe Syntax)
                 - Tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles).
                 - Use standard Markdown pipe syntax:
                   ```markdown
@@ -243,6 +260,24 @@ def render_syntax_page() -> None:
                 """
             )
 
+        with gr.Accordion("Matching with multiple targets", open=False):
+            gr.Markdown("""
+                Repeat an item on multiple rows, or leave the item cell empty to continue the preceding item:
+
+                ```markdown
+                # Grammar Practice
+                ## Match each word with every possible category.
+                | Item | Match |
+                |---|---|
+                | light | noun |
+                | | adjective |
+                | run | noun |
+                | | verb |
+                ```
+
+                Here both words have two correct targets, so learners may select multiple targets per item. With one target per item the matching matrix uses one selection per item. Replace `Match` with `Drag` for drag-and-drop presentation. Partial scoring is the default; `Scoring: all-correct` requires the exact set of correct pairs.
+            """)
+
         with gr.Accordion("Question-level settings", open=False):
             gr.Markdown(
                 """
@@ -250,13 +285,13 @@ def render_syntax_page() -> None:
                 - `Points: <number>` (default: 1)
                 - `### Hint` or `### Hint: <Title>` (pre-submission hint section; captures all lines/paragraphs, math, and code until the next heading)
                 - `### Feedback` or `### Feedback: <Title>` (post-submission explanation and solution section; captures all lines/paragraphs, math, and code until the next heading)
-                - `Scoring: partial` or `all-correct` (for Multiple Choice questions; default: `partial`)
-                - `Shuffle: yes / no` (controls answer scrambling; default: `yes`)
+                - `Scoring: partial` or `all-correct` (for Multiple Choice, Hottext, Match / Drag & Drop, and Hotspot questions; default: `partial`)
+                - `Shuffle: yes / no` (controls answer scrambling where applicable; default: `yes`). Order tiles always shuffle; dropdowns without an explicitly bold correct option also always shuffle, even with `Shuffle: no`
                 - `Topic: <text>` (overrides quiz-level Topic in OpenOLAT)
                 - `Keywords: <kw1, kw2>` (overrides quiz-level Keywords in OpenOLAT)
                 - `Additional_Info: <text>` (overrides OpenOLAT Zusatzinformationen)
                 - `Language: <iso-code>` (e.g. `en`, `de`, `fr`)
-                - `Type: <type-name>` (optional explicit question type override)
+                - `Type: <type-name>` (optional override; prefer inference). Supported names include `sc`, `mc`, `tf`, `kprim`, `essay`, `fib`, `dropdown`, `hottext`, `match`, `drag`, `numerical`, `order`, and `hotspot`. The answer syntax must still match the type
                 - `Identifier: <custom_id>` (optional, default: auto-generated)
 
                 > **Note on Hints and Solutions:** Always use `### Hint` and `### Feedback` for multi-paragraph explanations and worked solutions. Single-line `Hint:` or `Feedback:` metadata only covers a single line and warns if subsequent paragraphs could leak into the student prompt.
@@ -283,19 +318,9 @@ def render_syntax_page() -> None:
             )
 
         with gr.Accordion("Media & Images", open=False):
-            gr.Markdown(
-                """
-                Embed images anywhere in question prompts, choices, or feedback using standard Markdown:
-                - **Remote URL**: `![Diagram](https://example.org/diagram.png)`
-                - **Relative Path**: `![Tree](tree.png)` or `![Chart](images/chart.png)`
-                - **Image Sizing (HackMD Syntax)**:
-                  - Fixed width: `![Diagram](diagram.png =300x)`
-                  - Proportional width: `![Chart](chart.png =30%x)`
-                  - Width and height: `![Photo](photo.png =400x250)`
-                  - *(Note: A space before `=` is required; aspect ratio is preserved when omitting height or width).*
-
-                **Packaging Behavior:**
-                - By default (*Include media* OFF), image references remain external URLs / relative links in the QTI package.
-                - When *Include media* is enabled, remote images are downloaded and relative images are extracted from the uploaded **Media ZIP** to create a fully self-contained QTI package for OpenOLAT.
-                """
-            )
+            gr.Markdown(MEDIA_GUIDE)
+            gr.Markdown("""
+                ### Image syntax and sizing
+                Use `![Diagram](https://example.org/diagram.png)` for a remote image or `![Chart](images/chart.png)` for an uploaded local image.
+                HackMD sizing is supported: `![Diagram](diagram.png =300x)` for fixed width, `![Chart](chart.png =30%x)` for proportional width, or `![Photo](photo.png =400x250)` for both dimensions. Include a space before `=`; omit one dimension to preserve the aspect ratio.
+            """)

@@ -2,7 +2,7 @@
 
 SAMPLE_ALL_TYPES = """# General Knowledge & Science Quiz
 
-A demonstration quiz covering all supported question types with automatic inference.
+A demonstration of common question types with automatic inference. The separate hotspot example on Home includes image media.
 
 ## What is the capital of France?
 - [ ] Berlin

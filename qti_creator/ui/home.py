@@ -1,11 +1,12 @@
 """Home page for QTI-Creator: orientation and onboarding."""
 
 import gradio as gr
-from src.examples import EXAMPLES
+from qti_creator.ui.help_content import AUTHORING_WORKFLOW, VALIDATION_GUIDE
+from qti_creator.examples import UI_EXAMPLES, HOTSPOT_EXAMPLE_NAME, HOTSPOT_MEDIA_ZIP, load_example
 from src.version import __version__, __release_date__
 
 
-def render_home_page() -> None:
+def render_home_page(shared_session: gr.State) -> None:
     """Render the calm, focused Home page."""
     with gr.Column(elem_classes=["home-container"]):
         # Header
@@ -40,33 +41,43 @@ def render_home_page() -> None:
         gr.HTML("<hr style='border: none; border-top: 1px solid #e2e8f0; margin: 1.75rem 0;'>")
 
         # How it works
-        gr.Markdown(
-            """
-            ### How it works
+        gr.Markdown("### How it works\n\n" + AUTHORING_WORKFLOW)
+        gr.Markdown("""### Need help getting started?
 
-            ```text
-            Write or paste QuizMD  →  Preview & validate  →  Optionally manage Media  →  Export QTI 2.1
-            ```
-
-            ### Need help getting started?
-
-            - **[Syntax Cheat Sheet](/syntax)**: Comprehensive overview of supported question types and syntax conventions.
-            - **[Prompting Guide](/prompting)**: Ready-to-use AI prompts for converting teaching materials into QuizMD.
-            - **[OpenOLAT Import](/openolat)**: Step-by-step guide to importing the generated packages into OpenOLAT courses or question banks.
-            """
-        )
+- **[Syntax Cheat Sheet](/syntax)**: Complete examples and supported question syntax.
+- **[Prompting Guide](/prompting)**: AI drafting template and review checklist.
+- **[OpenOLAT Import](/openolat)**: Import, learner-preview checks, and publication.
+""")
 
         gr.HTML("<hr style='border: none; border-top: 1px solid #e2e8f0; margin: 1.75rem 0;'>")
+
+        with gr.Accordion("Validation, preview, and export status", open=False):
+            gr.Markdown(VALIDATION_GUIDE)
 
         # Explore examples
         gr.Markdown("### Explore Examples")
         example_select = gr.Dropdown(
-            choices=list(EXAMPLES.keys()),
+            choices=list(UI_EXAMPLES.keys()),
             value="All Question Types (Showcase)",
             label="Select an example to inspect its Markdown syntax:",
         )
+        gr.Markdown("Loading an example replaces the current QuizMD and media in this browser session. Save your working source first. The hotspot example includes its image archive and enables media packaging.")
+        with gr.Row():
+            btn_load_example = gr.Button("Load selected example in Editor", variant="primary")
+            example_media_download = gr.DownloadButton(
+                "Download hotspot media ZIP",
+                value=str(HOTSPOT_MEDIA_ZIP),
+                visible=False,
+            )
+        btn_load_example.click(
+            fn=load_example,
+            inputs=[example_select, shared_session],
+            outputs=[shared_session],
+            api_name=False,
+        ).success(None, js="() => { window.location.pathname = '/editor'; }")
+
         example_view = gr.Textbox(
-            value=EXAMPLES.get("All Question Types (Showcase)", ""),
+            value=UI_EXAMPLES.get("All Question Types (Showcase)", ""),
             lines=14,
             show_label=False,
             interactive=False,
@@ -74,7 +85,7 @@ def render_home_page() -> None:
         )
 
         example_select.change(
-            fn=lambda name: EXAMPLES.get(name, ""),
+            fn=lambda name: (UI_EXAMPLES.get(name, ""), gr.update(visible=name == HOTSPOT_EXAMPLE_NAME)),
             inputs=[example_select],
-            outputs=[example_view],
+            outputs=[example_view, example_media_download],
         )

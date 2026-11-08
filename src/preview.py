@@ -1,8 +1,11 @@
 """HTML preview generator for QuizMD."""
 
+import base64
 import html
 import json
 import re
+from typing import Any, Dict, List, Optional, Tuple
+from src.media import ResolvedHotspotImage, _detect_image_mime, _extract_image_dimensions
 from src.model import (
     AssociationQuestion,
     Choice,
@@ -22,17 +25,15 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-
-
-from typing import Dict, Optional
 from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_GAP, RE_DROPDOWN_GAP
-
 
 
 def render_quiz_preview_html(
     quiz: Quiz,
     asset_map: Optional[Dict[str, str]] = None,
     render_math: bool = True,
+    hotspot_images: Optional[Dict[str, ResolvedHotspotImage]] = None,
+    source_hash: Optional[str] = None,
 ) -> str:
     """Generate clean collapsible HTML cards to visually preview parsed questions.
 
@@ -205,7 +206,14 @@ def render_quiz_preview_html(
                     else ""
                 )
 
-            body_html = _render_question_body(q, asset_map=asset_map, render_math=render_math)
+            body_html = _render_question_body(
+                q,
+                asset_map=asset_map,
+                render_math=render_math,
+                hotspot_images=hotspot_images,
+                question_idx=global_idx,
+                source_hash=source_hash,
+            )
             hint_header = f"💡 Hint: {html.escape(q.hint_title)}" if getattr(q, "hint_title", None) else "💡 Hint"
             hint_html = (
                 f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
@@ -262,30 +270,31 @@ def render_quiz_preview_html(
 <div class="quiz-question-source-container" style="margin-top: 12px; font-size: 0.88em; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
   <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
     <details class="quiz-question-source-details" style="flex: 1 1 auto;">
-      <summary>
+      <summary title="Toggle raw QuizMD source for question {global_idx}">
         <span>Markdown</span>
       </summary>
       <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
     </details>
-    <button type="button" class="quiz-edit-jump-btn" title="Jump to this question in QuizMD editor" data-line="{line_no}" data-title="{escaped_title_attr}" onclick="var l = parseInt(this.getAttribute('data-line'), 10); var t = this.getAttribute('data-title'); var fn = window.quizJumpToLine || (window.parent && window.parent.quizJumpToLine); if (typeof fn === 'function') {{ fn(l, t); }} else if (window.parent &amp;&amp; window.parent.postMessage) {{ window.parent.postMessage({{action: 'quiz-jump', line: l, title: t}}, '*'); }}">
+    <button type="button" class="quiz-edit-jump-btn" title="Jump to question {global_idx} in QuizMD editor" data-line="{line_no}" data-title="{escaped_title_attr}" onclick="var l = parseInt(this.getAttribute('data-line'), 10); var t = this.getAttribute('data-title'); var fn = window.quizJumpToLine || (window.parent && window.parent.quizJumpToLine); if (typeof fn === 'function') {{ fn(l, t); }} else if (window.parent &amp;&amp; window.parent.postMessage) {{ window.parent.postMessage({{action: 'quiz-jump', line: l, title: t}}, '*'); }}">
       ✏️ Edit
     </button>
   </div>
 </div>
 """
 
+            card_id = f"qcard_{global_idx}"
             card_border_style = "border: 1px solid #f87171;" if is_invalid else "border: 1px solid #e2e8f0;"
             card = f"""
-<details class="quiz-question-card" style="background: white; {card_border_style} border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
+<details class="quiz-question-card" data-card-id="{card_id}" data-question-idx="{global_idx}" style="background: white; {card_border_style} border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
   <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
     <div style="display: flex; align-items: center; gap: 8px; flex-1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
       <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
     </div>
     <div style="display: flex; align-items: center; flex-shrink: 0; margin-left: 12px;">
-      <span style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px;">{type_name}</span>
+      <span title="Question type: {type_name}" style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px; cursor: help;">{type_name}</span>
       {status_badges_html}
-      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">{q.points} pt</span>
+      <span title="Score weight: {q.points} pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">{q.points} pt</span>
     </div>
   </summary>
   <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
@@ -388,66 +397,327 @@ def render_quiz_preview_html(
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: #475569;
-    font-weight: 500;
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    color: #334155 !important;
     cursor: pointer;
     user-select: none;
     list-style: none;
     outline: none;
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 0.82em;
-    line-height: 1.4;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    padding: 2px 8px !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
     transition: background 0.15s, color 0.15s, border-color 0.15s;
   }}
-  .quiz-question-source-details summary:hover {{ background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }}
+  .quiz-question-source-details summary:hover {{ background: #f1f5f9 !important; color: #0f172a !important; border-color: #94a3b8 !important; }}
   .quiz-edit-jump-btn {{
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    color: #475569;
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 0.82em;
-    line-height: 1.4;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    user-select: none;
-    outline: none;
-    white-space: nowrap;
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    transition: background 0.15s, color 0.15s, border-color 0.15s !important;
+    user-select: none !important;
+    outline: none !important;
   }}
   .quiz-edit-jump-btn:hover {{
-    background: #e0f2fe;
-    color: #0369a1;
-    border-color: #7dd3fc;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
   }}
   .quiz-expand-btn {{
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    color: #475569;
-    border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 0.82em;
-    line-height: 1.4;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    transition: background 0.15s, color 0.15s, border-color 0.15s !important;
+    user-select: none !important;
+    outline: none !important;
   }}
   .quiz-expand-btn:hover {{
-    background: #f1f5f9;
-    color: #1e293b;
-    border-color: #94a3b8;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+  }}
+  /* Hotspot Milestone 2 SVG Preview & Author/Learner Toggle */
+  .hotspot-preview-widget {{
+    margin-top: 4px;
+  }}
+  .hotspot-toolbar {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }}
+  .hotspot-mode-toggle {{
+    display: inline-flex;
+    background: #e2e8f0;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+  }}
+  .hotspot-mode-btn {{
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s !important;
+  }}
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-mode-btn[data-mode="author"],
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-mode-btn[data-mode="learner"] {{
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+  }}
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-mode-btn[data-mode="editor"] {{
+    background: #ffffff !important;
+    color: #1d4ed8 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+  }}
+  .hotspot-canvas-stage {{
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+  }}
+  .hotspot-canvas-stage img.hotspot-bg-image {{
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    user-select: none;
+  }}
+  .hotspot-overlay-svg {{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+  }}
+  .hotspot-provisional-svg {{
+    position: static;
+    display: block;
+    width: 100%;
+    max-width: 680px;
+    height: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+  }}
+  .hotspot-region-group {{
+    cursor: pointer;
+  }}
+  /* Author and Editor View shape colors */
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-region-group[data-correct="1"] .hotspot-shape,
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-region-group[data-correct="1"] .hotspot-shape {{
+    fill: rgba(34, 197, 94, 0.24);
+    stroke: #16a34a;
+  }}
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-region-group[data-correct="0"] .hotspot-shape,
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-region-group[data-correct="0"] .hotspot-shape {{
+    fill: rgba(239, 68, 68, 0.18);
+    stroke: #dc2626;
+    stroke-dasharray: 6, 4;
+  }}
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-region-group[data-highlighted="1"] .hotspot-shape,
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-region-group[data-highlighted="1"] .hotspot-shape {{
+    fill: rgba(14, 165, 233, 0.36);
+    stroke: #0284c7;
+    stroke-dasharray: none;
+    filter: drop-shadow(0 0 4px rgba(2, 132, 199, 0.6));
+  }}
+  /* Learner View shape colors (neutral, no answer-key leakage) */
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-region-group .hotspot-shape {{
+    fill: rgba(59, 130, 246, 0.14);
+    stroke: #3b82f6;
+    stroke-dasharray: none;
+  }}
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-region-group:hover .hotspot-shape {{
+    fill: rgba(59, 130, 246, 0.28);
+    stroke: #2563eb;
+  }}
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-region-group[data-learner-selected="1"] .hotspot-shape {{
+    fill: rgba(37, 99, 235, 0.42);
+    stroke: #1d4ed8;
+  }}
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-author-badge,
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-author-legend {{
+    display: none !important;
+  }}
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-learner-bar,
+  .hotspot-preview-widget[data-view-mode="author"] .hotspot-editor-controls,
+  .hotspot-preview-widget[data-view-mode="learner"] .hotspot-editor-controls {{
+    display: none !important;
+  }}
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-learner-bar {{
+    display: none !important;
+  }}
+  .hotspot-preview-widget[data-view-mode="editor"] .hotspot-region-group[data-selected="1"] .hotspot-shape {{
+    stroke: #2563eb !important;
+    stroke-width: 3.5 !important;
+    stroke-dasharray: none !important;
+    filter: drop-shadow(0 0 5px rgba(37, 99, 235, 0.7));
+  }}
+  .hotspot-editor-btn {{
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    transition: background 0.15s, border-color 0.15s !important;
+    white-space: nowrap !important;
+  }}
+  .hotspot-editor-btn:hover {{
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+  }}
+  .hotspot-editor-btn-danger {{
+    color: #b91c1c !important;
+    border-color: #fca5a5 !important;
+  }}
+  .hotspot-editor-btn-danger:hover {{
+    background: #fef2f2 !important;
+    border-color: #f87171 !important;
+  }}
+  .hotspot-region-pill {{
+    font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    transition: all 0.15s ease !important;
+    white-space: nowrap !important;
+  }}
+  .hotspot-region-pill:hover {{
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+  }}
+  .hotspot-region-pill[data-selected="1"] {{
+    background: #eff6ff !important;
+    border-color: #2563eb !important;
+    color: #1d4ed8 !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 0 1.5px #2563eb !important;
+  }}
+  .hotspot-handle {{
+    fill: #ffffff;
+    stroke: #2563eb;
+    stroke-width: 1.5;
+    cursor: pointer;
+  }}
+  .hotspot-legend-item {{
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+  }}
+  .hotspot-legend-item:hover {{
+    background: #f8fafc;
+  }}
+  .hotspot-legend-item[data-selected="1"] {{
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
+  }}
+  .hotspot-legend-item[data-highlighted="1"] {{
+    background: #e0f2fe !important;
+    border-color: #7dd3fc !important;
   }}
 </style>
-<div style="font-family: system-ui, -apple-system, sans-serif;">
+<div style="font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);">
   <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
     <div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -458,11 +728,13 @@ def render_quiz_preview_html(
     </div>
     <div>
 
-      <button type="button" class="quiz-expand-btn" onclick="
+      <button type="button" class="quiz-expand-btn" title="Expand or collapse all question cards" onclick="
         var items = document.querySelectorAll('.quiz-question-card, .quiz-section-desc-details');
         var anyClosed = Array.from(items).some(c => !c.open);
         items.forEach(c => c.open = anyClosed);
         this.innerHTML = anyClosed ? '▼ Collapse All' : '▶ Expand All';
+        this.title = anyClosed ? 'Collapse all question cards' : 'Expand all question cards';
+        if (window.onQuizExpandAllToggle) window.onQuizExpandAllToggle(anyClosed);
       ">▶ Expand All</button>
     </div>
   </div>
@@ -535,6 +807,9 @@ def _render_question_body(
     q: Question,
     asset_map: Optional[Dict[str, str]] = None,
     render_math: bool = True,
+    hotspot_images: Optional[Dict[str, ResolvedHotspotImage]] = None,
+    question_idx: int = 1,
+    source_hash: Optional[str] = None,
 ) -> str:
     if isinstance(q, InvalidQuestion):
         return ""
@@ -687,26 +962,329 @@ def _render_question_body(
             return f"{desc}{''.join(cards)}"
 
     elif isinstance(q, HotspotQuestion):
-        target_src = asset_map.get(q.image_src, q.image_src) if asset_map else q.image_src
-        img_html = (
-            f"<div style='margin-bottom: 8px;'><img src='{html.escape(target_src, quote=True)}' "
-            f"alt='{html.escape(q.image_alt, quote=True)}' style='max-width: 100%; height: auto; border-radius: 6px; border: 1px solid #cbd5e1;' /></div>"
+        return _render_hotspot_preview(
+            q,
+            asset_map=asset_map,
+            hotspot_images=hotspot_images,
+            question_idx=question_idx,
+            source_hash=source_hash,
         )
-        bullet = "□" if q.multiple else "○"
-        checked_bullet = "■" if q.multiple else "●"
-        reg_items = []
-        for idx, r in enumerate(q.regions, start=1):
-            icon = checked_bullet if r.correct else bullet
-            style = "color: #16a34a; font-weight: 600;" if r.correct else "color: #475569;"
-            unit_suffix = "%" if r.unit == "pct" else ""
-            coords_fmt = ", ".join(f"{int(c) if c == int(c) else c}{unit_suffix}" for c in r.coordinates)
-            label_part = f" — {html.escape(r.author_label)}" if r.author_label else ""
-            tag = " (Correct)" if r.correct else ""
-            reg_items.append(
-                f"<li style='margin-bottom: 4px; list-style: none; {style}'>"
-                f"{icon} <code>#{idx} ({html.escape(r.identifier)})</code>: "
-                f"<code>{html.escape(r.shape)}({coords_fmt})</code>{label_part}{tag}</li>"
-            )
-        return f"{img_html}<ul style='padding-left: 4px; margin: 0;'>{''.join(reg_items)}</ul>"
 
     return ""
+
+
+def _resolve_preview_hotspot_dimensions(
+    q: HotspotQuestion,
+    target_src: str,
+    hotspot_images: Optional[Dict[str, ResolvedHotspotImage]] = None,
+) -> Tuple[int, int, bool]:
+    """Return (width, height, is_resolved_image) for a HotspotQuestion preview."""
+    if hotspot_images and q.identifier in hotspot_images:
+        resolved = hotspot_images[q.identifier]
+        if resolved.width > 0 and resolved.height > 0:
+            return resolved.width, resolved.height, True
+
+    if target_src.startswith("data:image/") and ";base64," in target_src:
+        try:
+            _, b64_payload = target_src.split(";base64,", 1)
+            raw_bytes = base64.b64decode(b64_payload)
+            mime_info = _detect_image_mime(raw_bytes)
+            if mime_info:
+                dims = _extract_image_dimensions(raw_bytes, mime_info[0])
+                if dims and dims[0] > 0 and dims[1] > 0:
+                    return dims[0], dims[1], True
+        except Exception:
+            pass
+
+    # Provisional coordinate-grid dimensions when image bytes are not yet loaded
+    if q.declared_width and q.declared_height and q.declared_width > 0 and q.declared_height > 0:
+        return q.declared_width, q.declared_height, False
+
+    max_px_x = 0.0
+    max_px_y = 0.0
+    for r in q.regions:
+        if r.unit == "px":
+            if r.shape == "rect" and len(r.coordinates) == 4:
+                max_px_x = max(max_px_x, r.coordinates[2])
+                max_px_y = max(max_px_y, r.coordinates[3])
+            elif r.shape == "circle" and len(r.coordinates) == 3:
+                max_px_x = max(max_px_x, r.coordinates[0] + r.coordinates[2])
+                max_px_y = max(max_px_y, r.coordinates[1] + r.coordinates[2])
+    if max_px_x > 0 or max_px_y > 0:
+        return max(800, int(max_px_x * 1.15)), max(600, int(max_px_y * 1.15)), False
+
+    return 800, 600, False
+
+
+def _render_hotspot_preview(
+    q: HotspotQuestion,
+    asset_map: Optional[Dict[str, str]] = None,
+    hotspot_images: Optional[Dict[str, ResolvedHotspotImage]] = None,
+    question_idx: int = 1,
+    source_hash: Optional[str] = None,
+) -> str:
+    """Render Milestone 2 responsive SVG overlay preview with Author/Learner View toggle and Milestone 3 Visual Editor."""
+    target_src = asset_map.get(q.image_src, q.image_src) if asset_map else q.image_src
+    img_w, img_h, is_resolved = _resolve_preview_hotspot_dimensions(
+        q, target_src=target_src, hotspot_images=hotspot_images
+    )
+
+    short_dim = max(100, min(img_w, img_h))
+    stroke_w = max(2.0, round(short_dim * 0.0055, 1))
+    badge_r = max(11.0, round(short_dim * 0.028, 1))
+    font_sz = max(10.5, round(short_dim * 0.025, 1))
+
+    # Inline JS snippets for hover linking, mode switching, learner click simulation, and editor dispatch
+    hover_in_js = (
+        "var w=this.closest('.hotspot-preview-widget');"
+        "var idx=this.getAttribute('data-region-idx');"
+        "if(w&&idx){w.querySelectorAll('[data-region-idx=\"'+idx+'\"]').forEach(function(el){el.setAttribute('data-highlighted','1');});}"
+    )
+    hover_out_js = (
+        "var w=this.closest('.hotspot-preview-widget');"
+        "var idx=this.getAttribute('data-region-idx');"
+        "if(w&&idx){w.querySelectorAll('[data-region-idx=\"'+idx+'\"]').forEach(function(el){el.removeAttribute('data-highlighted');});}"
+    )
+    region_click_js = (
+        "var w=this.closest('.hotspot-preview-widget');"
+        "if(!w)return;"
+        "var mode=w.getAttribute('data-view-mode');"
+        "if(mode==='learner'){"
+        "var mult=w.getAttribute('data-multiple')==='1';"
+        "var cur=this.getAttribute('data-learner-selected')==='1';"
+        "if(!mult){w.querySelectorAll('.hotspot-region-group').forEach(function(g){g.setAttribute('data-learner-selected','0');});}"
+        "this.setAttribute('data-learner-selected',cur&&mult?'0':'1');"
+        "var sel=Array.from(w.querySelectorAll('.hotspot-region-group[data-learner-selected=\"1\"]')).map(function(g){return '#'+g.getAttribute('data-region-idx');});"
+        "var statusEl=w.querySelector('.hotspot-learner-status');"
+        "if(statusEl){statusEl.textContent=sel.length?'Selected region(s): '+sel.join(', '):'Click a region on the image to simulate learner selection.';}"
+        "}else if(mode==='editor'){"
+        "var rIdx=this.getAttribute('data-region-idx');"
+        "if(window.selectHotspotRegion){window.selectHotspotRegion(w,parseInt(rIdx,10));}"
+        "}"
+    )
+    mode_btn_js = (
+        "var w=this.closest('.hotspot-preview-widget');"
+        "var mode=this.getAttribute('data-mode');"
+        "if(w&&mode){"
+        "w.setAttribute('data-view-mode',mode);"
+        "if(mode==='author'){"
+        "w.querySelectorAll('.hotspot-region-group').forEach(function(g){g.setAttribute('data-learner-selected','0');});"
+        "var statusEl=w.querySelector('.hotspot-learner-status');"
+        "if(statusEl){statusEl.textContent='Click a region on the image to simulate learner selection.';}"
+        "}else if(mode==='editor'){"
+        "if(window.initHotspotEditor){window.initHotspotEditor(w);}"
+        "}"
+        "}"
+    )
+
+    svg_elements: List[str] = []
+
+    if not is_resolved:
+        # Draw provisional coordinate grid background & guide lines
+        grid_font = max(11.0, round(short_dim * 0.022, 1))
+        svg_elements.append(
+            f"<rect x='0' y='0' width='{img_w}' height='{img_h}' fill='#f8fafc' />"
+        )
+        for pct in (25, 50, 75):
+            gx = round(img_w * (pct / 100.0), 1)
+            gy = round(img_h * (pct / 100.0), 1)
+            dash = "6,4" if pct != 50 else "none"
+            color = "#cbd5e1" if pct == 50 else "#e2e8f0"
+            svg_elements.append(
+                f"<line x1='{gx}' y1='0' x2='{gx}' y2='{img_h}' stroke='{color}' stroke-width='1.5' stroke-dasharray='{dash}' />"
+                f"<line x1='0' y1='{gy}' x2='{img_w}' y2='{gy}' stroke='{color}' stroke-width='1.5' stroke-dasharray='{dash}' />"
+                f"<text x='{gx + 4}' y='{grid_font + 4}' fill='#94a3b8' font-size='{grid_font}' font-family='ui-monospace, monospace'>{pct}%</text>"
+                f"<text x='6' y='{gy - 4}' fill='#94a3b8' font-size='{grid_font}' font-family='ui-monospace, monospace'>{pct}%</text>"
+            )
+
+    bullet = "□" if q.multiple else "○"
+    checked_bullet = "■" if q.multiple else "●"
+    reg_items: List[str] = []
+
+    for idx, r in enumerate(q.regions, start=1):
+        px_coords = r.resolve_pixel_coords(img_w, img_h)
+        correct_flag = "1" if r.correct else "0"
+        badge_fill = "#16a34a" if r.correct else "#dc2626"
+
+        shape_svg = ""
+        bx, by = 0.0, 0.0
+        if r.shape == "rect" and len(px_coords) == 4:
+            x1, y1, x2, y2 = px_coords
+            rw = max(1, x2 - x1)
+            rh = max(1, y2 - y1)
+            shape_svg = (
+                f"<rect class='hotspot-shape' x='{x1}' y='{y1}' width='{rw}' height='{rh}' "
+                f"stroke-width='{stroke_w}' rx='2' />"
+            )
+            bx = min(float(img_w) - badge_r - 2, max(badge_r + 2, float(x1) + badge_r + 4))
+            by = min(float(img_h) - badge_r - 2, max(badge_r + 2, float(y1) + badge_r + 4))
+        elif r.shape == "circle" and len(px_coords) == 3:
+            cx, cy, rad = px_coords
+            shape_svg = (
+                f"<circle class='hotspot-shape' cx='{cx}' cy='{cy}' r='{max(1, rad)}' "
+                f"stroke-width='{stroke_w}' />"
+            )
+            bx = min(float(img_w) - badge_r - 2, max(badge_r + 2, float(cx)))
+            by = min(float(img_h) - badge_r - 2, max(badge_r + 2, float(cy)))
+
+        badge_svg = (
+            f"<g class='hotspot-author-badge' style='pointer-events: none;'>"
+            f"<circle cx='{bx:.1f}' cy='{by:.1f}' r='{badge_r}' fill='{badge_fill}' stroke='#ffffff' stroke-width='1.5' />"
+            f"<text x='{bx:.1f}' y='{by:.1f}' fill='#ffffff' font-size='{font_sz}' font-weight='700' "
+            f"font-family='system-ui, -apple-system, sans-serif' text-anchor='middle' dominant-baseline='central'>#{idx}</text>"
+            f"</g>"
+        )
+
+        px_raw_str = ",".join(str(c) for c in px_coords)
+        svg_title = f"<title>Hotspot #{idx} ({r.shape.capitalize()}, {'Correct' if r.correct else 'Distractor'}) — Click to edit</title>"
+        svg_elements.append(
+            f"<g class='hotspot-region-group' data-region-idx='{idx}' "
+            f"data-region-id='{html.escape(r.identifier, quote=True)}' "
+            f"data-shape='{r.shape}' data-unit='{r.unit}' "
+            f"data-px-coords='{px_raw_str}' "
+            f"data-correct='{correct_flag}' data-learner-selected='0' data-selected='0' "
+            f"onmouseenter=\"{hover_in_js}\" onmouseleave=\"{hover_out_js}\" onclick=\"{region_click_js}\">"
+            f"{svg_title}{shape_svg}{badge_svg}</g>"
+        )
+
+        # Build Author View legend row
+        icon = checked_bullet if r.correct else bullet
+        style = "color: #16a34a; font-weight: 600;" if r.correct else "color: #475569;"
+        unit_suffix = "%" if r.unit == "pct" else ""
+        coords_fmt = ", ".join(f"{int(c) if c == int(c) else c}{unit_suffix}" for c in r.coordinates)
+        px_fmt = ", ".join(str(c) for c in px_coords)
+        px_part = f" <span style='color: #64748b; font-weight: 400; font-size: 0.9em;'>&rarr; ({px_fmt}) px</span>"
+        label_part = f" — {html.escape(r.author_label)}" if r.author_label else ""
+        tag = " (Correct)" if r.correct else ""
+        legend_click_js = (
+            "var w=this.closest('.hotspot-preview-widget');"
+            f"if(w){{w.setAttribute('data-view-mode','editor');"
+            f"if(window.selectHotspotRegion){{window.selectHotspotRegion(w,{idx});}}}}"
+        )
+        reg_items.append(
+            f"<li class='hotspot-legend-item' data-region-idx='{idx}' "
+            f"style='margin-bottom: 4px; list-style: none; cursor: pointer; {style}' "
+            f"title='Click to select and edit hotspot #{idx} ({r.shape}, {'Correct' if r.correct else 'Distractor'})' "
+            f"onclick=\"{legend_click_js}\" "
+            f"onmouseenter=\"{hover_in_js}\" onmouseleave=\"{hover_out_js}\">"
+            f"{icon} <code>#{idx} ({html.escape(r.identifier)})</code>: "
+            f"<code>{html.escape(r.shape)}({coords_fmt})</code>{px_part}{label_part}{tag}</li>"
+        )
+
+    region_pills = []
+    for p_idx, pr in enumerate(q.regions, start=1):
+        p_sym = "✓" if pr.correct else "○"
+        p_col = "#16a34a" if pr.correct else "#dc2626"
+        p_type = "Correct" if pr.correct else "Distractor"
+        p_title = f"Select #{p_idx} ({pr.identifier}): {pr.shape.capitalize()} [{p_type}] - Click to edit on canvas"
+        region_pills.append(
+            f"<button type='button' class='hotspot-region-pill' data-region-idx='{p_idx}' "
+            f"title='{html.escape(p_title, quote=True)}' "
+            f"onclick=\"var w=this.closest('.hotspot-preview-widget'); if(w&&window.selectHotspotRegion){{window.selectHotspotRegion(w, {p_idx});}}\">"
+            f"<span>#{p_idx}</span> "
+            f"<span style='color: {p_col}; font-weight: 700;'>{p_sym}</span>"
+            f"</button>"
+        )
+    region_pills_html = "".join(region_pills)
+
+    provisional_banner = ""
+    if not is_resolved:
+        provisional_banner = (
+            f"<div class='hotspot-provisional-banner' style='background: #fffbeb; border: 1px solid #fcd34d; "
+            f"border-left: 4px solid #f59e0b; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; "
+            f"font-size: 0.86em; color: #92400e; line-height: 1.45;'>"
+            f"<strong>⚠️ Provisional Coordinate-Grid Preview:</strong> Background image "
+            f"<code>{html.escape(q.image_src)}</code> is not loaded in the Media workspace. "
+            f"Regions are shown on a provisional {img_w}&times;{img_h} reference grid; "
+            f"QTI package export requires packaging the real image."
+            f"</div>"
+        )
+
+    mode_desc = f"Multiple Choice (Scoring: {html.escape(q.scoring)})" if q.multiple else "Single Choice"
+    dim_badge = (
+        f"📐 {img_w} &times; {img_h} px"
+        if is_resolved
+        else f"📐 Provisional Grid ({img_w} &times; {img_h})"
+    )
+
+    toolbar_html = (
+        f"<div class='hotspot-toolbar'>"
+        f"<div style='color: #475569; font-weight: 500;'>"
+        f"<span title='Hotspot reference dimensions'>{dim_badge}</span> &bull; <span title='Hotspot interaction and scoring mode'>{mode_desc}</span>"
+        f"</div>"
+        f"<div class='hotspot-mode-toggle' role='group' aria-label='Hotspot preview mode'>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='author' title='Author View: Inspect correct hotspots, distractors, and coordinate labels' onclick=\"{mode_btn_js}\">👁️ Author View</button>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='learner' title='Learner View: Simulate learner click selection and response validation' onclick=\"{mode_btn_js}\">🎓 Learner View</button>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='editor' title='Visual Hotspot Editor: Drag to move, resize with corner handles, or add/delete shapes' onclick=\"{mode_btn_js}\">✏️ Edit Hotspots</button>"
+        f"</div>"
+        f"</div>"
+    )
+
+    editor_controls_html = (
+        f"<div class='hotspot-editor-controls' style='background: #f0fdf4; border: 1px solid #bbf7d0; "
+        f"border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.85em; display: flex; "
+        f"flex-direction: column; gap: 6px;'>"
+        f"<div style='display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;'>"
+        f"<div style='display: flex; align-items: center; gap: 6px;'>"
+        f"<span style='font-weight: 600; color: #166534; font-size: 0.9em;'>✏️ Visual Editor:</span> "
+        f"<button type='button' class='hotspot-editor-btn' title='Add a new rectangular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'rect');}}\">➕ Add Rect</button>"
+        f"<button type='button' class='hotspot-editor-btn' title='Add a new circular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'circle');}}\">➕ Add Circle</button>"
+        f"</div>"
+        f"<div class='hotspot-editor-region-bar' style='display: flex; align-items: center; gap: 6px;'>"
+        f"<span class='hotspot-editor-sel-info' style='color: #64748b; font-style: italic; font-size: 0.9em;' title='Click any shape, toolbar pill, or legend item to select'>Click a shape, pill, or legend item to edit</span>"
+        f"<button type='button' class='hotspot-editor-btn hotspot-editor-btn-correct' style='display:none;' title='Toggle whether this region is a correct answer or distractor' onclick=\"if(window.toggleSelectedCorrectness){{window.toggleSelectedCorrectness(this.closest('.hotspot-preview-widget'));}}\">✓ Toggle Correct</button>"
+        f"<button type='button' class='hotspot-editor-btn hotspot-editor-btn-danger' style='display:none;' title='Delete the selected hotspot region' onclick=\"if(window.deleteSelectedRegion){{window.deleteSelectedRegion(this.closest('.hotspot-preview-widget'));}}\">🗑️ Delete</button>"
+        f"</div>"
+        f"</div>"
+        f"<div style='display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 5px; border-top: 1px dashed #bbf7d0;'>"
+        f"<span style='font-weight: 600; color: #166534; font-size: 0.84em;'>Hotspots:</span>"
+        f"{region_pills_html}"
+        f"</div>"
+        f"</div>"
+    )
+
+    if is_resolved:
+        stage_html = (
+            f"<div class='hotspot-canvas-stage' style='margin-bottom: 10px;'>"
+            f"<img class='hotspot-bg-image' src='{html.escape(target_src, quote=True)}' "
+            f"alt='{html.escape(q.image_alt, quote=True)}' width='{img_w}' height='{img_h}' />"
+            f"<svg class='hotspot-overlay-svg' viewBox='0 0 {img_w} {img_h}' preserveAspectRatio='xMidYMid meet'>"
+            f"{''.join(svg_elements)}"
+            f"</svg>"
+            f"</div>"
+        )
+    else:
+        stage_html = (
+            f"<div style='margin-bottom: 10px;'>"
+            f"<svg class='hotspot-overlay-svg hotspot-provisional-svg' viewBox='0 0 {img_w} {img_h}' preserveAspectRatio='xMidYMid meet'>"
+            f"{''.join(svg_elements)}"
+            f"</svg>"
+            f"</div>"
+        )
+
+    learner_bar_html = (
+        f"<div class='hotspot-learner-bar' style='background: #eff6ff; border: 1px solid #bfdbfe; "
+        f"border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.86em; color: #1e40af;'>"
+        f"🖱️ <span class='hotspot-learner-status'>Click a region on the image to simulate learner selection.</span>"
+        f"</div>"
+    )
+
+    legend_html = (
+        f"<ul class='hotspot-author-legend' style='padding-left: 4px; margin: 0;'>"
+        f"{''.join(reg_items)}"
+        f"</ul>"
+    )
+
+    safe_hash = html.escape(source_hash or "", quote=True)
+    return (
+        f"<div class='hotspot-preview-widget' data-view-mode='author' data-multiple='{1 if q.multiple else 0}' "
+        f"data-question-idx='{question_idx}' data-img-w='{img_w}' data-img-h='{img_h}' "
+        f"data-source-hash='{safe_hash}'>"
+        f"{provisional_banner}"
+        f"{toolbar_html}"
+        f"{editor_controls_html}"
+        f"{stage_html}"
+        f"{learner_bar_html}"
+        f"{legend_html}"
+        f"</div>"
+    )

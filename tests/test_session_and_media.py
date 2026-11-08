@@ -214,7 +214,7 @@ def test_cross_tab_session_persistence_and_media_upload():
     assert any(f.relative_path == "quadrants.png" and f.status == "referenced" for f in sess4.media.files)
 
     # 5. Navigate back to /editor (new page load -> gr.State is None)
-    sess5, loaded_src, _, preview_html, status_html, diag_html, *_ = on_editor_loaded(
+    sess5, loaded_src, preview_html, status_html, diag_html, *_ = on_editor_loaded(
         None, True, fake_req
     )
     assert sess5 is sess1

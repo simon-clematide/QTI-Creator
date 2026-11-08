@@ -86,6 +86,12 @@ Question types are inferred automatically from their Markdown syntax.
       <td style="padding: 8px 12px;">Partial credit (OpenOLAT negative point system)</td>
     </tr>
     <tr style="border-bottom: 1px solid #e2e8f0;">
+      <td style="padding: 8px 12px;"><strong>Hotspot (Image)</strong></td>
+      <td style="padding: 8px 12px;"><code>![Alt](img.png)<br>- [X] circle(65%, 60%, 10%) Label<br>- [ ] rect(20%, 25%, 45%, 55%)</code></td>
+      <td style="padding: 8px 12px;">Standalone image + shape choices: <code>circle(cx, cy, r)</code>, <code>rect(x1, y1, x2, y2)</code> in % or px. Single Choice (<code>[X]</code>) or Multiple Choice (<code>[x]</code>)</td>
+      <td style="padding: 8px 12px;">All-or-nothing (SC) / Partial credit (MC)</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #e2e8f0;">
       <td style="padding: 8px 12px;"><strong>Essay / Free Text</strong></td>
       <td style="padding: 8px 12px;"><em>Question prompt with no answers</em></td>
       <td style="padding: 8px 12px;">No answer syntax</td>
@@ -208,12 +214,24 @@ def render_syntax_page() -> None:
                 #### 7. Essay / Free Text
                 - Write the prompt without any answer markers. OpenOLAT creates an open text response area for manual grading.
 
-                #### 8. Formulas & Code Blocks
+                #### 8. Hotspot (Image Interaction)
+                - Hotspot questions present an image with clickable regions:
+                  - Single Choice (one `[X]`): Learner must click the one correct region.
+                  - Multiple Choice (one or more `[x]`): Learner selects all correct regions.
+                - Supported shapes:
+                  - `circle(cx, cy, r)`: Center coordinates and radius.
+                  - `rect(x1, y1, x2, y2)` or `rectangle(...)`: Top-left and bottom-right corner coordinates.
+                - Coordinates can use percentages (e.g. `circle(65%, 60%, 10%)`) or pixels (e.g. `rect(100, 200, 300, 400)`).
+                - Trailing text after the shape call becomes an author label shown in the editor/legend, but is **never leaked** into the QTI assessment to the learner.
+                - **Interactive Visual Editor**: In the Preview pane, switch to **✏️ Edit Hotspots** to move, resize with corner/edge handles, add new shapes, or toggle correctness visually without manually calculating coordinates.
+                - *Packaging requirement*: Hotspot questions require packaging the real background image via the **Media** tab (`.zip` upload) to ensure exact intrinsic pixel alignment in OpenOLAT.
+
+                #### 9. Formulas & Code Blocks
                 - **Math Formulas**: Use MathJax-compatible TeX syntax — e.g. `$E = mc^2$`, `$$\frac{a}{b}$$`, `\sum`, `\text{...}`. OpenOLAT renders math natively via MathJax 3 (OpenOLAT ≥ 16.2). Arbitrary LaTeX packages and document-level commands are not supported.
                 - **Display Math**: `$$ \int_0^1 x^2 \, dx $$` on its own line.
                 - **Code**: Backticks `` `code` `` or fenced blocks ```` ```python ... ``` ````. Lines in code blocks are protected from quiz syntax parsing.
 
-                #### 8. Markdown Tables (GFM Pipe Syntax)
+                #### 10. Markdown Tables (GFM Pipe Syntax)
                 - Tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles).
                 - Use standard Markdown pipe syntax:
                   ```markdown

@@ -142,9 +142,9 @@ Feedback: Some feedback
         # Q3 has both in order 💡 💬
         self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
         # Verify sequence: Single Choice (type), then status badges, then points
-        self.assertIn('Single Choice</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>\n      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">1.0 pt</span>', html_out)
+        self.assertIn('Single Choice</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>\n      <span title="Score weight: 1.0 pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">1.0 pt</span>', html_out)
         # Q4 has neither badge
-        self.assertIn('Single Choice</span>\n      \n      <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600;">1.0 pt</span>', html_out)
+        self.assertIn('Single Choice</span>\n      \n      <span title="Score weight: 1.0 pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">1.0 pt</span>', html_out)
 
     def test_preview_section_summary_counts(self):
         text = """---
@@ -439,6 +439,36 @@ For $x=3$, the accumulated adjoint is $\\bar x={{24}}$.
 
         # Input field must be rendered inside the prompt (nested in math span) so preview highlights conflict
         self.assertIn("<input type='text' disabled value='24'", html_out)
+
+    def test_active_question_tracker_in_styles(self):
+        from qti_creator.ui.styles import MATHJAX_HEAD, MATHJAX_TYPESET_JS
+        self.assertIn("window.getActiveQuizQuestionIdx", MATHJAX_HEAD)
+        self.assertIn("window.syncActiveQuestionToPreview", MATHJAX_HEAD)
+        self.assertIn("window.initEditorQuestionTracker", MATHJAX_HEAD)
+        self.assertIn("window.initAllTooltips", MATHJAX_HEAD)
+        self.assertIn("syncActiveQuestionToPreview", MATHJAX_TYPESET_JS)
+        self.assertIn("initEditorQuestionTracker", MATHJAX_TYPESET_JS)
+        self.assertIn("initAllTooltips", MATHJAX_TYPESET_JS)
+
+    def test_tooltips_on_buttons_and_pills(self):
+        text = """## Tree Anatomy
+- [X] Root
+- [ ] Leaf
+"""
+        quiz, diags = parse_quizmd(text)
+        self.assertEqual(len(diags), 0)
+        html_out = render_quiz_preview_html(quiz)
+
+        # Question header pills have descriptive tooltips
+        self.assertIn('title="Question type: Single Choice"', html_out)
+        self.assertIn('title="Score weight: 1.0 pt"', html_out)
+
+        # Expand All button has tooltip
+        self.assertIn('title="Expand or collapse all question cards"', html_out)
+
+        # Edit jump button and source details have tooltips
+        self.assertIn('title="Jump to question 1 in QuizMD editor"', html_out)
+        self.assertIn('title="Toggle raw QuizMD source for question 1"', html_out)
 
 
 if __name__ == "__main__":

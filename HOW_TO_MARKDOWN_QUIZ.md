@@ -311,6 +311,41 @@ Drag & Drop questions use the same association table format with header `| Item 
 
 ---
 
+### Hotspot (Image Interaction)
+
+Hotspot questions present an image with interactive clickable target areas.
+
+Single Choice Hotspot (exactly one `[X]`):
+```markdown
+## Identify the left ventricle.
+Click the correct region in the diagram.
+![Human heart](heart.png)
+- [X] circle(65%, 60%, 10%) Left ventricle
+- [ ] circle(35%, 60%, 10%) Right ventricle
+- [ ] rect(28%, 25%, 45%, 45%) Right atrium
+```
+
+Multiple Choice Hotspot (one or more `[x]`):
+```markdown
+## Select all input devices.
+![Computer peripherals](peripherals.png)
+- [x] rect(5%, 53%, 48%, 87%) Keyboard
+- [x] circle(65%, 70%, 8%) Mouse
+- [ ] rect(23%, 5%, 78%, 48%) Monitor
+```
+
+Rules:
+- Inferred when a question has exactly one standalone image (`![alt](src)`) and shape-function choices.
+- Supported shapes:
+  - `circle(cx, cy, r)`: Circle with center `(cx, cy)` and radius `r`.
+  - `rect(x1, y1, x2, y2)` or `rectangle(...)`: Rectangle with top-left `(x1, y1)` and bottom-right `(x2, y2)`.
+- Coordinates can use percentages (e.g. `65%`) or pixels (e.g. `520`).
+- Trailing text on a choice line provides an author label for the editor and legend, but is never revealed to students in the QTI assessment.
+- In QTI-Creator's Preview tab, click **✏️ Edit Hotspots** to move, resize with corner/edge handles, add new shapes, or toggle correctness visually.
+- **Packaging requirement:** The real background image must be uploaded via the **Media** tab before exporting to QTI to ensure exact pixel alignment.
+
+---
+
 ### Essay / Free Text
 
 Write a question without any answer specification:

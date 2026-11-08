@@ -148,6 +148,16 @@ AI_PROMPT_TEMPLATE = (
     "|---|---|\n"
     "| dog | noun |\n"
     "| run | verb |\n\n"
+    "Hotspot (Image Interaction)\n"
+    "Use a standalone image followed by shape-call choices: circle(cx, cy, r) or rect(x1, y1, x2, y2).\n"
+    "Use [X] for single-choice and [x] for multiple-choice.\n"
+    "Coordinates can use percentages (% recommended) or pixels.\n"
+    "Example:\n"
+    "## Identify the left ventricle\n"
+    "![Heart](heart.png)\n"
+    "- [X] circle(65%, 60%, 10%) Left ventricle\n"
+    "- [ ] circle(35%, 60%, 10%) Right ventricle\n"
+    "- [ ] rect(28%, 25%, 45%, 45%) Right atrium\n\n"
     "Essay / Free Text\n"
     "Write the question without an answer specification.\n"
     "Example:\n"
@@ -202,7 +212,7 @@ def render_prompting_page() -> None:
                 interactive=False,
             )
             with gr.Row():
-                btn_copy_prompt = gr.Button("📋 Copy Prompt Template", variant="secondary")
+                btn_copy_prompt = gr.Button("📋 Copy Prompt Template", variant="secondary", elem_id="btn_copy_prompt")
                 copy_status = gr.Markdown("", elem_classes=["no-scroll-block"])
 
             btn_copy_prompt.click(

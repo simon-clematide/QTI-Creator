@@ -76,6 +76,7 @@ Explain the difference between aerobic and anaerobic respiration in 2-3 sentence
 | **Order / Sequencing** | `1. [ ] First`<br>`1. [ ] Second`<br>`1. [ ] Third` | Ordered list with empty `[ ]` (minimum 2 items) | All or nothing |
 | **Match** | `\| Item \| Match \|`<br>`\|---\|---\|`<br>`\| dog \| noun \|`<br>`\| cat \| noun \|` | 2-column table with `Item` and `Match` headers (ditto supported via empty cells) | Partial credit (OpenOLAT negative point system) |
 | **Drag & Drop** | `\| Item \| Drag \|`<br>`\|---\|---\|`<br>`\| dog \| noun \|`<br>`\| run \| verb \|` | 2-column table with `Item` and `Drag` headers. Native OpenOLAT drag-and-drop | Partial credit (OpenOLAT negative point system) |
+| **Hotspot (Image)** | `![Alt](img.png)`<br>`- [X] circle(65%, 60%, 10%) Label`<br>`- [ ] rect(20%, 25%, 45%, 55%)` | Standalone image + shape choices (`rect`, `circle` in % or px). Single Choice (`[X]`) or Multiple Choice (`[x]`). Interactive Visual Editor in Preview. | All-or-nothing (SC) / Partial credit (MC) |
 | **Essay / Free Text** | Question prompt with no answers | No answer syntax | Manual grading |
 
 *All questions are worth 1 point by default. Use `Points: <number>` to change a question's weight.*
@@ -200,7 +201,31 @@ Association questions are specified as clean two-column Markdown tables:
 - Generates OpenOLAT's native visual drag-and-drop interaction.
 - Partial credit uses OpenOLAT's negative point system (bounded at 0.0), or `Scoring: all-correct`.
 
-### 8. Shuffling / Randomization
+### 8. Hotspot Questions (Image Interaction)
+Hotspot questions present a background image with interactive clickable target areas.
+
+```markdown
+## Identify the left ventricle.
+Click the correct region in the diagram.
+![Human heart](heart.png)
+- [X] circle(65%, 60%, 10%) Left ventricle
+- [ ] circle(35%, 60%, 10%) Right ventricle
+- [ ] rect(28%, 25%, 45%, 45%) Right atrium
+```
+
+- **Inference**: A question containing a standalone image (`![alt](src)`) whose answer list consists of shape calls is automatically inferred as a Hotspot question.
+- **Single Choice vs. Multiple Choice**:
+  - `[X]` (uppercase): Single Choice (`maxChoices="1"`). Exactly one correct region required.
+  - `[x]` (lowercase): Multiple Choice (`maxChoices="0"`). Learners select all correct regions.
+- **Supported Shapes & Coordinates**:
+  - `circle(cx, cy, r)`: Circle with center `(cx, cy)` and radius `r`.
+  - `rect(x1, y1, x2, y2)` or `rectangle(...)`: Rectangle with top-left `(x1, y1)` and bottom-right `(x2, y2)`.
+  - Coordinates can be percentages (`circle(50%, 50%, 10%)`) or pixels (`circle(400, 300, 60)`).
+  - Trailing text on a choice line is the private author label (e.g. `Left ventricle`), visible in the editor/legend but strictly omitted from the learner's QTI XML.
+- **Interactive Visual Editor**: In the Preview pane, switch to **✏️ Edit Hotspots** to drag shapes, resize with corner/edge handles, add new shapes, or toggle correctness visually—the Markdown source updates in real time with revision-safe synchronization.
+- **Media Packaging Invariant**: Hotspot questions require uploading the actual image file in the **Media** tab (`.zip` upload) before exporting to QTI to ensure exact intrinsic coordinate alignment in OpenOLAT.
+
+### 9. Shuffling / Randomization
 QuizMD defaults to **shuffling answer options** wherever the interaction supports and benefits from it (`Shuffle: yes` by default), reducing authoring boilerplate and preventing accidental answer leakage.
 
 - **Choice & Kprim Questions**: Answer choices are shuffled by default in OpenOLAT. Use `Shuffle: no` (or `false`, `0`, `off`) when choice ordering matters pedagogically (e.g. "All of the above" or progressive numeric options).
@@ -221,7 +246,7 @@ Shuffle: no
 Shuffle: no
 ```
 
-### 9. Quiz Metadata & Shuffling
+### 10. Quiz Metadata & Shuffling
 You can specify quiz-level settings using either **Top-Level Header Metadata** (Way A) or **YAML Frontmatter** (Way B):
 
 **Way A: Top-Level Header Metadata**
@@ -266,7 +291,7 @@ Quiz-level metadata acts as defaults that automatically inherit down to every in
 
 ---
 
-### 10. Test Structure & Sections (`#` and `##`)
+### 11. Test Structure & Sections (`#` and `##`)
 QuizMD uses deterministic heading semantics to model OpenOLAT's native test hierarchy:
 - **YAML `title:`** defines the overall test title.
 - **`#` always starts an Assessment Section** (rendered as `<assessmentSection>` in OpenOLAT).
@@ -300,7 +325,7 @@ Formula sheets are provided in the appendix.
 
 ---
 
-### 11. Question Metadata & Local Overrides
+### 12. Question Metadata & Local Overrides
 Question metadata can be placed **before or after** choices/statements (case-insensitive):
 - `Points: <number>` (default: 1) — Point weight for the question.
 - `Hint: <text>` — Pre-submission interactive hint displayed during test-taking in OpenOLAT (supports Markdown and math). *Note on OpenOLAT layout:* If personal notes are enabled in the test options, OpenOLAT positions the personal notes field directly beneath the question choices, placing it in-between the interactive Hint button and the revealed hint text/modal.
@@ -327,7 +352,7 @@ Additional_Info: Source: General Biology Curriculum
 Feedback: Remember "Dear King Philip Came Over For Good Soup".
 ```
 
-### 12. Full Configuration & Metadata Example
+### 13. Full Configuration & Metadata Example
 Here is a comprehensive example demonstrating every available global and question-level configuration option in QuizMD:
 
 ```markdown
@@ -410,14 +435,14 @@ Provide a detailed explanation of amortized time complexity.
 Discuss how dynamic array resizing achieves $O(1)$ amortized insertion despite $O(n)$ worst-case copy steps.
 ```
 
-### 13. Mathematical Formulas & Code Blocks
+### 14. Mathematical Formulas & Code Blocks
 - **Inline LaTeX**: Wrap in `$ ... $` or `\( ... \)`. In generated QTI packages, inline math is wrapped in OpenOLAT-compatible `<span class="math" title="URL_ENCODED">latex</span>` elements (without delimiters inside the span).
 - **Display Math**: Wrap in `$$ ... $$` or `\[ ... \]`. In generated QTI packages, display math is formatted as a centered paragraph `<p style="text-align:center"><span class="math" title="URL_ENCODED">latex</span></p>` matching OpenOLAT's native editor.
 - **Headings Prohibition**: Do not put mathematical formulas (`$...$`) or code inside `#` or `##` headings. Always put them in the body, choices, hint, or feedback.
 - **Inline Code**: Use backticks: `` `x = 42` ``.
 - **Fenced Code Blocks**: Standard triple backticks ```` ```python ... ``` ````. Lines inside code blocks are protected from being misinterpreted as quiz markers.
 
-### 14. Markdown Tables (GFM Pipe Syntax)
+### 15. Markdown Tables (GFM Pipe Syntax)
 Standard GitHub Flavored Markdown (GFM) tables are supported in question prompts, section descriptions, hints, and feedback (everywhere apart from headings/titles):
 
 ```markdown

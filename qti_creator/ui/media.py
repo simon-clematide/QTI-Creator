@@ -98,9 +98,9 @@ def build_media_tree_html(session: QuizSession) -> str:
                 f: MediaFile = val
                 badge = ""
                 if f.status == "referenced":
-                    badge = "<span style='background: #dcfce7; color: #166534; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; font-weight: 600;'>Referenced</span>"
+                    badge = "<span style='background: #dcfce7; color: #166534; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; font-weight: 600;' title='Referenced by one or more questions in QuizMD'>Referenced</span>"
                 else:
-                    badge = "<span style='background: #f1f5f9; color: #64748b; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;'>Unused</span>"
+                    badge = "<span style='background: #f1f5f9; color: #64748b; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;' title='Uploaded asset not referenced by any question in current QuizMD source'>Unused</span>"
 
                 html_out.append(f"""
                 <li style='margin: 4px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;'>
@@ -266,6 +266,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     type="filepath",
                     size="sm",
                     variant="primary",
+                    elem_id="btn_upload_media_zip",
                 )
 
         empty_session = QuizSession(session_id="")

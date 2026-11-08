@@ -14,10 +14,10 @@ def render_home_page() -> None:
             <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
               <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
                 <span>QTI-Creator</span>
-                <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.45em; font-weight: 600; padding: 2px 8px; border-radius: 9999px; vertical-align: middle;">Beta</span>
+                <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.45em; font-weight: 600; padding: 2px 8px; border-radius: 9999px; vertical-align: middle;" title="QTI-Creator preview release">Beta</span>
               </h1>
               <div style="font-size: 0.85em; color: #64748b; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
-                <span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; border: 1px solid #e2e8f0;">v{__version__}</span>
+                <span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; border: 1px solid #e2e8f0;" title="QTI-Creator version {__version__}">v{__version__}</span>
                 <span>&bull;</span>
                 <span>{__release_date__}</span>
               </div>
@@ -29,7 +29,7 @@ def render_home_page() -> None:
         )
 
         with gr.Row():
-            btn_open_editor = gr.Button("🚀 Open Quiz Editor", variant="primary", scale=1)
+            btn_open_editor = gr.Button("🚀 Open Quiz Editor", variant="primary", scale=1, elem_id="btn_open_editor")
 
         # Connect button to navigate to /editor
         btn_open_editor.click(

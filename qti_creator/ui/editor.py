@@ -20,6 +20,14 @@ from src.examples import EXAMPLES, SAMPLE_ALL_TYPES
 from src.media import preflight_media
 from src.packager import create_qti_package
 from src.parser import parse_quizmd
+from src.patcher import (
+    add_hotspot_region,
+    compute_source_hash,
+    delete_hotspot_region,
+    patch_hotspot_coordinates,
+    toggle_hotspot_correctness,
+    update_hotspot_author_label,
+)
 from src.preview import render_quiz_preview_html
 from src.validation import Severity
 
@@ -62,31 +70,31 @@ def format_editor_status_html(
     """Produce the compact horizontal command/status bar HTML."""
     if not is_valid:
         status_part = f"""
-        <span style="color: #dc2626; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+        <span style="color: #dc2626; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="{issue_count} validation error{'s' if issue_count != 1 else ''} detected in QuizMD source">
           <span>✕</span> <span>{issue_count} validation issue{'s' if issue_count != 1 else ''}</span>
         </span>
         """
     else:
         status_part = f"""
-        <span style="color: #16a34a; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+        <span style="color: #16a34a; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="All {question_count} question{'s' if question_count != 1 else ''} are syntactically valid and ready for QTI export">
           <span>✓</span> <span>Valid · {question_count} question{'s' if question_count != 1 else ''}</span>
         </span>
         """
 
     media_part = ""
     if media_info:
-        media_part = f"<span style='color: #64748b;'>· {html.escape(media_info)}</span>"
+        media_part = f"<span style='color: #64748b;' title='Media files referenced in QuizMD'>· {html.escape(media_info)}</span>"
 
     pkg_part = ""
     if package_status == "ready" and package_filename:
         pkg_part = f"""
-        <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+        <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;" title="QTI 2.1 package is generated and ready to download">
           ✓ Package ready: <strong>{html.escape(package_filename)}</strong>
         </span>
         """
     elif package_status == "outdated":
         pkg_part = """
-        <span style="background: #fefce8; color: #854d0e; border: 1px solid #fde047; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+        <span style="background: #fefce8; color: #854d0e; border: 1px solid #fde047; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;" title="Quiz source or media has changed since the last package build; click Regenerate">
           ⚠ Package outdated (source or media changed)
         </span>
         """
@@ -198,10 +206,13 @@ def render_editor_view(
     media_info = " · ".join(media_parts)
 
     is_valid = len(all_errors) == 0
+    src_hash = compute_source_hash(source)
     preview_html = render_quiz_preview_html(
         quiz,
         asset_map=asset_map,
         render_math=render_math,
+        hotspot_images=media_res.resolved_hotspot_images,
+        source_hash=src_hash,
     )
 
     # Check package state
@@ -340,7 +351,7 @@ def handle_generate_package(
 def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None = None) -> None:
     """Build the clean, compact Editor workspace."""
     with gr.Column(elem_classes=["quiz-editor-page-container"]):
-        # Top row: Title + Actions (UploadButton, Example Dropdown)
+        # Top row: Title
         with gr.Row(elem_classes=["editor-header-row"]):
             gr.HTML(
                 """
@@ -349,23 +360,6 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 </h2>
                 """
             )
-            with gr.Row():
-                example_dd = gr.Dropdown(
-                    choices=list(EXAMPLES.keys()),
-                    value="All Question Types (Showcase)",
-                    show_label=False,
-                    container=False,
-                    scale=0,
-                    min_width=220,
-                )
-                btn_upload_file = gr.UploadButton(
-                    "📄 Upload .md / .txt",
-                    file_types=[".md", ".txt"],
-                    file_count="single",
-                    type="filepath",
-                    size="sm",
-                    variant="secondary",
-                )
 
         # Status & Export Bar: Command row
         with gr.Row(elem_classes=["quiz-command-bar"], elem_id="quiz_command_bar"):
@@ -378,8 +372,8 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 elem_classes=["quiz-status-pill"],
             )
             with gr.Row():
-                btn_generate = gr.Button("📦 Generate package", variant="primary", size="sm")
-                btn_download = gr.DownloadButton("📥 Download ZIP", visible=False, size="sm", variant="primary")
+                btn_generate = gr.Button("📦 Generate package", variant="primary", size="sm", elem_id="btn_generate_package")
+                btn_download = gr.DownloadButton("📥 Download ZIP", visible=False, size="sm", variant="primary", elem_id="btn_download_package")
 
         # Validation diagnostics (collapsible / alert when errors exist)
         diagnostics_box = gr.HTML("", elem_classes=["no-scroll-block"])
@@ -390,7 +384,17 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             with gr.Column(scale=1, min_width=480, elem_id="quiz_source_container", elem_classes=["quiz-pane"]):
                 with gr.Row(elem_classes=["quiz-fullscreen-header"]):
                     gr.Markdown("**📝 QuizMD Source**", elem_classes=["no-scroll-block"])
-                    btn_refresh = gr.Button("🔄 Refresh", variant="secondary", size="sm", elem_classes=["quiz-fullscreen-btn"])
+                    btn_upload_file = gr.UploadButton(
+                        "📄 Upload .md / .txt",
+                        file_types=[".md", ".txt"],
+                        file_count="single",
+                        type="filepath",
+                        size="sm",
+                        variant="secondary",
+                        elem_id="btn_upload_file",
+                        elem_classes=["quiz-fullscreen-btn", "quiz-upload-btn"],
+                    )
+                    btn_refresh = gr.Button("🔄 Refresh", variant="secondary", size="sm", elem_id="btn_refresh", elem_classes=["quiz-fullscreen-btn"])
                     btn_editor_fs = gr.Button("⛶", size="sm", elem_id="btn_editor_fs", elem_classes=["quiz-fullscreen-btn"])
 
                 quiz_source = gr.Textbox(
@@ -409,11 +413,20 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                         value=True,
                         label="Render math",
                         container=False,
+                        elem_id="cb_render_math",
                         elem_classes=["quiz-header-checkbox"],
                     )
                     btn_preview_fs = gr.Button("⛶", size="sm", elem_id="btn_preview_fs", elem_classes=["quiz-fullscreen-btn"])
 
                 preview_display = gr.HTML(elem_id="quiz_preview_display")
+
+        # Hidden bridge input for Milestone 3 Visual Hotspot Editor client events (hidden via CSS)
+        hotspot_action_input = gr.Textbox(
+            visible=True,
+            container=False,
+            elem_id="hotspot_action_input",
+            lines=1,
+        )
 
         # Fullscreen button handlers (Generic JS helper)
         btn_editor_fs.click(
@@ -458,22 +471,87 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             api_name=False,
         ).then(js=MATHJAX_TYPESET_JS)
 
-        # Example loading
-        def on_load_example(
-            name: str,
+        # Milestone 3: Handle visual hotspot editor actions from client
+        def on_hotspot_action(
+            action_raw: str,
             session: QuizSession | None,
             render_math: bool,
             request: gr.Request | None = None,
-        ):
+        ) -> Tuple[str, QuizSession, str, str, str, gr.update, gr.update]:
             session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
-            text = EXAMPLES.get(name, "")
-            session.source = text
-            preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
-            return text, session, preview, status_bar, diag, dl, gen
+            if not action_raw or not action_raw.strip():
+                preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
+                return session.source, session, preview, status_bar, diag, dl, gen
 
-        example_dd.input(
-            fn=on_load_example,
-            inputs=[example_dd, shared_session, render_math_cb],
+            import json
+            try:
+                data = json.loads(action_raw)
+            except Exception:
+                preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
+                return session.source, session, preview, status_bar, diag, dl, gen
+
+            act = data.get("action")
+            q_idx = int(data.get("question_idx", 1))
+            r_idx = int(data.get("region_idx", 1))
+            src_hash = data.get("source_hash")
+            current_src = session.source
+
+            new_source = current_src
+            err = None
+
+            if act == "update_coords":
+                shape = data.get("shape", "rect")
+                raw_coords = tuple(float(c) for c in data.get("coords", []))
+                unit = data.get("unit", "pct")
+                new_source, err = patch_hotspot_coordinates(
+                    current_src,
+                    question_idx=q_idx,
+                    region_idx=r_idx,
+                    new_shape=shape,
+                    new_coords=raw_coords,
+                    unit=unit,
+                    expected_hash=src_hash,
+                )
+            elif act == "toggle_correct":
+                new_source, err = toggle_hotspot_correctness(
+                    current_src,
+                    question_idx=q_idx,
+                    region_idx=r_idx,
+                    expected_hash=src_hash,
+                )
+            elif act == "delete_region":
+                new_source, err = delete_hotspot_region(
+                    current_src,
+                    question_idx=q_idx,
+                    region_idx=r_idx,
+                    expected_hash=src_hash,
+                )
+            elif act == "add_region":
+                shape = data.get("shape", "rect")
+                raw_coords = tuple(float(c) for c in data.get("coords", []))
+                unit = data.get("unit", "pct")
+                correct = bool(data.get("correct", False))
+                label = data.get("author_label", "")
+                new_source, err = add_hotspot_region(
+                    current_src,
+                    question_idx=q_idx,
+                    shape=shape,
+                    coords=raw_coords,
+                    unit=unit,
+                    correct=correct,
+                    author_label=label,
+                    expected_hash=src_hash,
+                )
+
+            if not err:
+                session.source = new_source
+
+            preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
+            return session.source, session, preview, status_bar, diag, dl, gen
+
+        hotspot_action_input.change(
+            fn=on_hotspot_action,
+            inputs=[hotspot_action_input, shared_session, render_math_cb],
             outputs=[quiz_source, shared_session, preview_display, status_bar_html, diagnostics_box, btn_download, btn_generate],
             api_name=False,
         ).then(js=MATHJAX_TYPESET_JS)
@@ -519,15 +597,10 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             request: gr.Request | None = None,
         ):
             session = resolve_session(session, request, default_source=SAMPLE_ALL_TYPES)
-            matched_example = next(
-                (k for k, v in EXAMPLES.items() if v == session.source),
-                None,
-            )
             preview, status_bar, diag, dl, gen = render_editor_view(session, render_math=render_math)
             return (
                 session,
                 session.source,
-                gr.update(value=matched_example),
                 preview,
                 status_bar,
                 diag,
@@ -542,7 +615,6 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 outputs=[
                     shared_session,
                     quiz_source,
-                    example_dd,
                     preview_display,
                     status_bar_html,
                     diagnostics_box,

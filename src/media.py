@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 import hashlib
 import html
 import ipaddress
+import math
 import os
 import re
 import socket
@@ -466,7 +467,117 @@ def resolve_and_validate_hotspots(
             )
         )
 
+    # Advisory geometric overlap warning (>50% of the smaller region's area)
+    for i in range(len(resolved_regions)):
+        for j in range(i + 1, len(resolved_regions)):
+            reg_i = resolved_regions[i]
+            reg_j = resolved_regions[j]
+            # Exact duplicates are already reported as errors above
+            if (reg_i.shape, reg_i.pixel_coords) == (reg_j.shape, reg_j.pixel_coords):
+                continue
+            area_i = _compute_region_area(reg_i)
+            area_j = _compute_region_area(reg_j)
+            min_area = min(area_i, area_j)
+            if min_area <= 0:
+                continue
+            inter_area = _compute_pair_intersection_area(reg_i, reg_j)
+            overlap_ratio = inter_area / min_area
+            if overlap_ratio > 0.50:
+                src_reg_j = question.regions[j]
+                r_line = (
+                    src_reg_j.source_location.choice_span.line_number
+                    if (src_reg_j.source_location and src_reg_j.source_location.choice_span.line_number)
+                    else question.line_number
+                )
+                diagnostics.append(
+                    Diagnostic(
+                        f"Hotspot regions #{i + 1} ({reg_i.identifier}) and #{j + 1} ({reg_j.identifier}) "
+                        f"overlap significantly ({overlap_ratio * 100:.0f}% of the smaller region). "
+                        f"Learners clicking the overlapping area may trigger unintended grading.",
+                        Severity.WARNING,
+                        r_line,
+                        question_index,
+                    )
+                )
+
     return tuple(resolved_regions), diagnostics
+
+
+def _compute_region_area(region: ResolvedHotspotRegion) -> float:
+    """Compute the pixel area of a resolved hotspot region."""
+    if region.shape == "rect":
+        x1, y1, x2, y2 = region.pixel_coords
+        return float(max(0, x2 - x1) * max(0, y2 - y1))
+    elif region.shape == "circle":
+        _, _, r = region.pixel_coords
+        return math.pi * float(max(0, r)) ** 2
+    return 0.0
+
+
+def _compute_pair_intersection_area(
+    a: ResolvedHotspotRegion,
+    b: ResolvedHotspotRegion,
+) -> float:
+    """Compute the intersection area (in square pixels) between two resolved hotspot regions."""
+    if a.shape == "rect" and b.shape == "rect":
+        ax1, ay1, ax2, ay2 = a.pixel_coords
+        bx1, by1, bx2, by2 = b.pixel_coords
+        ix1 = max(ax1, bx1)
+        iy1 = max(ay1, by1)
+        ix2 = min(ax2, bx2)
+        iy2 = min(ay2, by2)
+        return float(max(0, ix2 - ix1) * max(0, iy2 - iy1))
+
+    if a.shape == "circle" and b.shape == "circle":
+        cx1, cy1, r1 = a.pixel_coords
+        cx2, cy2, r2 = b.pixel_coords
+        if r1 <= 0 or r2 <= 0:
+            return 0.0
+        d = math.hypot(cx2 - cx1, cy2 - cy1)
+        if d >= r1 + r2:
+            return 0.0
+        if d <= abs(r1 - r2):
+            return math.pi * float(min(r1, r2)) ** 2
+        r1_sq = float(r1 * r1)
+        r2_sq = float(r2 * r2)
+        cos_a = max(-1.0, min(1.0, (d * d + r1_sq - r2_sq) / (2.0 * d * r1)))
+        cos_b = max(-1.0, min(1.0, (d * d + r2_sq - r1_sq) / (2.0 * d * r2)))
+        part1 = r1_sq * math.acos(cos_a)
+        part2 = r2_sq * math.acos(cos_b)
+        part3 = 0.5 * math.sqrt(
+            max(0.0, (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2))
+        )
+        return part1 + part2 - part3
+
+    # Mixed rect + circle: stratified grid integration over bounding-box intersection
+    rect_reg = a if a.shape == "rect" else b
+    circ_reg = b if a.shape == "rect" else a
+    rx1, ry1, rx2, ry2 = rect_reg.pixel_coords
+    cx, cy, r = circ_reg.pixel_coords
+    if r <= 0 or rx1 >= rx2 or ry1 >= ry2:
+        return 0.0
+    ix1 = max(rx1, cx - r)
+    iy1 = max(ry1, cy - r)
+    ix2 = min(rx2, cx + r)
+    iy2 = min(ry2, cy + r)
+    if ix1 >= ix2 or iy1 >= iy2:
+        return 0.0
+
+    steps = 32
+    dx = (ix2 - ix1) / steps
+    dy = (iy2 - iy1) / steps
+    r_sq = float(r * r)
+    inside = 0
+    for sx in range(steps):
+        px = ix1 + (sx + 0.5) * dx
+        dx_c = px - cx
+        dx_sq = dx_c * dx_c
+        for sy in range(steps):
+            py = iy1 + (sy + 0.5) * dy
+            dy_c = py - cy
+            if dx_sq + dy_c * dy_c <= r_sq:
+                inside += 1
+    return (inside / float(steps * steps)) * float((ix2 - ix1) * (iy2 - iy1))
 
 
 def _is_safe_relative_path(path: str) -> bool:

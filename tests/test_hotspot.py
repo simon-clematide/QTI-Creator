@@ -380,5 +380,152 @@ Scoring: all-correct
         self.assertEqual(len(errors), 0)
 
 
+class TestHotspotMilestone2(unittest.TestCase):
+    """Tests for Milestone 2: SVG overlay preview, provisional grid fallback, and overlap warnings."""
+
+    def test_geometric_overlap_warnings_rect_circle_and_non_overlapping(self):
+        # Case 1: Heavy rect-rect overlap (smaller rect is 100% inside larger rect)
+        md_rect_overlap = """# Quiz
+## Q1
+![Heart](heart.png)
+- [X] rect(100, 100, 300, 300) Outer
+- [ ] rect(150, 150, 250, 250) Inner
+"""
+        quiz, _ = parse_quizmd(md_rect_overlap)
+        media_zip = make_media_zip({"heart.png": make_png_bytes(800, 600)})
+        preflight = preflight_media(quiz, include_media=True, media_zip_bytes=media_zip)
+        self.assertFalse(preflight.has_errors)
+        warnings = [d for d in preflight.diagnostics if d.severity == Severity.WARNING]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("overlap significantly (100%", warnings[0].message)
+        self.assertIn("hc_1", warnings[0].message)
+        self.assertIn("hc_2", warnings[0].message)
+
+        # Case 2: Heavy circle-circle overlap (concentric circles)
+        md_circle_overlap = """# Quiz
+## Q1
+![Heart](heart.png)
+- [X] circle(400, 300, 80) Outer circle
+- [ ] circle(400, 300, 50) Inner circle
+"""
+        quiz2, _ = parse_quizmd(md_circle_overlap)
+        preflight2 = preflight_media(quiz2, include_media=True, media_zip_bytes=media_zip)
+        warnings2 = [d for d in preflight2.diagnostics if d.severity == Severity.WARNING]
+        self.assertEqual(len(warnings2), 1)
+        self.assertIn("overlap significantly (100%", warnings2[0].message)
+
+        # Case 3: Heavy rect-circle overlap (circle centered inside rect)
+        md_mixed_overlap = """# Quiz
+## Q1
+![Heart](heart.png)
+- [X] rect(200, 200, 500, 500) Box
+- [ ] circle(350, 350, 60) Circle inside box
+"""
+        quiz3, _ = parse_quizmd(md_mixed_overlap)
+        preflight3 = preflight_media(quiz3, include_media=True, media_zip_bytes=media_zip)
+        warnings3 = [d for d in preflight3.diagnostics if d.severity == Severity.WARNING]
+        self.assertEqual(len(warnings3), 1)
+        self.assertIn("overlap significantly", warnings3[0].message)
+
+        # Case 4: Slight overlap (<= 50%) should NOT warn
+        md_slight = """# Quiz
+## Q1
+![Heart](heart.png)
+- [X] rect(100, 100, 200, 200) Left box
+- [ ] rect(180, 100, 280, 200) Right box (20% overlap)
+"""
+        quiz4, _ = parse_quizmd(md_slight)
+        preflight4 = preflight_media(quiz4, include_media=True, media_zip_bytes=media_zip)
+        warnings4 = [d for d in preflight4.diagnostics if d.severity == Severity.WARNING]
+        self.assertEqual(len(warnings4), 0)
+
+    def test_hotspot_svg_preview_with_resolved_image(self):
+        from src.preview import render_quiz_preview_html
+        import base64
+
+        md = """# Anatomy Quiz
+## Identify the left ventricle
+Click the correct region.
+![Human heart](heart.png)
+- [X] circle(65%, 60%, 10%) Left ventricle
+- [ ] rect(20%, 25%, 45%, 55%) Right atrium
+"""
+        quiz, diags = parse_quizmd(md)
+        self.assertEqual(len(diags), 0)
+
+        png_bytes = make_png_bytes(800, 600)
+        b64_uri = f"data:image/png;base64,{base64.b64encode(png_bytes).decode('ascii')}"
+        media_zip = make_media_zip({"heart.png": png_bytes})
+        preflight = preflight_media(quiz, include_media=True, media_zip_bytes=media_zip)
+
+        html_out = render_quiz_preview_html(
+            quiz,
+            asset_map={"heart.png": b64_uri},
+            hotspot_images=preflight.resolved_hotspot_images,
+        )
+
+        # Verify SVG viewBox and intrinsic dimensions
+        self.assertIn("viewBox='0 0 800 600'", html_out)
+        self.assertIn("800 &times; 600 px", html_out)
+        self.assertNotIn("hotspot-provisional-banner", html_out)
+
+        # Verify card persistence identifiers
+        self.assertIn("data-card-id=\"qcard_1\"", html_out)
+        self.assertIn("data-question-idx=\"1\"", html_out)
+
+        # Verify Author / Learner / Editor toggle buttons
+        self.assertIn("data-mode='author'", html_out)
+        self.assertIn("data-mode='learner'", html_out)
+        self.assertIn("data-mode='editor'", html_out)
+        self.assertIn("Author View", html_out)
+        self.assertIn("Learner View", html_out)
+        self.assertIn("Edit Hotspots", html_out)
+        self.assertIn("hotspot-editor-controls", html_out)
+
+        # Verify region selector pills in toolbar for selecting correct or distractor regions
+        self.assertIn("class='hotspot-region-pill'", html_out)
+        self.assertIn("data-region-idx='1'", html_out)
+        self.assertIn("data-region-idx='2'", html_out)
+        self.assertIn("selectHotspotRegion", html_out)
+
+        # Verify circle (65% of 800 = 520, 60% of 600 = 360, 10% of 600 = 60) and rect
+        self.assertIn("<circle class='hotspot-shape' cx='520' cy='360' r='60'", html_out)
+        self.assertIn("<rect class='hotspot-shape' x='160' y='150' width='200' height='180'", html_out)
+
+        # Verify hover-linked legend items and author labels (shown in preview legend, never in QTI XML)
+        self.assertIn("class='hotspot-legend-item'", html_out)
+        self.assertIn("data-region-id='hc_1'", html_out)
+        self.assertIn("data-region-id='hc_2'", html_out)
+        self.assertIn("Left ventricle", html_out)
+        self.assertIn("Right atrium", html_out)
+        self.assertIn("(520, 360, 60) px", html_out)
+        # Verify legend items are clickable for selecting & editing
+        self.assertIn("onclick=\"var w=this.closest('.hotspot-preview-widget');if(w){w.setAttribute('data-view-mode','editor');if(window.selectHotspotRegion){window.selectHotspotRegion(w,1);}}\"", html_out)
+
+    def test_hotspot_provisional_coordinate_grid_fallback(self):
+        from src.preview import render_quiz_preview_html
+
+        md = """# Anatomy Quiz
+## Identify the left ventricle
+![Human heart](heart.png =1200x900)
+- [X] circle(50%, 50%, 10%) Center target
+- [ ] rect(10%, 10%, 30%, 30%) Corner distractor
+"""
+        quiz, diags = parse_quizmd(md)
+        self.assertEqual(len(diags), 0)
+
+        # Render preview WITHOUT media loaded
+        html_out = render_quiz_preview_html(quiz, asset_map={})
+
+        # Verify provisional banner and coordinate grid SVG
+        self.assertIn("hotspot-provisional-banner", html_out)
+        self.assertIn("Provisional Coordinate-Grid Preview:", html_out)
+        self.assertIn("Provisional Grid (1200 &times; 900)", html_out)
+        self.assertIn("hotspot-provisional-svg", html_out)
+        self.assertIn("viewBox='0 0 1200 900'", html_out)
+        # 50% of 1200 = 600, 50% of 900 = 450, 10% of min(1200,900) = 90
+        self.assertIn("<circle class='hotspot-shape' cx='600' cy='450' r='90'", html_out)
+
+
 if __name__ == "__main__":
     unittest.main()

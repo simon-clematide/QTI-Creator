@@ -31,7 +31,7 @@ DNA stands for {{deoxyribonucleic acid}}.
 """
 
 AUTHORING_WORKFLOW = """
-1. **Write or load QuizMD.** Open the Editor and paste your source or use **Upload .md / .txt**. On Home, select an example and load it into the Editor. AI drafting is optional; see the [Prompting Guide](/prompting).
+1. **Write or load QuizMD.** Open the Editor and paste your source or use **Upload source**. On Home, select an example and load it into the Editor. AI drafting is optional; see the [Prompting Guide](/prompting).
 2. **Inspect and correct.** Check the validation status and expand the Preview question cards to inspect the inferred types, answer keys, points, hints, and feedback. Use **Refresh** if the preview needs updating.
 3. **Prepare images if needed.** In [Media](/media), upload a ZIP whose paths match your image references. Enable **Include media in exported QTI package** for a self-contained package. See the media instructions for remote images and hotspots.
 4. **Generate and download.** Click **Generate package**, then **Download ZIP**. After changing the source or media settings, use **Regenerate** and download the new ZIP.
@@ -64,7 +64,7 @@ media.zip
     └── chart.png
 ```
 
-Upload this archive with **Upload Media ZIP**. Uploading a ZIP replaces the current media archive and enables export inclusion. Check the file list for referenced, unused, and missing files.
+Upload this archive with **Upload media ZIP**. Uploading a ZIP replaces the current media archive and enables export inclusion. Check the file list for referenced, unused, and missing files.
 
 - **Resolve relative media in preview** displays uploaded local images in the author preview. It does not package them for export.
 - **Include media in exported QTI package** copies referenced local images into the package and downloads supported remote images. Remote URLs must be reachable by the server; a remote-only quiz needs no ZIP upload.

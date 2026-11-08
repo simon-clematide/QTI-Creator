@@ -4,6 +4,7 @@ import base64
 import html
 import json
 import re
+from src.ui_icons import icon as ui_icon
 from typing import Any, Dict, List, Optional, Tuple
 from src.media import ResolvedHotspotImage, _detect_image_mime, _extract_image_dimensions
 from src.model import (
@@ -28,12 +29,25 @@ from src.model import (
 from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_GAP, RE_DROPDOWN_GAP
 
 
+
+def render_expand_all_control() -> str:
+    """Render the shared disclosure control for embedded and standalone previews."""
+    return """      <button type="button" class="quiz-expand-btn" title="Expand or collapse all question cards" onclick="
+        var items = document.querySelectorAll('.quiz-question-card, .quiz-section-desc-details');
+        var anyClosed = Array.from(items).some(c => !c.open);
+        items.forEach(c => c.open = anyClosed);
+        this.innerHTML = anyClosed ? '▼ Collapse All' : '▶ Expand All';
+        this.title = anyClosed ? 'Collapse all question cards' : 'Expand all question cards';
+        if (window.onQuizExpandAllToggle) window.onQuizExpandAllToggle(anyClosed);
+      ">▶ Expand All</button>"""
+
 def render_quiz_preview_html(
     quiz: Quiz,
     asset_map: Optional[Dict[str, str]] = None,
     render_math: bool = True,
     hotspot_images: Optional[Dict[str, ResolvedHotspotImage]] = None,
     source_hash: Optional[str] = None,
+    show_expand_all: bool = True,
 ) -> str:
     """Generate clean collapsible HTML cards to visually preview parsed questions.
 
@@ -46,9 +60,7 @@ def render_quiz_preview_html(
     if not quiz.questions:
         return "<p style='color: #666; font-style: italic;'>No questions detected yet. Start typing or choose an example on the left.</p>"
 
-    has_multiple_sections = len(quiz.sections) > 1 or (
-        len(quiz.sections) == 1 and bool(quiz.sections[0].description)
-    )
+    has_multiple_sections = len(quiz.sections) > 1
 
     sections_html = []
     global_idx = 1
@@ -57,7 +69,6 @@ def render_quiz_preview_html(
         sec_cards = []
         for q in sec.questions:
             type_name = _get_type_label(q)
-            badge_color = _get_badge_color(q)
 
             is_invalid = isinstance(q, InvalidQuestion) or bool(getattr(q, "errors", None))
             has_distinct_prompt = bool(q.prompt and q.prompt.strip() and q.prompt.strip() != q.title.strip())
@@ -80,7 +91,7 @@ def render_quiz_preview_html(
 """
 
             # Question title: OpenOLAT does not render Markdown or math in question titles.
-            # Render the raw title in full at the top of the body so users can read the entire title even when truncated in the summary.
+            # Expanded summary headings wrap to show the full raw title; the body only adds a formatting warning.
             has_title_md = contains_markdown(q.title)
             q_title_warning = ""
             if has_title_md:
@@ -89,7 +100,7 @@ def render_quiz_preview_html(
                     f"style=\"display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 4px; padding: 1px 6px; font-size: 0.72em; font-weight: 600; cursor: help;\">"
                     f"⚠️ Markdown/Math in title</span>"
                 )
-            question_title_html = f"<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>{html.escape(q.title)}{q_title_warning}</div>"
+            question_title_html = q_title_warning
 
             if isinstance(q, InlineChoiceQuestion):
                 # Render dropdown prompt with styled select dropdowns
@@ -214,18 +225,18 @@ def render_quiz_preview_html(
                 question_idx=global_idx,
                 source_hash=source_hash,
             )
-            hint_header = f"💡 Hint: {html.escape(q.hint_title)}" if getattr(q, "hint_title", None) else "💡 Hint"
+            hint_header = ui_icon("hint") + (f" Hint: {html.escape(q.hint_title)}" if getattr(q, "hint_title", None) else " Hint")
             hint_html = (
-                f"<details style='margin-top: 10px; padding: 8px 12px; background: #fffbeb; border-left: 3px solid #f59e0b; font-size: 0.9em; border-radius: 4px; color: #92400e; cursor: pointer;'>"
+                f"<details class='question-hint' style='margin-top: 12px; padding: 8px 0; font-size: 0.95em; color: #475569;'>"
                 f"<summary style='font-weight: 600; outline: none;'>{hint_header}</summary>"
-                f"<div style='margin-top: 6px; color: #78350f;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map, render_math=render_math)}</div></details>"
+                f"<div style='margin-top: 6px; color: #334155;'>{markdown_to_qti_xhtml(q.hint, asset_map=asset_map, render_math=render_math)}</div></details>"
                 if q.hint
                 else ""
             )
 
             feedback_header = f"Feedback: {html.escape(q.feedback_title)}" if getattr(q, "feedback_title", None) else "Feedback:"
             feedback_html = (
-                f"<div style='margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border-left: 3px solid #22c55e; font-size: 0.9em; border-radius: 4px;'>"
+                f"<div class='question-feedback' style='margin-top: 12px; padding: 10px 0; border-top: 1px solid #e2e8f0; font-size: 0.95em; color: #475569;'>"
                 f"<strong>{feedback_header}</strong> {markdown_to_qti_xhtml(q.feedback, asset_map=asset_map, render_math=render_math)}</div>"
                 if q.feedback
                 else ""
@@ -252,9 +263,9 @@ def render_quiz_preview_html(
             elif has_title_md:
                 status_badges.append(f'<span title="Question title contains Markdown or math syntax" style="cursor: help; font-size: 0.95em;">⚠️</span>')
             if q.hint and q.hint.strip():
-                status_badges.append('<span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span>')
+                status_badges.append('<span title="Hint available" aria-label="Hint available">' + ui_icon("hint") + "</span>")
             if q.feedback and q.feedback.strip():
-                status_badges.append('<span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span>')
+                status_badges.append('<span title="Feedback available" aria-label="Feedback available">' + ui_icon("feedback") + "</span>")
             status_badges_html = (
                 f"<span style='display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;'>{' '.join(status_badges)}</span>"
                 if status_badges
@@ -276,28 +287,28 @@ def render_quiz_preview_html(
       <pre style="margin-top: 8px; margin-bottom: 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #1e293b;"><code>{html.escape(raw_src.strip())}</code></pre>
     </details>
     <button type="button" class="quiz-edit-jump-btn" title="Jump to question {global_idx} in QuizMD editor" data-line="{line_no}" data-title="{escaped_title_attr}" onclick="var l = parseInt(this.getAttribute('data-line'), 10); var t = this.getAttribute('data-title'); var fn = window.quizJumpToLine || (window.parent && window.parent.quizJumpToLine); if (typeof fn === 'function') {{ fn(l, t); }} else if (window.parent &amp;&amp; window.parent.postMessage) {{ window.parent.postMessage({{action: 'quiz-jump', line: l, title: t}}, '*'); }}">
-      ✏️ Edit
+      {ui_icon("edit")} Edit
     </button>
   </div>
 </div>
 """
 
             card_id = f"qcard_{global_idx}"
-            card_border_style = "border: 1px solid #f87171;" if is_invalid else "border: 1px solid #e2e8f0;"
+            card_border_style = "border-left: 3px solid #dc2626;" if is_invalid else ""
             card = f"""
-<details class="quiz-question-card" data-card-id="{card_id}" data-question-idx="{global_idx}" style="background: white; {card_border_style} border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: border-color 0.2s;">
-  <summary style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; list-style: none;">
+<details class="quiz-question-card" data-card-id="{card_id}" data-question-idx="{global_idx}" style="{card_border_style} border-bottom: 1px solid #e2e8f0; margin: 0;">
+  <summary style="display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; cursor: pointer; user-select: none; list-style: none;">
     <div style="display: flex; align-items: center; gap: 8px; flex-1; min-width: 0;">
       <span class="quiz-chevron" style="display: inline-block; font-size: 0.8em; color: #64748b; transition: transform 0.2s;">▶</span>
-      <span style="font-weight: 600; font-size: 1.05em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
+      <span class="question-title" style="font-weight: 600; font-size: 1em; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{global_idx}. {html.escape(q.title)}</span>
     </div>
     <div style="display: flex; align-items: center; flex-shrink: 0; margin-left: 12px;">
-      <span title="Question type: {type_name}" style="background: {badge_color}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 500; margin-right: 6px; cursor: help;">{type_name}</span>
+      <span class="question-type" title="Question type: {type_name}">{type_name}</span>
       {status_badges_html}
-      <span title="Score weight: {q.points} pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">{q.points} pt</span>
+      <span class="question-points" title="Score weight: {q.points} pt">{q.points} pt</span>
     </div>
   </summary>
-  <div style="padding: 12px 16px 16px 16px; border-top: 1px solid #f1f5f9;">
+  <div class="question-content" style="padding: 8px 24px 16px;">
     {validation_alert_html}
     {warning_alert_html}
     {question_title_html}
@@ -313,16 +324,16 @@ def render_quiz_preview_html(
             global_idx += 1
 
         sec_header = ""
-        if has_multiple_sections:
+        if has_multiple_sections or sec.title != quiz.title or sec.description:
             sec_points = sum(q.points for q in sec.questions)
             sec_hints = sum(1 for q in sec.questions if q.hint and q.hint.strip())
             sec_feedbacks = sum(1 for q in sec.questions if q.feedback and q.feedback.strip())
 
             sec_summary_parts = [f"{len(sec.questions)} question{'s' if len(sec.questions) != 1 else ''}"]
             if sec_hints > 0:
-                sec_summary_parts.append(f"💡 {sec_hints}")
+                sec_summary_parts.append(f"{sec_hints} hint{'s' if sec_hints != 1 else ''}")
             if sec_feedbacks > 0:
-                sec_summary_parts.append(f"💬 {sec_feedbacks}")
+                sec_summary_parts.append(f"{sec_feedbacks} feedback")
             sec_summary_parts.append(f"{sec_points} pt")
             sec_summary_text = " &bull; ".join(sec_summary_parts)
 
@@ -332,7 +343,7 @@ def render_quiz_preview_html(
                 f"<span class=\"quiz-desc-chevron\" style=\"display: inline-block; font-size: 0.75em; color: #94a3b8; transition: transform 0.2s;\">▼</span>"
                 f"<span>Section Description / Instructions</span>"
                 f"</summary>"
-                f"<div style='color: #475569; font-size: 0.92em; line-height: 1.5; padding: 6px 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 2px;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map, render_math=render_math)}</div>"
+                f"<div style='color: #475569; font-size: 0.92em; line-height: 1.5; padding: 4px 0; margin-top: 2px;'>{markdown_to_qti_xhtml(sec.description, asset_map=asset_map, render_math=render_math)}</div>"
                 f"</details>"
                 if sec.description
                 else ""
@@ -347,14 +358,15 @@ def render_quiz_preview_html(
                     f"⚠️ Markdown/Math in title</span>"
                 )
 
-            sec_header = f"""
-<div class="quiz-section-container" style="margin-top: {('20px' if s_idx > 1 else '6px')}; margin-bottom: 16px; padding: 14px 16px 8px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
-  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
-    <h4 style="margin: 0; color: #1e293b; font-size: 1.1em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <span>📁</span> <span>{html.escape(sec.title)}</span> {md_warning_badge}
-    </h4>
-    <span style="color: #64748b; font-size: 0.85em; font-weight: 500; white-space: nowrap; margin-left: 12px;">{sec_summary_text}</span>
+            section_title_row = f"""
+  <div class="section-heading">
+    <h4>{html.escape(sec.title)} {md_warning_badge}</h4>
+    <span>{sec_summary_text}</span>
   </div>
+""" if len(quiz.sections) > 1 or sec.title != quiz.title else ""
+            sec_header = f"""
+<div class="quiz-section-container">
+  {section_title_row}
   {desc_html}
   {''.join(sec_cards)}
 </div>
@@ -371,9 +383,10 @@ def render_quiz_preview_html(
     if len(quiz.sections) > 1:
         summary_meta[0] += f" across {len(quiz.sections)} section{'s' if len(quiz.sections) != 1 else ''}"
     if total_hints > 0:
-        summary_meta.append(f"💡 {total_hints} hint{'s' if total_hints != 1 else ''}")
+        summary_meta.append(f"{total_hints} hint{'s' if total_hints != 1 else ''}")
     if total_feedbacks > 0:
-        summary_meta.append(f"💬 {total_feedbacks} feedback{'s' if total_feedbacks != 1 else ''}")
+        summary_meta.append(f"{total_feedbacks} feedback{'s' if total_feedbacks != 1 else ''}")
+    summary_meta.append(f"{sum(q.points for q in quiz.questions):g} pt total")
     summary_meta_text = " &bull; ".join(summary_meta)
 
     return f"""
@@ -716,8 +729,27 @@ def render_quiz_preview_html(
     background: #e0f2fe !important;
     border-color: #7dd3fc !important;
   }}
+
+  .ui-icon {{ width: 1rem; height: 1rem; display: inline-block; flex: 0 0 1rem; vertical-align: -0.15em; }}
+  .question-type {{ color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; margin-right: 8px; }}
+  .question-points {{ color: #64748b; font-size: 0.8em; white-space: nowrap; }}
+  .quiz-section-container {{ margin: 12px 0 20px; padding: 0; }}
+  .section-heading {{ display: flex; gap: 12px; align-items: baseline; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #cbd5e1; }}
+  .section-heading h4 {{ margin: 0; font-size: 1em; }}
+  .section-heading > span {{ color: #64748b; font-size: 0.85em; }}
+  .quiz-question-card[open] {{ background: #fafbfc; box-shadow: none !important; }}
+  .quiz-question-card[open] > summary .question-title {{ white-space: normal !important; overflow: visible !important; }}
+  .quiz-question-card > summary:hover {{ background: #f8fafc; }}
+  .quiz-question-card > summary:focus-visible {{ outline: 2px solid #334155; outline-offset: -2px; }}
+  .quiz-question-card > summary > div:first-child {{ flex: 1 1 auto; }}
+  .quiz-question-card > summary > div:last-child {{ color: #64748b; gap: 4px; }}
+  .quiz-expand-btn, .quiz-edit-jump-btn, .quiz-question-source-details summary, .hotspot-mode-btn, .hotspot-editor-btn {{ box-shadow: none !important; }}
+  @media(max-width: 640px) {{
+    .quiz-question-card > summary {{ flex-wrap: wrap; gap: 6px; }}
+    .quiz-question-card > summary > div:last-child {{ margin-left: 20px !important; }}
+  }}
 </style>
-<div style="font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);">
+<div class="quiz-preview-root" data-source-hash="{html.escape(source_hash or '', quote=True)}" style="font-family: var(--font, 'Source Sans 3', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);">
   <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
     <div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -728,14 +760,7 @@ def render_quiz_preview_html(
     </div>
     <div>
 
-      <button type="button" class="quiz-expand-btn" title="Expand or collapse all question cards" onclick="
-        var items = document.querySelectorAll('.quiz-question-card, .quiz-section-desc-details');
-        var anyClosed = Array.from(items).some(c => !c.open);
-        items.forEach(c => c.open = anyClosed);
-        this.innerHTML = anyClosed ? '▼ Collapse All' : '▶ Expand All';
-        this.title = anyClosed ? 'Collapse all question cards' : 'Expand all question cards';
-        if (window.onQuizExpandAllToggle) window.onQuizExpandAllToggle(anyClosed);
-      ">▶ Expand All</button>
+      {render_expand_all_control() if show_expand_all else ""}
     </div>
   </div>
   {''.join(sections_html)}
@@ -771,36 +796,6 @@ def _get_type_label(q: Question) -> str:
     elif isinstance(q, HotspotQuestion):
         return "Hotspot (MC)" if q.multiple else "Hotspot (SC)"
     return "Question"
-
-
-def _get_badge_color(q: Question) -> str:
-    if isinstance(q, InvalidQuestion) or bool(getattr(q, "errors", None)):
-        return "#ef4444"  # Red
-    elif isinstance(q, SingleChoiceQuestion):
-        return "#3b82f6"  # Blue
-    elif isinstance(q, MultipleChoiceQuestion):
-        return "#8b5cf6"  # Purple
-    elif isinstance(q, TrueFalseQuestion):
-        return "#06b6d4"  # Cyan
-    elif isinstance(q, EssayQuestion):
-        return "#f59e0b"  # Amber
-    elif isinstance(q, FillBlankQuestion):
-        return "#10b981"  # Emerald
-    elif isinstance(q, InlineChoiceQuestion):
-        return "#0d9488"  # Teal
-    elif isinstance(q, HottextQuestion):
-        return "#d97706"  # Amber/Ochre
-    elif isinstance(q, NumericalQuestion):
-        return "#ec4899"  # Pink
-    elif isinstance(q, KprimQuestion):
-        return "#6366f1"  # Indigo
-    elif isinstance(q, OrderQuestion):
-        return "#0ea5e9"  # Sky
-    elif isinstance(q, AssociationQuestion):
-        return "#8b5cf6" if q.interaction == "drag" else "#2563eb"
-    elif isinstance(q, HotspotQuestion):
-        return "#0284c7"  # Sky Blue
-    return "#64748b"
 
 
 def _render_question_body(
@@ -951,7 +946,7 @@ def _render_question_body(
                 ) or "<span style='color: #94a3b8; font-style: italic; font-size: 0.85em;'>No items</span>"
                 cards.append(
                     f"<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;'>"
-                    f"<div style='font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 0.9em;'>📂 {t_html}:</div>"
+                    f"<div style='font-weight: 600; color: #1e293b; margin-bottom: 4px; font-size: 0.9em;'>{t_html}:</div>"
                     f"<div>{items_pills}</div>"
                     f"</div>"
                 )
@@ -1202,9 +1197,9 @@ def _render_hotspot_preview(
 
     mode_desc = f"Multiple Choice (Scoring: {html.escape(q.scoring)})" if q.multiple else "Single Choice"
     dim_badge = (
-        f"📐 {img_w} &times; {img_h} px"
+        f"{img_w} &times; {img_h} px"
         if is_resolved
-        else f"📐 Provisional Grid ({img_w} &times; {img_h})"
+        else f"Provisional Grid ({img_w} &times; {img_h})"
     )
 
     toolbar_html = (
@@ -1213,31 +1208,31 @@ def _render_hotspot_preview(
         f"<span title='Hotspot reference dimensions'>{dim_badge}</span> &bull; <span title='Hotspot interaction and scoring mode'>{mode_desc}</span>"
         f"</div>"
         f"<div class='hotspot-mode-toggle' role='group' aria-label='Hotspot preview mode'>"
-        f"<button type='button' class='hotspot-mode-btn' data-mode='author' title='Author View: Inspect correct hotspots, distractors, and coordinate labels' onclick=\"{mode_btn_js}\">👁️ Author View</button>"
-        f"<button type='button' class='hotspot-mode-btn' data-mode='learner' title='Learner View: Simulate learner click selection and response validation' onclick=\"{mode_btn_js}\">🎓 Learner View</button>"
-        f"<button type='button' class='hotspot-mode-btn' data-mode='editor' title='Visual Hotspot Editor: Drag to move, resize with corner handles, or add/delete shapes' onclick=\"{mode_btn_js}\">✏️ Edit Hotspots</button>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='author' title='Author View: Inspect correct hotspots, distractors, and coordinate labels' onclick=\"{mode_btn_js}\">{ui_icon('eye')} Author View</button>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='learner' title='Learner View: Simulate learner click selection and response validation' onclick=\"{mode_btn_js}\">{ui_icon('learner')} Learner View</button>"
+        f"<button type='button' class='hotspot-mode-btn' data-mode='editor' title='Visual Hotspot Editor: Drag to move, resize with corner handles, or add/delete shapes' onclick=\"{mode_btn_js}\">{ui_icon('edit')} Edit Hotspots</button>"
         f"</div>"
         f"</div>"
     )
 
     editor_controls_html = (
-        f"<div class='hotspot-editor-controls' style='background: #f0fdf4; border: 1px solid #bbf7d0; "
+        f"<div class='hotspot-editor-controls' style='background: #f8fafc; border: 1px solid #cbd5e1; "
         f"border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 0.85em; display: flex; "
         f"flex-direction: column; gap: 6px;'>"
         f"<div style='display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;'>"
         f"<div style='display: flex; align-items: center; gap: 6px;'>"
-        f"<span style='font-weight: 600; color: #166534; font-size: 0.9em;'>✏️ Visual Editor:</span> "
-        f"<button type='button' class='hotspot-editor-btn' title='Add a new rectangular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'rect');}}\">➕ Add Rect</button>"
-        f"<button type='button' class='hotspot-editor-btn' title='Add a new circular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'circle');}}\">➕ Add Circle</button>"
+        f"<span style='font-weight: 600; color: #334155; font-size: 0.9em;'>Visual editor:</span> "
+        f"<button type='button' class='hotspot-editor-btn' title='Add a new rectangular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'rect');}}\">{ui_icon('plus')} Add rectangle</button>"
+        f"<button type='button' class='hotspot-editor-btn' title='Add a new circular hotspot region to the canvas' onclick=\"if(window.addHotspotShape){{window.addHotspotShape(this.closest('.hotspot-preview-widget'), 'circle');}}\">{ui_icon('plus')} Add circle</button>"
         f"</div>"
         f"<div class='hotspot-editor-region-bar' style='display: flex; align-items: center; gap: 6px;'>"
         f"<span class='hotspot-editor-sel-info' style='color: #64748b; font-style: italic; font-size: 0.9em;' title='Click any shape, toolbar pill, or legend item to select'>Click a shape, pill, or legend item to edit</span>"
         f"<button type='button' class='hotspot-editor-btn hotspot-editor-btn-correct' style='display:none;' title='Toggle whether this region is a correct answer or distractor' onclick=\"if(window.toggleSelectedCorrectness){{window.toggleSelectedCorrectness(this.closest('.hotspot-preview-widget'));}}\">✓ Toggle Correct</button>"
-        f"<button type='button' class='hotspot-editor-btn hotspot-editor-btn-danger' style='display:none;' title='Delete the selected hotspot region' onclick=\"if(window.deleteSelectedRegion){{window.deleteSelectedRegion(this.closest('.hotspot-preview-widget'));}}\">🗑️ Delete</button>"
+        f"<button type='button' class='hotspot-editor-btn hotspot-editor-btn-danger' style='display:none;' title='Delete the selected hotspot region' onclick=\"if(window.deleteSelectedRegion){{window.deleteSelectedRegion(this.closest('.hotspot-preview-widget'));}}\">{ui_icon('trash')} Delete</button>"
         f"</div>"
         f"</div>"
         f"<div style='display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 5px; border-top: 1px dashed #bbf7d0;'>"
-        f"<span style='font-weight: 600; color: #166534; font-size: 0.84em;'>Hotspots:</span>"
+        f"<span style='font-weight: 600; color: #334155; font-size: 0.84em;'>Hotspots:</span>"
         f"{region_pills_html}"
         f"</div>"
         f"</div>"

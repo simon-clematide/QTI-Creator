@@ -222,3 +222,28 @@ def test_cross_tab_session_persistence_and_media_upload():
     assert loaded_src == custom_md
     assert "Valid · 1 question" in status_html
     assert "Validation Errors" not in diag_html
+
+
+def test_export_actions_follow_package_freshness(tmp_path):
+    from qti_creator.ui.editor import handle_generate_package, render_editor_view
+
+    session = QuizSession(
+        session_id=str(tmp_path / "session"),
+        source="# Sample\n## Question\n- [X] Correct\n- [ ] Incorrect\n",
+    )
+    _, _, _, download, generate = render_editor_view(session)
+    assert generate["value"] == "Generate package"
+    assert generate["variant"] == "primary"
+    assert download["visible"] is False
+
+    session, download, _, _, generate = handle_generate_package(session)
+    assert generate["value"] == "Regenerate"
+    assert generate["variant"] == "secondary"
+    assert download["visible"] is True
+    assert download["variant"] == "primary"
+
+    session.source += "\n### Feedback\nAn explanation.\n"
+    _, _, _, download, generate = render_editor_view(session)
+    assert generate["value"] == "Regenerate"
+    assert generate["variant"] == "primary"
+    assert download["visible"] is False

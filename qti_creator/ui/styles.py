@@ -1,5 +1,7 @@
 """Shared styles and CSS for QTI-Creator multipage application."""
 
+from src.ui_icons import button_icon_css
+
 SHARED_CSS = """
 /* ── Multipage Navigation Bar: align to left ── */
 .nav-holder nav,
@@ -390,7 +392,76 @@ table.table tbody tr:nth-child(even) {
   border-color: #38bdf8 !important;
   color: #0369a1 !important;
 }
+/* Restrained application hierarchy. Main panes define the workspace boundary. */
+.gradio-container { color: #1e293b; }
+.gradio-container button { box-shadow: none !important; }
+.gradio-container button:focus-visible, .gradio-container summary:focus-visible,
+.gradio-container a:focus-visible { outline: 2px solid #334155 !important; outline-offset: 3px; }
+.gradio-container button.primary { background: #334155 !important; border-color: #334155 !important; color: #fff !important; }
+.gradio-container button.primary:hover { background: #1e293b !important; }
+.gradio-container button.secondary { background: #fff !important; color: #334155 !important; border: 1px solid #cbd5e1 !important; }
+.home-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.home-heading h1 { margin: 0; font-size: 1.8rem; font-weight: 650; color: #0f172a; }
+.release-version { font-size: 0.78rem; color: #64748b; }
+.home-intro { font-size: 1.05rem; line-height: 1.6; color: #475569; max-width: 44rem; }
+.home-container { gap: 16px !important; }
+.home-actions { flex-grow: 0 !important; justify-content: flex-start !important; gap: 8px !important; }
+.home-actions > button { flex: 0 0 auto !important; width: auto !important; }
+.example-note { font-size: 0.9rem !important; color: #64748b !important; }
+.example-source textarea { font-family: ui-monospace, monospace !important; font-size: 0.88rem !important; max-height: 22rem; }
+#btn_open_editor, #btn_generate_package, #btn_download_package, #btn_upload_media_zip {
+  flex: 0 0 auto !important; width: auto !important; min-height: 36px !important;
+  font-size: 0.92rem !important; font-weight: 500 !important; border-radius: 5px !important;
+  display: inline-flex !important; align-items: center; justify-content: center; gap: 7px;
+}
+.export-actions > button { min-width: 0 !important; width: max-content !important; }
+.export-actions { flex: 0 0 auto !important; width: max-content !important; min-width: 0 !important; flex-wrap: nowrap !important; gap: 8px !important; }
+.quiz-command-bar { display: grid !important; grid-template-columns: minmax(0, 1fr) max-content; background: #fff !important; border: 0 !important; border-bottom: 1px solid #e2e8f0 !important; border-radius: 0 !important; padding: 8px 0 14px !important; align-items: flex-start !important; }
+.quiz-command-bar > .quiz-status-pill { flex: 1 1 280px !important; width: auto !important; min-width: 0 !important; }
+.editor-header-row .block, .editor-header-row .html-container, .quiz-command-bar > .quiz-status-pill { padding: 0 !important; }
+.editor-header-row h2 { margin: 0 !important; }
+.editor-status { display: flex; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; font-size: 0.9rem; }
+.answer-quality-checks { flex-basis: 100%; font-weight: 400; color: #475569; font-size: 0.85rem; }
+.answer-quality-checks summary { cursor: pointer; padding: 3px 0; }
+.answer-quality-checks ul { padding-left: 20px; margin: 8px 0; color: #92400e; }
+.quality-metrics { padding: 8px 0 0; line-height: 1.7; }
+.package-ready { color: #166534; font-weight: 400; }
+.quiz-pane { border-color: #e2e8f0 !important; border-radius: 5px !important; box-shadow: none !important; padding: 12px !important; }
+.quiz-source-editor, .quiz-source-editor label, .quiz-source-editor textarea { border: 0 !important; box-shadow: none !important; background: #fff !important; }
+.quiz-source-editor textarea:focus-visible { outline: 2px solid #94a3b8 !important; outline-offset: 2px; }
+.quiz-fullscreen-header { margin-bottom: 12px !important; }
+.preview-expand-control { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; }
+.preview-expand-control .html-container { padding: 0 !important; }
+.quiz-fullscreen-header button, .quiz-expand-btn, .quiz-edit-jump-btn { box-shadow: none !important; font-weight: 500 !important; border-color: #e2e8f0 !important; }
+#btn_editor_fs, #btn_preview_fs { font-size: 0 !important; gap: 0 !important; }
+#btn_editor_fs::before, #btn_preview_fs::before { width: 14px; height: 14px; }
+#btn_upload_file, #btn_refresh, #btn_copy_prompt, #btn_download_example_media { display: inline-flex !important; align-items: center; justify-content: center; gap: 6px; }
+.docs-content { line-height: 1.65; }
+.docs-content h3, .home-container h3 { font-size: 1.08rem !important; font-weight: 600 !important; }
+.docs-content table { width: 100%; border: 0 !important; border-collapse: collapse; }
+.docs-content table tr { border: 0 !important; }
+.docs-content table th, .docs-content table td { border: 0 !important; border-bottom: 1px solid #e2e8f0 !important; padding: 10px 12px !important; vertical-align: top; line-height: 1.5; }
+.docs-content table th { background: #f8fafc !important; color: #334155 !important; font-weight: 600; }
+.docs-content .prose pre { border: 0 !important; background: #f8fafc !important; border-radius: 4px !important; }
+.media-page-container { gap: 12px !important; }
+.media-header-bar { margin-bottom: 0 !important; align-items: flex-start !important; }
+.media-summary-banner { border: 0 !important; border-radius: 4px; margin: 0 !important; font-size: 0.9rem; font-weight: 400; }
+.media-page-container > .quiz-media-settings-bar { padding-top: 4px !important; }
+@media(max-width: 760px) {
+  .quiz-command-bar { grid-template-columns: minmax(0, 1fr); }
+  .quiz-fullscreen-header { flex-wrap: wrap !important; }
+  .quiz-fullscreen-header > :first-child { flex: 1 0 100% !important; }
+  .hotspot-mode-toggle { flex-wrap: wrap; }
+  .export-actions { width: 100% !important; }
+  .export-actions > button { min-width: 0 !important; flex: 1 1 0 !important; }
+  .home-container, .docs-content { padding-inline: 1rem; }
+}
+
+
 """
+
+SHARED_CSS += "\n" + button_icon_css()
+
 
 MATHJAX_HEAD = """
 <script>
@@ -562,15 +633,59 @@ window.syncActiveQuestionToPreview = function(scrollIntoView) {
     if (!card.open) {
       card.open = true;
     }
-    var prevActiveIdx = window._lastActiveQuestionIdx;
     window._lastActiveQuestionIdx = qIdx;
 
-    if (scrollIntoView && prevActiveIdx !== qIdx) {
-      try {
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      } catch(e) {}
+    // Scroll only the preview pane, never the page or focused source editor.
+    var pane = document.getElementById('quiz_preview_display');
+    if (scrollIntoView && pane && pane.clientHeight > 0) {
+      var bounds = pane.getBoundingClientRect();
+      var target = card.getBoundingClientRect();
+      var visibleContext = Math.min(target.height, pane.clientHeight - 24, 160);
+      if (target.top < bounds.top + 8 || target.top + visibleContext > bounds.bottom - 8) {
+        pane.scrollTo({
+          top: Math.max(0, pane.scrollTop + target.top - bounds.top - 12),
+          behavior: 'smooth'
+        });
+      }
     }
   }
+};
+
+window.cancelDelayedPreviewSync = function() {
+  clearTimeout(window._previewSyncTimer);
+  window._previewSyncTimer = null;
+  window._previewSyncReady = false;
+  window._previewSyncToken = (window._previewSyncToken || 0) + 1;
+};
+
+window.flushDelayedPreviewSync = async function() {
+  if (!window._previewSyncReady || window._previewSyncTimer) return;
+  var editor = document.querySelector('.quiz-source-editor textarea');
+  if (!editor || document.activeElement !== editor || editor._quizComposing) return;
+  var token = window._previewSyncToken;
+  var source = editor.value;
+  var root = document.querySelector('#quiz_preview_display .quiz-preview-root');
+  if (!root) return;
+
+  // A slow response must not navigate an older preview after headings change.
+  var expectedHash = root.getAttribute('data-source-hash');
+  if (expectedHash && window.crypto && window.crypto.subtle) {
+    var digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(source));
+    var currentHash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (currentHash !== expectedHash) return; // Retry when the matching preview arrives.
+  }
+  if (!window._previewSyncReady || token !== window._previewSyncToken || editor.value !== source || document.activeElement !== editor) return;
+  window._previewSyncReady = false;
+  window.syncActiveQuestionToPreview(true);
+};
+
+window.scheduleDelayedPreviewSync = function() {
+  window.cancelDelayedPreviewSync();
+  window._previewSyncTimer = setTimeout(function() {
+    window._previewSyncTimer = null;
+    window._previewSyncReady = true;
+    window.flushDelayedPreviewSync();
+  }, 1000);
 };
 
 window.initEditorQuestionTracker = function() {
@@ -579,17 +694,28 @@ window.initEditorQuestionTracker = function() {
   editor._hasQuestionTracker = true;
 
   editor.addEventListener('click', function() {
+    window.cancelDelayedPreviewSync();
     window.syncActiveQuestionToPreview(true);
   });
   editor.addEventListener('keyup', function(e) {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].indexOf(e.key) !== -1) {
+      window.cancelDelayedPreviewSync();
       window.syncActiveQuestionToPreview(true);
-    } else {
-      window.syncActiveQuestionToPreview(false);
     }
   });
   editor.addEventListener('input', function() {
-    window.syncActiveQuestionToPreview(false);
+    if (!editor._quizComposing) window.scheduleDelayedPreviewSync();
+  });
+  editor.addEventListener('compositionstart', function() {
+    editor._quizComposing = true;
+    window.cancelDelayedPreviewSync();
+  });
+  editor.addEventListener('compositionend', function() {
+    editor._quizComposing = false;
+    window.scheduleDelayedPreviewSync();
+  });
+  editor.addEventListener('blur', function() {
+    window.cancelDelayedPreviewSync();
   });
 };
 
@@ -638,7 +764,9 @@ window.initAllTooltips = function() {
   var genBtn = document.getElementById('btn_generate_package');
   if (genBtn) {
     var txt = genBtn.textContent || '';
-    if (txt.indexOf('Regenerate') !== -1) {
+    if (document.querySelector('.package-ready')) {
+      genBtn.setAttribute('title', 'Generate a fresh copy of the current QTI package');
+    } else if (txt.indexOf('Regenerate') !== -1) {
       genBtn.setAttribute('title', 'Quiz source or media has changed; click to regenerate the QTI 2.1 package');
     } else {
       genBtn.setAttribute('title', 'Generate QTI 2.1 zip package from the valid quiz');
@@ -681,6 +809,16 @@ window.onQuizCardToggle = function(card) {
   } catch(e) {}
 };
 
+window.syncExpandAllControl = function() {
+  const btn = document.querySelector('.preview-expand-control .quiz-expand-btn');
+  if (!btn) return;
+  const items = document.querySelectorAll('#quiz_preview_display .quiz-question-card, #quiz_preview_display .quiz-section-desc-details');
+  const allOpen = items.length > 0 && Array.from(items).every(c => c.open);
+  btn.textContent = allOpen ? '▼ Collapse All' : '▶ Expand All';
+  btn.title = allOpen ? 'Collapse all question cards' : 'Expand all question cards';
+  btn.disabled = items.length === 0;
+};
+
 window.onQuizExpandAllToggle = function(allOpen) {
   if (!window._openQuestionCards) window._openQuestionCards = new Set();
   document.querySelectorAll('.quiz-question-card').forEach(function(c) {
@@ -698,6 +836,7 @@ window.onQuizExpandAllToggle = function(allOpen) {
 document.addEventListener('toggle', function(e) {
   if (e.target && e.target.classList && e.target.classList.contains('quiz-question-card')) {
     window.onQuizCardToggle(e.target);
+    if (window.syncExpandAllControl) window.syncExpandAllControl();
   }
 }, true);
 
@@ -750,7 +889,7 @@ window.dispatchHotspotAction = function(payload) {
       const tb = widget.querySelector('.hotspot-toolbar > div');
       if (tb) tb.appendChild(toast);
     }
-    toast.innerHTML = '💾 Saved to MD';
+    toast.textContent = '✓ Saved to source';
     toast.style.opacity = '1';
     clearTimeout(widget._toastTimer);
     widget._toastTimer = setTimeout(function() {
@@ -1171,6 +1310,7 @@ window.addHotspotShape = function(widget, shape) {
 """
 
 MATHJAX_TYPESET_JS = """() => {
+  if (window.syncExpandAllControl) window.syncExpandAllControl();
   // 1. Ensure question tracker is initialized on the editor textarea
   if (typeof window.initEditorQuestionTracker === 'function') {
     window.initEditorQuestionTracker();
@@ -1191,9 +1331,12 @@ MATHJAX_TYPESET_JS = """() => {
     }
   } catch(e) {}
 
-  // 3. Keep active editor question card open
-  if (typeof window.syncActiveQuestionToPreview === 'function') {
-    window.syncActiveQuestionToPreview(false);
+  // 3. Navigate only after typing pauses and the rendered source is current.
+  if (window._previewSyncReady && typeof window.flushDelayedPreviewSync === 'function') {
+    window.flushDelayedPreviewSync();
+  } else if (!window._previewSyncTimer && typeof window.syncActiveQuestionToPreview === 'function') {
+    const editor = document.querySelector('.quiz-source-editor textarea');
+    if (editor && document.activeElement === editor && !editor._quizComposing) window.syncActiveQuestionToPreview(false);
   }
 
   // 4. Restore active hotspot editor state if a recent edit occurred
@@ -1224,7 +1367,7 @@ MATHJAX_TYPESET_JS = """() => {
           const tb = widget.querySelector('.hotspot-toolbar > div');
           if (tb) tb.appendChild(toast);
         }
-        toast.innerHTML = '💾 Saved to MD';
+        toast.textContent = '✓ Saved to source';
         toast.style.opacity = '1';
         clearTimeout(widget._toastTimer);
         widget._toastTimer = setTimeout(function() {

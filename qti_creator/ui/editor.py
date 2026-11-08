@@ -28,7 +28,7 @@ from src.patcher import (
     toggle_hotspot_correctness,
     update_hotspot_author_label,
 )
-from src.preview import render_quiz_preview_html
+from src.preview import render_quiz_preview_html, render_expand_all_control
 from src.validation import Severity
 
 
@@ -88,8 +88,8 @@ def format_editor_status_html(
     pkg_part = ""
     if package_status == "ready" and package_filename:
         pkg_part = f"""
-        <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;" title="QTI 2.1 package is generated and ready to download">
-          ✓ Package ready: <strong>{html.escape(package_filename)}</strong>
+        <span class="package-ready" title="{html.escape(package_filename, quote=True)}">
+          ✓ Package ready
         </span>
         """
     elif package_status == "outdated":
@@ -116,30 +116,22 @@ def format_editor_status_html(
         short_warned = r.shortest_bias - r.random_score > 0.005
         long_warned = r.longest_bias - r.random_score > 0.005
 
-        warn_html = ""
-        if r.bias_warnings:
-            items = "".join(
-                f'<li style="margin:2px 0;">{html.escape(w)}</li>' for w in r.bias_warnings
-            )
-            warn_html = (
-                f'<details class="bias-details"><summary>{len(r.bias_warnings)} answer-length warnings</summary><ul style="margin:4px 0 0 0; padding-left:1.2em; '
-                f'color:#92400e; font-size:0.82rem; list-style:disc;">{items}</ul></details>'
-            )
-
+        warning_count = len(r.bias_warnings)
+        summary = "Answer-quality checks"
+        if warning_count:
+            summary += f" · ⚠ {warning_count} warning{'s' if warning_count != 1 else ''}"
+        items = "".join(f"<li>{html.escape(w)}</li>" for w in r.bias_warnings)
         diff_part = (
-            f'<span style="color: #64748b; font-size: 0.85rem;" '
-            f'title="Expected score fraction for random / shortest / longest answer selection">'
-            f'🎲 Random: <strong>{r.random_score * 100:.0f}&thinsp;%</strong>'
-            f'&ensp;↔&ensp;Shortest: {_fmt(r.shortest_bias, short_warned)}'
-            f'&ensp;Longest: {_fmt(r.longest_bias, long_warned)}'
-            f'&ensp;<span style="opacity:.7;">({r.scorable_questions}/'
-            f'{r.scorable_questions + r.skipped_questions} scored{skip_note})</span>'
-            f'</span>'
-            f'{warn_html}'
+            f'<details class="answer-quality-checks"><summary>{summary}</summary>'
+            f'<div class="quality-metrics">Random: {_fmt(r.random_score, False)}'
+            f' · Shortest: {_fmt(r.shortest_bias, short_warned)}'
+            f' · Longest: {_fmt(r.longest_bias, long_warned)}'
+            f' <span>({r.scorable_questions}/{r.scorable_questions + r.skipped_questions} scored{skip_note})</span></div>'
+            f'{"<ul>" + items + "</ul>" if items else ""}</details>'
         )
 
     return f"""
-    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div class="editor-status">
       {status_part}
       {media_part}
       {pkg_part}
@@ -170,7 +162,7 @@ def render_editor_view(
             status_bar,
             "",
             gr.update(visible=False),
-            gr.update(value="📦 Generate package", variant="secondary"),
+            gr.update(value="Generate package", variant="secondary"),
         )
 
     quiz, diagnostics = parse_quizmd(source)
@@ -213,6 +205,7 @@ def render_editor_view(
         render_math=render_math,
         hotspot_images=media_res.resolved_hotspot_images,
         source_hash=src_hash,
+        show_expand_all=False,
     )
 
     # Check package state
@@ -277,13 +270,13 @@ def render_editor_view(
     diag_md = "".join(diag_lines)
 
     download_update = (
-        gr.update(value=session.package.output_path, visible=True)
+        gr.update(value=session.package.output_path, visible=True, variant="primary")
         if (pkg_status == "ready")
         else gr.update(visible=False)
     )
 
-    gen_btn_text = "🔄 Regenerate" if pkg_status == "outdated" else "📦 Generate package"
-    gen_btn_variant = "primary" if is_valid else "secondary"
+    gen_btn_text = "Regenerate" if pkg_status in ("ready", "outdated") else "Generate package"
+    gen_btn_variant = "primary" if is_valid and pkg_status != "ready" else "secondary"
     gen_update = gr.update(value=gen_btn_text, variant=gen_btn_variant)
 
     return preview_html, status_bar_html, diag_md, download_update, gen_update
@@ -371,9 +364,9 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                 """,
                 elem_classes=["quiz-status-pill"],
             )
-            with gr.Row():
-                btn_generate = gr.Button("📦 Generate package", variant="primary", size="sm", elem_id="btn_generate_package")
-                btn_download = gr.DownloadButton("📥 Download ZIP", visible=False, size="sm", variant="primary", elem_id="btn_download_package")
+            with gr.Row(elem_classes=["export-actions"]):
+                btn_generate = gr.Button("Generate package", variant="primary", size="sm", scale=0, min_width=0, elem_id="btn_generate_package")
+                btn_download = gr.DownloadButton("Download ZIP", visible=False, size="sm", variant="primary", scale=0, min_width=0, elem_id="btn_download_package")
 
         # Validation diagnostics (collapsible / alert when errors exist)
         diagnostics_box = gr.HTML("", elem_classes=["no-scroll-block", "editor-diagnostics"])
@@ -383,9 +376,9 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             # Left: Source
             with gr.Column(scale=1, min_width=480, elem_id="quiz_source_container", elem_classes=["quiz-pane"]):
                 with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                    gr.Markdown("**📝 QuizMD Source**", elem_classes=["no-scroll-block"])
+                    gr.Markdown("**QuizMD Source**", elem_classes=["no-scroll-block"])
                     btn_upload_file = gr.UploadButton(
-                        "📄 Upload .md / .txt",
+                        "Upload source",
                         file_types=[".md", ".txt"],
                         file_count="single",
                         type="filepath",
@@ -394,7 +387,7 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
                         elem_id="btn_upload_file",
                         elem_classes=["quiz-fullscreen-btn", "quiz-upload-btn"],
                     )
-                    btn_refresh = gr.Button("🔄 Refresh", variant="secondary", size="sm", elem_id="btn_refresh", elem_classes=["quiz-fullscreen-btn"])
+                    btn_refresh = gr.Button("Refresh", variant="secondary", size="sm", elem_id="btn_refresh", elem_classes=["quiz-fullscreen-btn"])
                     btn_editor_fs = gr.Button("⛶", size="sm", elem_id="btn_editor_fs", elem_classes=["quiz-fullscreen-btn"])
 
                 quiz_source = gr.Textbox(
@@ -408,7 +401,8 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             # Right: Preview
             with gr.Column(scale=1, min_width=480, elem_id="quiz_preview_container", elem_classes=["quiz-pane"]):
                 with gr.Row(elem_classes=["quiz-fullscreen-header"]):
-                    gr.Markdown("**👁️ Preview**", elem_classes=["no-scroll-block"])
+                    gr.Markdown("**Preview**", elem_classes=["no-scroll-block"])
+                    gr.HTML(render_expand_all_control(), elem_classes=["preview-expand-control", "no-scroll-block"])
                     render_math_cb = gr.Checkbox(
                         value=True,
                         label="Render math",
@@ -589,7 +583,7 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
             inputs=[shared_session],
             outputs=[shared_session, btn_download, status_bar_html, diagnostics_box, btn_generate],
             api_name="generate_package",
-        )
+        ).then(js=MATHJAX_TYPESET_JS)
 
         def on_editor_loaded(
             session: QuizSession | None,

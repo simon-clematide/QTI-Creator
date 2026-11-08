@@ -213,7 +213,7 @@ def render_prompting_page() -> None:
                 interactive=False,
             )
             with gr.Row():
-                btn_copy_prompt = gr.Button("📋 Copy Prompt Template", variant="secondary", elem_id="btn_copy_prompt")
+                btn_copy_prompt = gr.Button("Copy prompt template", variant="secondary", elem_id="btn_copy_prompt")
                 copy_status = gr.Markdown("", elem_classes=["no-scroll-block"])
 
             btn_copy_prompt.click(

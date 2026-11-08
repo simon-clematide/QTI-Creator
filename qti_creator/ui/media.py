@@ -106,7 +106,7 @@ def build_media_tree_html(session: QuizSession) -> str:
                 html_out.append(f"""
                 <li style='margin: 4px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;'>
                   <span style='color: #1e293b; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.88rem;'>
-                    📄 {html.escape(f.name)}
+                    {html.escape(f.name)}
                   </span>
                   <div>
                     <span style='color: #94a3b8; font-size: 0.78rem; margin-right: 6px;'>{format_file_size(f.size)}</span>
@@ -261,13 +261,15 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                     </p>
                     """
                 )
-            with gr.Column(scale=1, min_width=200):
+            with gr.Column(scale=0, min_width=170):
                 btn_upload_media_zip = gr.UploadButton(
-                    "📎 Upload Media ZIP",
+                    "Upload media ZIP",
                     file_types=[".zip"],
                     file_count="single",
                     type="filepath",
                     size="sm",
+                    scale=0,
+                    min_width=170,
                     variant="primary",
                     elem_id="btn_upload_media_zip",
                 )
@@ -287,14 +289,14 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
         with gr.Row(elem_classes=["quiz-workspace-container"], equal_height=True, visible=False) as media_workspace:
             # Left: File Hierarchy
             with gr.Column(scale=5, min_width=380, elem_classes=["quiz-pane"]):
-                gr.Markdown("**📂 Files & References**", elem_classes=["no-scroll-block"])
+                gr.Markdown("**Files & References**", elem_classes=["no-scroll-block"])
                 tree_display = gr.HTML(
                     value=build_media_tree_html(empty_session),
                 )
 
             # Right: File Detail Panel
             with gr.Column(scale=5, min_width=380, elem_classes=["quiz-pane"]):
-                gr.Markdown("**🔍 File Details & Preview**", elem_classes=["no-scroll-block"])
+                gr.Markdown("**File Details & Preview**", elem_classes=["no-scroll-block"])
                 file_selector = gr.Dropdown(
                     choices=[],
                     visible=False,
@@ -317,7 +319,7 @@ def render_media_page(shared_session: gr.State, route_context: gr.Blocks | None 
                 label="Resolve relative media in preview",
             )
 
-        # Event: Upload Media ZIP
+        # Event: Upload media ZIP
         def on_upload_media_zip(
             filepath: str,
             session: QuizSession | None,

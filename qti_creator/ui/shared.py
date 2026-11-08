@@ -2,9 +2,9 @@
 
 import gradio as gr
 
-THEME = gr.themes.Soft(
-    primary_hue="indigo",
-    secondary_hue="blue",
+THEME = gr.themes.Base(
+    primary_hue="slate",
+    secondary_hue="slate",
     font=[
         gr.themes.GoogleFont("Source Sans 3"),
         "Source Sans Pro",

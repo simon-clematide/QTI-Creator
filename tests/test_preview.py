@@ -1,6 +1,7 @@
 """Tests for the preview generator."""
 
 import unittest
+import re
 from src.parser import parse_quizmd
 from src.preview import render_quiz_preview_html
 
@@ -65,6 +66,13 @@ class TestPreview(unittest.TestCase):
         self.assertIn("**Section 1**: *Calculus*", html_out)
         # Ensure it does not render formatted HTML like <strong> or <em> in section title
         self.assertNotIn("<strong>Section 1</strong>", html_out)
+
+    def test_single_section_keeps_instructions_and_title_warning_without_duplicate_heading(self):
+        quiz, _ = parse_quizmd("# **Practice**\nRead carefully.\n## Question\n- [X] A\n- [ ] B\n")
+        output = render_quiz_preview_html(quiz)
+        self.assertIn("Read carefully.", output)
+        self.assertIn("Markdown/Math in title", output)
+        self.assertNotIn("<h4", output)
 
     def test_preview_multi_section_markdown_title_warning(self):
         text = """---
@@ -134,17 +142,19 @@ Feedback: Some feedback
         self.assertEqual(len(diags), 0)
         html_out = render_quiz_preview_html(quiz)
 
-        # In summary header:
-        # Q1 has 💡 but not 💬
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>', html_out)
-        # Q2 has 💬 but not 💡
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
-        # Q3 has both in order 💡 💬
-        self.assertIn('<span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span> <span title="Feedback available" style="cursor: help; font-size: 0.95em;">💬</span></span>', html_out)
-        # Verify sequence: Single Choice (type), then status badges, then points
-        self.assertIn('Single Choice</span>\n      <span style=\'display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;\'><span title="Hint available" style="cursor: help; font-size: 0.95em;">💡</span></span>\n      <span title="Score weight: 1.0 pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">1.0 pt</span>', html_out)
-        # Q4 has neither badge
-        self.assertIn('Single Choice</span>\n      \n      <span title="Score weight: 1.0 pt" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; cursor: help;">1.0 pt</span>', html_out)
+        summaries = re.findall(r'<details class="quiz-question-card".*?<summary[^>]*>(.*?)</summary>', html_out, re.S)
+        self.assertEqual(len(summaries), 4)
+        self.assertIn('aria-label="Hint available"', summaries[0])
+        self.assertNotIn('aria-label="Feedback available"', summaries[0])
+        self.assertIn('aria-label="Feedback available"', summaries[1])
+        self.assertNotIn('aria-label="Hint available"', summaries[1])
+        self.assertIn('aria-label="Hint available"', summaries[2])
+        self.assertIn('aria-label="Feedback available"', summaries[2])
+        self.assertNotIn('aria-label="Hint available"', summaries[3])
+        self.assertNotIn('aria-label="Feedback available"', summaries[3])
+        for summary in summaries:
+            self.assertIn('Single Choice', summary)
+            self.assertIn('Score weight: 1.0 pt', summary)
 
     def test_preview_section_summary_counts(self):
         text = """---
@@ -174,9 +184,9 @@ Feedback: Great work!
         html_out = render_quiz_preview_html(quiz)
 
         # Section 1 has 2 Qs, 1 Hint, 1 Feedback, 2.0 pt in sequence Qs &bull; 💡 &bull; 💬 &bull; pt
-        self.assertIn("2 questions &bull; 💡 1 &bull; 💬 1 &bull; 2.0 pt", html_out)
-        # Overall header should report 3 questions parsed across 2 sections &bull; 💡 1 hint &bull; 💬 1 feedback
-        self.assertIn("3 questions parsed across 2 sections &bull; 💡 1 hint &bull; 💬 1 feedback", html_out)
+        self.assertIn("2 questions &bull; 1 hint &bull; 1 feedback &bull; 2.0 pt", html_out)
+        # Overall header should report 3 questions parsed across 2 sections &bull; 1 hint &bull; 1 feedback
+        self.assertIn("3 questions parsed across 2 sections &bull; 1 hint &bull; 1 feedback", html_out)
 
     def test_preview_section_description_collapsible(self):
         text = """# Test Exam
@@ -258,7 +268,7 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
         with self.assertRaises(QuizValidationError):
             create_qti_package(quiz, out)
 
-    def test_preview_full_raw_question_title_in_card_body(self):
+    def test_preview_full_raw_question_title_in_expanded_heading(self):
         text = """## Very long question title about **thermodynamics** & *fluid mechanics* that exceeds typical widths?
 - [X] Yes
 - [ ] No
@@ -275,8 +285,9 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
         # Check that Markdown/Math warning badge is displayed for the question title
         self.assertIn("⚠️ Markdown/Math in title", html_out)
 
-        # Verify the question title wrapper in the body
-        self.assertIn("<div style='font-size: 1.05em; font-weight: 600; color: #0f172a; margin-bottom: 8px; line-height: 1.4;'>", html_out)
+        # The full title stays in the heading; expanded headings wrap instead of truncating.
+        self.assertIn('class="question-title"', html_out)
+        self.assertIn("white-space: normal !important", html_out)
 
     def test_preview_question_math_in_title_warning(self):
         text = """## Solve for $x$: $2x + 5 = 15$
@@ -360,8 +371,8 @@ The {** cat **} { sat } on the {** mat **}.
         html_out = render_quiz_preview_html(quiz)
         self.assertIn("Drag & Drop", html_out)
         self.assertIn("Drag & Drop Categories (Single Choice)", html_out)
-        self.assertIn("📂 noun:", html_out)
-        self.assertIn("📂 verb:", html_out)
+        self.assertIn("noun:", html_out)
+        self.assertIn("verb:", html_out)
         self.assertIn("dog", html_out)
         self.assertIn("cat", html_out)
         self.assertIn("run", html_out)
@@ -403,7 +414,7 @@ Second paragraph of solution.
         html_out = render_quiz_preview_html(quiz)
 
         # Verify custom titles in preview
-        self.assertIn("💡 Hint: Special Hint Title", html_out)
+        self.assertIn("Hint: Special Hint Title", html_out)
         self.assertIn("Feedback: Detailed Solution Explanation", html_out)
 
         # Verify warning alert box in card body

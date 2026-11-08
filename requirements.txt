@@ -1,2 +1,4 @@
 gradio>=4.44.0
 pyyaml>=6.0.0
+
+genanki>=0.13.1,<0.14

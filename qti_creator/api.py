@@ -262,6 +262,17 @@ def export_qti_api(quiz_markdown: str) -> Optional[str]:
         raise gr.Error(f"Failed to create QTI package: {e}")
 
 
+def export_anki_api(quiz_markdown: str, deck_name: str = "", separate_gaps: bool = True,
+                    media_zip: Optional[str] = None) -> str:
+    """Export an Anki .apkg; optional ZIP supplies locally referenced images."""
+    from qti_creator.anki_export import build_anki_export
+    try:
+        path, _ = build_anki_export(quiz_markdown, deck_name, separate_gaps, media_zip)
+        return path
+    except ValueError as exc:
+        raise gr.Error(str(exc)) from exc
+
+
 def register_api_endpoints(demo: gr.Blocks) -> None:
     """Register headless API endpoints on the Gradio Blocks application."""
     with demo:
@@ -297,4 +308,16 @@ def register_api_endpoints(demo: gr.Blocks) -> None:
                 inputs=[api_inp_export],
                 outputs=[api_out_export],
                 api_name="export_qti",
+            )
+
+            api_inp_anki = gr.Textbox(label="Quiz Markdown", visible=False)
+            api_deck_anki = gr.Textbox(label="Deck name (blank uses quiz title)", visible=False)
+            api_gaps_anki = gr.Checkbox(value=True, label="One card per gap", visible=False)
+            api_media_anki = gr.File(label="Media ZIP", type="filepath", visible=False)
+            api_out_anki = gr.File(label="Anki Deck", visible=False)
+            api_btn_anki = gr.Button("Export Anki", visible=False)
+            api_btn_anki.click(
+                fn=export_anki_api,
+                inputs=[api_inp_anki, api_deck_anki, api_gaps_anki, api_media_anki],
+                outputs=[api_out_anki], api_name="export_anki",
             )

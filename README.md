@@ -517,15 +517,74 @@ python3 scripts/validate_qti.py my_quiz_qti21.zip
 
 ---
 
+## Anki flashcard export
+
+In **Editor → Anki flashcards**, optionally enter a deck name, choose whether
+multiple gaps produce separate cards, and click **Preview and build Anki deck**.
+Inspect the card fronts and backs, then download the `.apkg` and import it into
+Anki. Changing the source, options, or session clears the previous download.
+
+The exporter uses the existing answer keys without AI rewriting:
+
+| Quiz question | Anki cards |
+|---|---|
+| Single choice, multiple choice, true/false | Basic card with the original options and correct answers on the back. |
+| Text gaps, dropdowns | Cloze notes; one card per gap by default, or all gaps hidden together. |
+| Kprim | One Basic card per statement. |
+| Match, drag and drop | One Basic card per source item, with the task context. |
+| Ordering | Unordered items on the front; correct sequence on the back. |
+| Numerical | Expected value and tolerance on the back. |
+| Hottext | Unmarked text on the front; correct spans emphasized on the back. |
+| Essay, hotspot | Skipped with a visible explanation. No answers are invented. |
+
+Feedback and accepted spelling variants appear after revealing the answer.
+Hints are expandable. Sections, topics, and keywords become tags. Markdown,
+code, and native Anki MathJax delimiters are supported. Referenced images are
+bundled automatically: upload relative image files through the existing
+**Media** ZIP uploader; remote images are downloaded during export. Missing or
+invalid images stop export rather than producing a broken deck. Audio export
+and hotspot image occlusion are not supported.
+
+**Updating decks:** Keep the quiz title stable. Add a unique `Identifier:` to
+questions whose headings may change. Otherwise, section and question titles
+identify the note. Answer edits and question reordering preserve note GUIDs;
+renaming a title without an explicit identifier creates a new note. Kprim
+statements and matching items are identified by their text, so changing that
+text creates a new child note. Duplicate identities are rejected. Deck name is
+a display setting and does not change the deck identity. Re-imports use Anki's
+normal package merge rules; removed source questions are not automatically
+deleted from a student's collection.
+
+The `/export_anki` endpoint accepts `quiz_markdown`, optional `deck_name`,
+`separate_gaps` (default `True`), and an optional uploaded `media_zip`. It returns
+a downloadable `.apkg`. This endpoint becomes available on hosted instances
+once this version is deployed.
+
+For local Python callers:
+
+```python
+from qti_creator.anki_export import build_anki_export
+
+path, preview_html = build_anki_export(
+    "# Linguistics\n## Units\nText is split into {{tokens}}.",
+    deck_name="Linguistics revision",
+    separate_gaps=True,
+)
+print(path)
+```
+
+---
+
 ## 🔌 Programmatic API Access (Hugging Face / Gradio API)
 
-Integrate QTI-Creator directly into automated workflows, LLM agents, or CI/CD pipelines. The Hugging Face Space exposes three headless API endpoints:
+Integrate QTI-Creator directly into automated workflows, LLM agents, or CI/CD pipelines. The application exposes these headless API endpoints (hosted instances require deployment of the corresponding version):
 
 | Endpoint | Input Parameter | Output | Purpose |
 | :--- | :--- | :--- | :--- |
 | `/check_quiz` | `quiz_markdown: str` | JSON `dict` | Fast AST & semantic validation (invariants, point sums, gap/math syntax checks). |
 | `/validate_jqti` | `quiz_markdown: str` | JSON `dict` | Full XML generation + OpenOLAT native Java `jqtiplus` engine validation. |
 | `/export_qti` | `quiz_markdown: str` | `.zip` File | Headless compilation & download of the QTI 2.1 ZIP archive. |
+| `/export_anki` | `quiz_markdown`, optional `deck_name`, `separate_gaps`, `media_zip` | `.apkg` File | Anki Basic/Cloze deck with bundled images. |
 
 ### Python (`gradio_client`)
 

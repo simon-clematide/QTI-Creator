@@ -414,6 +414,36 @@ def render_editor_page(shared_session: gr.State, route_context: gr.Blocks | None
 
                 preview_display = gr.HTML(elem_id="quiz_preview_display")
 
+        with gr.Accordion("Anki flashcards", open=False):
+            gr.Markdown("Build a study deck from this quiz. Choice options are preserved; "
+                        "essays and hotspots are skipped. Referenced images are bundled "
+                        "using the uploaded Media ZIP or downloaded from their URLs.")
+            with gr.Row():
+                anki_deck = gr.Textbox(label="Deck name", placeholder="Use quiz title")
+                anki_gaps = gr.Checkbox(value=True, label="One card per gap")
+            anki_build = gr.Button("Preview and build Anki deck")
+            anki_download = gr.DownloadButton("Download Anki deck (.apkg)", visible=False)
+            anki_preview = gr.HTML()
+
+            def build_anki(source, deck_name, separate_gaps, session):
+                from qti_creator.anki_export import build_anki_export
+                try:
+                    media_zip = session.media.zip_path if session else None
+                    path, preview = build_anki_export(source, deck_name, separate_gaps, media_zip)
+                    return gr.update(value=path, visible=True), preview
+                except Exception as exc:
+                    return gr.update(value=None, visible=False), '<p>' + html.escape(str(exc)) + '</p>'
+
+            anki_build.click(build_anki,
+                             inputs=[quiz_source, anki_deck, anki_gaps, shared_session],
+                             outputs=[anki_download, anki_preview], api_name=False).then(js=MATHJAX_TYPESET_JS)
+
+            def clear_anki():
+                return gr.update(value=None, visible=False), ""
+
+            for component in (quiz_source, anki_deck, anki_gaps, shared_session):
+                component.change(clear_anki, outputs=[anki_download, anki_preview], api_name=False)
+
         # Hidden bridge input for Milestone 3 Visual Hotspot Editor client events (hidden via CSS)
         hotspot_action_input = gr.Textbox(
             visible=True,

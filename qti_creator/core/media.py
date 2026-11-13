@@ -20,7 +20,7 @@ import urllib.request
 import zipfile
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
-from src.model import (
+from qti_creator.core.model import (
     EssayQuestion,
     FillBlankQuestion,
     HotspotQuestion,
@@ -36,7 +36,7 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-from src.validation import Diagnostic, Severity
+from qti_creator.core.validation import Diagnostic, Severity
 
 # Supported raster image MIME magic bytes
 MAGIC_NUMBERS: Dict[bytes, Tuple[str, str]] = {

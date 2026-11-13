@@ -2,8 +2,8 @@
 
 import unittest
 
-from src.parser import parse_quizmd
-from src.patcher import (
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.patcher import (
     add_hotspot_region,
     compute_source_hash,
     delete_hotspot_region,

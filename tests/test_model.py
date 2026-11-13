@@ -1,7 +1,7 @@
 """Tests for the typed domain model invariants."""
 
 import unittest
-from src.model import (
+from qti_creator.core.model import (
     AssociationItem,
     AssociationQuestion,
     AssociationTarget,
@@ -22,7 +22,7 @@ from src.model import (
     KprimStatement,
     Quiz,
 )
-from src.validation import QuizValidationError
+from qti_creator.core.validation import QuizValidationError
 
 
 
@@ -183,9 +183,9 @@ class TestModelInvariants(unittest.TestCase):
         self.assertEqual(len(diags), 0)
 
     def test_section_markdown_title_warning(self):
-        from src.model import Section
-        from src.markdown import contains_markdown
-        from src.validation import Severity
+        from qti_creator.core.model import Section
+        from qti_creator.core.markdown import contains_markdown
+        from qti_creator.core.validation import Severity
 
         # Test contains_markdown directly
         self.assertTrue(contains_markdown("**Bold Section**"))

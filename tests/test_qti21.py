@@ -4,7 +4,7 @@ import io
 import unittest
 import xml.etree.ElementTree as ET
 import zipfile
-from src.model import (
+from qti_creator.core.model import (
     AssociationItem,
     AssociationQuestion,
     AssociationTarget,
@@ -27,11 +27,11 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-from src.packager import create_qti_package, create_qti_package_bytes
-from src.parser import parse_quizmd
-from src.qti21 import generate_item_xml
-from src.qti21.manifest import generate_manifest_xml
-from src.qti21.test import generate_test_xml
+from qti_creator.core.packager import create_qti_package, create_qti_package_bytes
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.qti21 import generate_item_xml
+from qti_creator.core.qti21.manifest import generate_manifest_xml
+from qti_creator.core.qti21.test import generate_test_xml
 
 
 class TestQTI21Generator(unittest.TestCase):

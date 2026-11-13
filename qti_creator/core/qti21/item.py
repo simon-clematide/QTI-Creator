@@ -3,7 +3,7 @@
 import html
 from typing import Dict, Optional
 
-from src.markdown import markdown_to_qti_xhtml
+from qti_creator.core.markdown import markdown_to_qti_xhtml
 
 
 

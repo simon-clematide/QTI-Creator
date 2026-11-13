@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile
 
-from src.anki import prepare_anki_export, render_anki_preview, write_anki_package
+from qti_creator.core.anki import prepare_anki_export, render_anki_preview, write_anki_package
 
 
 def build_anki_export(source: str, deck_name: str = '', separate_gaps: bool = True,

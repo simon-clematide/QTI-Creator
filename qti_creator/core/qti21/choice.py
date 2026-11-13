@@ -1,63 +1,87 @@
-"""QTI 2.1 generator for Hottext questions (hottextInteraction)."""
+"""QTI 2.1 generator for Single Choice, Multiple Choice, and True/False questions."""
 
 import html
-import re
 from typing import Dict, Optional
 
-from src.markdown import extract_hottexts, markdown_to_qti_xhtml
-from src.model import HottextQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.defaults import DEFAULTS
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.model import MultipleChoiceQuestion, SingleChoiceQuestion, TrueFalseQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
-def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
-    """Generate QTI 2.1 XML for a Hottext question."""
-    correct_items = [it for it in q.items if it.is_correct]
-    incorrect_items = [it for it in q.items if not it.is_correct]
-    n_correct = len(correct_items)
-    n_incorrect = len(incorrect_items)
+def generate_single_choice_xml(q: SingleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
 
-    correct_values_xml = "\n".join(
-        f"      <value>{it.identifier}</value>" for it in correct_items
+    """Generate QTI 2.1 XML for a Single Choice question."""
+    correct_choice = next(c for c in q.choices if c.is_correct)
+
+    response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+    <correctResponse>
+      <value>{correct_choice.identifier}</value>
+    </correctResponse>
+    <mapping defaultValue="0.0">
+      <mapEntry mapKey="{correct_choice.identifier}" mappedValue="{q.points}"/>
+    </mapping>
+  </responseDeclaration>"""
+
+    choices_xml = []
+    for c in q.choices:
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
+        choices_xml.append(
+            f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
+        )
+
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
+    item_body = f"""    {prompt_xhtml}
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="1">
+
+{chr(10).join(choices_xml)}
+    </choiceInteraction>"""
+
+    response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
+
+    return wrap_assessment_item(
+        identifier=q.identifier,
+        title=q.title,
+        response_declarations=response_decl,
+        item_body_content=item_body,
+        response_processing=response_proc,
+        feedback=q.feedback,
+        hint=q.hint,
+        feedback_title=q.feedback_title,
+        hint_title=q.hint_title,
+        max_score=q.points,
+        asset_map=asset_map,
     )
 
-    # 1. Convert prompt markdown to XHTML first
+
+def generate_multiple_choice_xml(q: MultipleChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Generate QTI 2.1 XML for a Multiple Choice question with partial or all-correct scoring."""
+    correct_choices = [c for c in q.choices if c.is_correct]
+    incorrect_choices = [c for c in q.choices if not c.is_correct]
+    n_correct = len(correct_choices)
+    n_incorrect = len(incorrect_choices)
+
+    correct_values_xml = "\n".join(
+        f"      <value>{c.identifier}</value>" for c in correct_choices
+    )
+
+    choices_xml = []
+    for c in q.choices:
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
+        choices_xml.append(
+            f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
+        )
+
     prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+    shuffle_bool = q.shuffle if q.shuffle is not None else DEFAULTS["shuffle"]
+    shuffle_str = "true" if shuffle_bool else "false"
+    item_body = f"""    {prompt_xhtml}
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="{shuffle_str}" maxChoices="0">
+{chr(10).join(choices_xml)}
+    </choiceInteraction>"""
 
-    # 2. Extract hottexts in the prompt and replace tokens with <hottext identifier="...">content</hottext>
-    # Note: we need content to be formatted inlines (bold, italic, code, etc.) without surrounding <p>
-    hottext_tokens = extract_hottexts(q.prompt)
-    item_map = {}
-    for idx, ht in enumerate(hottext_tokens):
-        if idx < len(q.items):
-            item_map[ht[2]] = q.items[idx]
-
-    # Function to replace each raw token with <hottext>...</hottext>
-    def replace_hottext(match):
-        raw = match.group(0)
-        item = item_map.get(raw)
-        if not item:
-            # Fallback search if exact match doesn't hit
-            for it in q.items:
-                if it.text == raw:
-                    item = it
-                    break
-        if not item:
-            return raw
-        # Convert inner text to QTI XHTML (preserving bold/italic/code/math, but strip wrapping <p>)
-        inner_xhtml = markdown_to_qti_xhtml(item.text, asset_map=asset_map)
-        if inner_xhtml.startswith("<p>") and inner_xhtml.endswith("</p>"):
-            inner_xhtml = inner_xhtml[3:-4]
-        return f'<hottext identifier="{item.identifier}">{inner_xhtml}</hottext>'
-
-    # Regex matching { ... } with required whitespace
-    re_ht_token = re.compile(r"\{(?:\*\*|\+|\-)?\s+[\s\S]*?\}")
-    body_with_hottext = re_ht_token.sub(replace_hottext, prompt_xhtml)
-
-    # Hottext interaction wraps the prompt body inside <hottextInteraction>
-    # Note: in QTI 2.1, hottextInteraction is a block interaction. OpenOLAT wraps the content in <p> inside <hottextInteraction>
-    item_body = f"""    <hottextInteraction responseIdentifier="RESPONSE" maxChoices="0">
-      {body_with_hottext}
-    </hottextInteraction>"""
 
     scoring_mode = q.scoring.lower() if q.scoring else "partial"
 
@@ -84,14 +108,15 @@ def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]]
         )
 
     elif scoring_mode in ("points-per-answer", "per-answer", "points_per_answer", "per_answer"):
+        # Explicit mapping per choice
         pos_val = round(q.points / n_correct, 4) if n_correct > 0 else 0.0
         neg_val = round(-(q.points / n_incorrect), 4) if n_incorrect > 0 else 0.0
 
         mapping_entries_xml = []
-        for it in q.items:
-            val = pos_val if it.is_correct else neg_val
+        for c in q.choices:
+            val = pos_val if c.is_correct else neg_val
             mapping_entries_xml.append(
-                f'      <mapEntry mapKey="{it.identifier}" mappedValue="{val}"/>'
+                f'      <mapEntry mapKey="{c.identifier}" mappedValue="{val}"/>'
             )
 
         response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
@@ -119,7 +144,11 @@ def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]]
         )
 
     else:
-        # Default: Partial credit (OpenOLAT native NPS calculation)
+        # OpenOLAT native "Teilpunkte" (Partial scoring):
+        # OpenOLAT uses NPS_NUMCORRECT and NPS_NUMINCORRECT accumulators in responseProcessing
+        # without a <mapping> element, calculating:
+        # SCORE = (NPS_NUMCORRECT * MAXSCORE / n_correct) - (NPS_NUMINCORRECT * MAXSCORE / n_incorrect)
+        # clamped between MINSCORE (0.0) and MAXSCORE.
         response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="multiple" baseType="identifier">
     <correctResponse>
 {correct_values_xml}
@@ -138,12 +167,12 @@ def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]]
   </outcomeDeclaration>"""
 
         condition_blocks = []
-        for it in q.items:
-            target_var = "NPS_NUMCORRECT" if it.is_correct else "NPS_NUMINCORRECT"
+        for c in q.choices:
+            target_var = "NPS_NUMCORRECT" if c.is_correct else "NPS_NUMINCORRECT"
             condition_blocks.append(f"""    <responseCondition>
       <responseIf>
         <member>
-          <baseValue baseType="identifier">{it.identifier}</baseValue>
+          <baseValue baseType="identifier">{c.identifier}</baseValue>
           <variable identifier="RESPONSE"/>
         </member>
         <setOutcomeValue identifier="{target_var}">
@@ -157,6 +186,7 @@ def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]]
 
         conditions_xml = "\n".join(condition_blocks)
 
+        # Build subtract expression for correct vs incorrect
         correct_term = f"""<divide>
         <product>
           <integerToFloat>
@@ -228,3 +258,46 @@ def generate_hottext_xml(q: HottextQuestion, asset_map: Optional[Dict[str, str]]
             extra_outcome_declarations=extra_outcomes,
             asset_map=asset_map,
         )
+
+
+def generate_true_false_xml(q: TrueFalseQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:
+    """Generate QTI 2.1 XML for a True/False question (represented as Single Choice in QTI 2.1)."""
+    correct_choice = next(c for c in q.choices if c.is_correct)
+
+    response_decl = f"""  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier">
+    <correctResponse>
+      <value>{correct_choice.identifier}</value>
+    </correctResponse>
+    <mapping defaultValue="0.0">
+      <mapEntry mapKey="{correct_choice.identifier}" mappedValue="{q.points}"/>
+    </mapping>
+  </responseDeclaration>"""
+
+    choices_xml = []
+    for c in q.choices:
+        choice_xhtml = markdown_to_qti_xhtml(c.text, asset_map=asset_map)
+        choices_xml.append(
+            f'      <simpleChoice identifier="{c.identifier}">{choice_xhtml}</simpleChoice>'
+        )
+
+    prompt_xhtml = markdown_to_qti_xhtml(q.prompt, asset_map=asset_map)
+    item_body = f"""    {prompt_xhtml}
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="false" maxChoices="1">
+{chr(10).join(choices_xml)}
+    </choiceInteraction>"""
+
+    response_proc = """  <responseProcessing template="http://www.imsglobal.org/question/qti_v2p1/rptemplates/map_response"/>"""
+
+    return wrap_assessment_item(
+        identifier=q.identifier,
+        title=q.title,
+        response_declarations=response_decl,
+        item_body_content=item_body,
+        response_processing=response_proc,
+        feedback=q.feedback,
+        hint=q.hint,
+        feedback_title=q.feedback_title,
+        hint_title=q.hint_title,
+        max_score=q.points,
+        asset_map=asset_map,
+    )

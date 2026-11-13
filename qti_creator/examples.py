@@ -7,7 +7,7 @@ import gradio as gr
 
 from qti_creator.media_service import analyze_session_media, safe_extract_media_zip
 from qti_creator.session import MediaSession, PackageState, QuizSession, resolve_session
-from src.examples import EXAMPLES
+from qti_creator.core.examples import EXAMPLES
 
 HOTSPOT_EXAMPLE_NAME = "Hotspot Image Questions (with Media)"
 ASSET_DIR = Path(__file__).resolve().parent / "assets"

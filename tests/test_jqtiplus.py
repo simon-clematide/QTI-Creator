@@ -4,13 +4,13 @@ import io
 import unittest
 from pathlib import Path
 
-from src.jqti_validator import (
+from qti_creator.core.jqti_validator import (
     is_java_available,
     is_javac_available,
     validate_qti_xml_string,
     validate_with_jqti,
 )
-from src.model import (
+from qti_creator.core.model import (
     Choice,
     InlineChoice,
     InlineChoiceGap,
@@ -18,9 +18,9 @@ from src.model import (
     MultipleChoiceQuestion,
     SingleChoiceQuestion,
 )
-from src.packager import create_qti_package
-from src.parser import parse_quizmd
-from src.qti21 import generate_item_xml
+from qti_creator.core.packager import create_qti_package
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.qti21 import generate_item_xml
 
 JAVA_PRESENT = is_java_available() and is_javac_available()
 
@@ -70,7 +70,7 @@ class TestJqtiPlusRuntimeValidation(unittest.TestCase):
         self.assertEqual(len(errors), 0)
 
     def test_hottext_validates_in_jqti(self):
-        from src.model import HottextItem, HottextQuestion
+        from qti_creator.core.model import HottextItem, HottextQuestion
         q = HottextQuestion(
             prompt="The {** cat **} { sat } on the {** mat **} using {+ `print()` }.",
             items=[

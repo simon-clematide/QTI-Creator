@@ -8,9 +8,9 @@ import zipfile
 
 import pytest
 
-from src.anki import convert_quiz, prepare_anki_export, render_anki_preview, write_anki_package
-from src.examples import SAMPLE_ALL_TYPES
-from src.model import (
+from qti_creator.core.anki import convert_quiz, prepare_anki_export, render_anki_preview, write_anki_package
+from qti_creator.core.examples import SAMPLE_ALL_TYPES
+from qti_creator.core.model import (
     AssociationItem, AssociationQuestion, AssociationTarget, Choice, EssayQuestion,
     HottextItem, HottextQuestion, KprimQuestion, KprimStatement, NumericalQuestion,
     OrderItem, OrderQuestion, Quiz, SingleChoiceQuestion, TrueFalseQuestion,
@@ -160,7 +160,7 @@ Recall $x^2$ and {{value}}. Literal `{{c7::example}}`.
 
 def test_sample_all_types_builds(tmp_path):
     # Bundled sample includes remote imagery; don't fetch it in this unit test.
-    from src.parser import parse_quizmd
+    from qti_creator.core.parser import parse_quizmd
     quiz, _ = parse_quizmd(SAMPLE_ALL_TYPES)
     export = convert_quiz(quiz)
     assert export.notes

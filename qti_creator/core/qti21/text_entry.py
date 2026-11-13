@@ -4,9 +4,9 @@ import html
 import re
 from typing import Dict, Optional
 
-from src.markdown import RE_GAP, markdown_to_qti_xhtml
-from src.model import FillBlankQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.markdown import RE_GAP, markdown_to_qti_xhtml
+from qti_creator.core.model import FillBlankQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
 

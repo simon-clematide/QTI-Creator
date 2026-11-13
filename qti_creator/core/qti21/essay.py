@@ -2,9 +2,9 @@
 
 from typing import Dict, Optional
 
-from src.markdown import markdown_to_qti_xhtml
-from src.model import EssayQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.model import EssayQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
 

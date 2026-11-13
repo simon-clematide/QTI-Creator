@@ -1,6 +1,6 @@
 """Shared styles and CSS for QTI-Creator multipage application."""
 
-from src.ui_icons import button_icon_css
+from qti_creator.core.ui_icons import button_icon_css
 
 SHARED_CSS = """
 /* ── Multipage Navigation Bar: align to left ── */

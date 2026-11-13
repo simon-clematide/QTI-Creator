@@ -10,9 +10,9 @@ from typing import List, Optional, Tuple
 import zipfile
 
 from qti_creator.session import MediaFile, MissingMediaReference, QuizSession
-from src.media import extract_media_references
-from src.model import Quiz
-from src.parser import parse_quizmd
+from qti_creator.core.media import extract_media_references
+from qti_creator.core.model import Quiz
+from qti_creator.core.parser import parse_quizmd
 
 # Security limits for uploaded media ZIPs
 MAX_FILES = 2000

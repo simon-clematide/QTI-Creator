@@ -21,7 +21,7 @@ def bump_version(part: str = "patch") -> str:
 
     m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
     if not m:
-        print("Error: Could not find __version__ in src/version.py", file=sys.stderr)
+        print("Error: Could not find __version__ in qti_creator/core/version.py", file=sys.stderr)
         sys.exit(1)
 
     old_version = m.group(1)

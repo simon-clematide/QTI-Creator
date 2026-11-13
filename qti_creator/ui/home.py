@@ -3,7 +3,7 @@
 import gradio as gr
 from qti_creator.ui.help_content import AUTHORING_WORKFLOW, VALIDATION_GUIDE
 from qti_creator.examples import UI_EXAMPLES, HOTSPOT_EXAMPLE_NAME, HOTSPOT_MEDIA_ZIP, load_example
-from src.version import __version__, __release_date__
+from qti_creator.core.version import __version__, __release_date__
 
 
 def render_home_page(shared_session: gr.State) -> None:

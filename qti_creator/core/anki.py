@@ -12,16 +12,16 @@ import tempfile
 
 import genanki
 
-from src.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts, markdown_to_qti_xhtml
-from src.media import preflight_media
-from src.model import (
+from qti_creator.core.markdown import RE_GAP, RE_DROPDOWN_GAP, extract_hottexts, markdown_to_qti_xhtml
+from qti_creator.core.media import preflight_media
+from qti_creator.core.model import (
     AssociationQuestion, EssayQuestion, FillBlankQuestion, HotspotQuestion,
     HottextQuestion, InlineChoiceQuestion, InvalidQuestion, KprimQuestion,
     MultipleChoiceQuestion, NumericalQuestion, OrderQuestion, Quiz,
     SingleChoiceQuestion, TrueFalseQuestion,
 )
-from src.parser import parse_quizmd
-from src.validation import Severity
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.validation import Severity
 
 CSS = """.card { font-family: sans-serif; font-size: 20px; text-align: left;
 line-height: 1.5; padding: 20px; } img { max-width: 100%; height: auto; }

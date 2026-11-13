@@ -2,8 +2,8 @@
 
 from typing import Dict, Optional, Sequence
 
-from src.media import ResolvedHotspotImage, ResolvedHotspotRegion
-from src.model import (
+from qti_creator.core.media import ResolvedHotspotImage, ResolvedHotspotRegion
+from qti_creator.core.model import (
     AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,
@@ -18,17 +18,17 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-from src.qti21.association import generate_association_xml
-from src.qti21.choice import generate_single_choice_xml, generate_multiple_choice_xml, generate_true_false_xml
-from src.qti21.essay import generate_essay_xml
-from src.qti21.hotspot import generate_hotspot_xml
-from src.qti21.hottext import generate_hottext_xml
-from src.qti21.inline_choice import generate_inline_choice_xml
-from src.qti21.text_entry import generate_fill_blank_xml
-from src.qti21.numerical import generate_numerical_xml
-from src.qti21.kprim import generate_kprim_xml
-from src.qti21.order import generate_order_xml
-from src.validation import Diagnostic, QuizValidationError, Severity
+from qti_creator.core.qti21.association import generate_association_xml
+from qti_creator.core.qti21.choice import generate_single_choice_xml, generate_multiple_choice_xml, generate_true_false_xml
+from qti_creator.core.qti21.essay import generate_essay_xml
+from qti_creator.core.qti21.hotspot import generate_hotspot_xml
+from qti_creator.core.qti21.hottext import generate_hottext_xml
+from qti_creator.core.qti21.inline_choice import generate_inline_choice_xml
+from qti_creator.core.qti21.text_entry import generate_fill_blank_xml
+from qti_creator.core.qti21.numerical import generate_numerical_xml
+from qti_creator.core.qti21.kprim import generate_kprim_xml
+from qti_creator.core.qti21.order import generate_order_xml
+from qti_creator.core.validation import Diagnostic, QuizValidationError, Severity
 
 
 def generate_item_xml(

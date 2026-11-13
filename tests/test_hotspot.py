@@ -6,32 +6,32 @@ import unittest
 import zipfile
 import zlib
 
-from src.difficulty import question_difficulty, quiz_difficulty
-from src.jqti_validator import (
+from qti_creator.core.difficulty import question_difficulty, quiz_difficulty
+from qti_creator.core.jqti_validator import (
     is_java_available,
     is_javac_available,
     validate_qti_xml_string,
     validate_qti_zip_bytes,
 )
-from src.media import (
+from qti_creator.core.media import (
     ResolvedHotspotImage,
     _extract_image_dimensions,
     _get_jpeg_exif_orientation,
     preflight_media,
     resolve_and_validate_hotspots,
 )
-from src.model import (
+from qti_creator.core.model import (
     HotspotQuestion,
     HotspotRegion,
     InvalidQuestion,
     MultipleChoiceQuestion,
     SingleChoiceQuestion,
 )
-from src.packager import create_qti_package_bytes
-from src.parser import parse_quizmd
-from src.preview import render_quiz_preview_html
-from src.qti21 import generate_item_xml
-from src.validation import QuizValidationError, Severity
+from qti_creator.core.packager import create_qti_package_bytes
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.preview import render_quiz_preview_html
+from qti_creator.core.qti21 import generate_item_xml
+from qti_creator.core.validation import QuizValidationError, Severity
 
 JAVA_PRESENT = is_java_available() and is_javac_available()
 
@@ -440,7 +440,7 @@ class TestHotspotMilestone2(unittest.TestCase):
         self.assertEqual(len(warnings4), 0)
 
     def test_hotspot_svg_preview_with_resolved_image(self):
-        from src.preview import render_quiz_preview_html
+        from qti_creator.core.preview import render_quiz_preview_html
         import base64
 
         md = """# Anatomy Quiz
@@ -503,7 +503,7 @@ Click the correct region.
         self.assertIn("onclick=\"var w=this.closest('.hotspot-preview-widget');if(w){w.setAttribute('data-view-mode','editor');if(window.selectHotspotRegion){window.selectHotspotRegion(w,1);}}\"", html_out)
 
     def test_hotspot_provisional_coordinate_grid_fallback(self):
-        from src.preview import render_quiz_preview_html
+        from qti_creator.core.preview import render_quiz_preview_html
 
         md = """# Anatomy Quiz
 ## Identify the left ventricle

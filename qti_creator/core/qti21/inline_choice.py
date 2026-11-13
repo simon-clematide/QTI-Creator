@@ -3,9 +3,9 @@
 import html
 from typing import Dict, Optional
 
-from src.markdown import RE_DROPDOWN_GAP, markdown_to_qti_xhtml
-from src.model import InlineChoiceQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.markdown import RE_DROPDOWN_GAP, markdown_to_qti_xhtml
+from qti_creator.core.model import InlineChoiceQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
 def generate_inline_choice_xml(q: InlineChoiceQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

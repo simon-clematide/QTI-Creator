@@ -3,10 +3,10 @@
 import html
 from typing import Dict, Optional
 
-from src.defaults import DEFAULTS
-from src.markdown import markdown_to_qti_xhtml
-from src.model import AssociationQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.defaults import DEFAULTS
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.model import AssociationQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
 def generate_association_xml(q: AssociationQuestion, asset_map: Optional[Dict[str, str]] = None) -> str:

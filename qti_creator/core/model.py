@@ -10,9 +10,9 @@ import math
 from typing import List, Literal, Optional, Tuple
 import uuid
 
-from src.defaults import DEFAULTS
-from src.markdown import find_gaps_in_math
-from src.validation import Diagnostic, QuizValidationError, Severity
+from qti_creator.core.defaults import DEFAULTS
+from qti_creator.core.markdown import find_gaps_in_math
+from qti_creator.core.validation import Diagnostic, QuizValidationError, Severity
 
 
 def generate_id(prefix: str = "id") -> str:
@@ -659,7 +659,7 @@ class Section:
         """Validate this section and all questions within it."""
         diagnostics: List[Diagnostic] = []
         if self.title:
-            from src.markdown import contains_markdown
+            from qti_creator.core.markdown import contains_markdown
             if contains_markdown(self.title):
                 diagnostics.append(
                     Diagnostic(

@@ -3,11 +3,11 @@
 import html
 from typing import Dict, Optional, Sequence
 
-from src.defaults import DEFAULTS
-from src.markdown import markdown_to_qti_xhtml
-from src.media import ResolvedHotspotImage, ResolvedHotspotRegion
-from src.model import HotspotQuestion
-from src.qti21.item import wrap_assessment_item
+from qti_creator.core.defaults import DEFAULTS
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.media import ResolvedHotspotImage, ResolvedHotspotRegion
+from qti_creator.core.model import HotspotQuestion
+from qti_creator.core.qti21.item import wrap_assessment_item
 
 
 def generate_hotspot_xml(

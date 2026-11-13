@@ -10,11 +10,11 @@ import pytest
 from qti_creator.examples import HOTSPOT_EXAMPLE_NAME, UI_EXAMPLES, load_example
 from qti_creator.session import QuizSession
 from qti_creator.ui.help_content import SINGLE_SECTION_EXAMPLE, MULTI_SECTION_EXAMPLE
-from src.media import preflight_media
-from src.model import FillBlankQuestion, HotspotQuestion
-from src.packager import create_qti_package
-from src.parser import parse_quizmd
-from src.validation import Severity
+from qti_creator.core.media import preflight_media
+from qti_creator.core.model import FillBlankQuestion, HotspotQuestion
+from qti_creator.core.packager import create_qti_package
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.validation import Severity
 
 
 @pytest.mark.parametrize("source,sections,questions", [

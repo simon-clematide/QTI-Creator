@@ -5,14 +5,14 @@ import unittest
 import xml.etree.ElementTree as ET
 import zipfile
 
-from src.model import (
+from qti_creator.core.model import (
     EssayQuestion,
     FillBlankQuestion,
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-from src.packager import create_qti_package_bytes
-from src.parser import parse_quizmd
+from qti_creator.core.packager import create_qti_package_bytes
+from qti_creator.core.parser import parse_quizmd
 
 
 class TestVerticalSlice(unittest.TestCase):

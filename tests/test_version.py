@@ -2,8 +2,8 @@
 
 import re
 import unittest
-from src import __version__, __release_date__
-from src.version import __version__ as ver, __release_date__ as rdate
+from qti_creator.core import __version__, __release_date__
+from qti_creator.core.version import __version__ as ver, __release_date__ as rdate
 
 
 class TestVersionManagement(unittest.TestCase):

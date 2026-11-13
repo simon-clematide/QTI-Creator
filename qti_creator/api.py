@@ -9,16 +9,17 @@ from __future__ import annotations
 import io
 import os
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import gradio as gr
+if TYPE_CHECKING:
+    import gradio as gr
 
-from src.difficulty import quiz_difficulty
-from src.jqti_validator import is_java_available, is_javac_available, validate_qti_zip_bytes
-from src.model import InvalidQuestion
-from src.packager import create_qti_package
-from src.parser import parse_quizmd
-from src.validation import Severity
+from qti_creator.core.difficulty import quiz_difficulty
+from qti_creator.core.jqti_validator import is_java_available, is_javac_available, validate_qti_zip_bytes
+from qti_creator.core.model import InvalidQuestion
+from qti_creator.core.packager import create_qti_package
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.validation import Severity
 
 
 def _check_quiz_full(quiz_markdown: str) -> Dict[str, Any]:
@@ -230,6 +231,19 @@ def validate_jqti_api(quiz_markdown: str) -> Dict[str, Any]:
         }
 
 
+def _raise_api_error(message: str, cause: Optional[BaseException] = None) -> None:
+    """Raise ``gr.Error`` when Gradio is available, otherwise ``ValueError``."""
+    try:
+        import gradio as gr
+
+        err: BaseException = gr.Error(message)
+    except ImportError:
+        err = ValueError(message)
+    if cause is not None:
+        raise err from cause
+    raise err
+
+
 def export_qti_api(quiz_markdown: str) -> Optional[str]:
     """Compile QuizMD markdown and generate a downloadable QTI 2.1 ZIP package.
 
@@ -237,10 +251,10 @@ def export_qti_api(quiz_markdown: str) -> Optional[str]:
         quiz_markdown: Raw QuizMD markdown string.
 
     Returns:
-        Absolute filepath to the generated temporary .zip file, or raises gr.Error on failure.
+        Absolute filepath to the generated temporary .zip file, or raises gr.Error / ValueError on failure.
     """
     if not quiz_markdown or not quiz_markdown.strip():
-        raise gr.Error("Cannot export empty quiz markdown.")
+        _raise_api_error("Cannot export empty quiz markdown.")
 
     quiz, diagnostics = parse_quizmd(quiz_markdown)
     fatal_errors = [d for d in diagnostics if d.severity == Severity.ERROR]
@@ -248,7 +262,7 @@ def export_qti_api(quiz_markdown: str) -> Optional[str]:
         err_msg = "; ".join(d.message for d in fatal_errors[:3])
         if len(fatal_errors) > 3:
             err_msg += f" (+{len(fatal_errors) - 3} more)"
-        raise gr.Error(f"Validation failed: {err_msg}")
+        _raise_api_error(f"Validation failed: {err_msg}")
 
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False, prefix="quiz_qti21_") as tf:
         tmp_path = tf.name
@@ -259,7 +273,7 @@ def export_qti_api(quiz_markdown: str) -> Optional[str]:
     except Exception as e:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
-        raise gr.Error(f"Failed to create QTI package: {e}")
+        _raise_api_error(f"Failed to create QTI package: {e}", cause=e)
 
 
 def export_anki_api(quiz_markdown: str, deck_name: str = "", separate_gaps: bool = True,
@@ -270,11 +284,13 @@ def export_anki_api(quiz_markdown: str, deck_name: str = "", separate_gaps: bool
         path, _ = build_anki_export(quiz_markdown, deck_name, separate_gaps, media_zip)
         return path
     except ValueError as exc:
-        raise gr.Error(str(exc)) from exc
+        _raise_api_error(str(exc), cause=exc)
 
 
-def register_api_endpoints(demo: gr.Blocks) -> None:
+def register_api_endpoints(demo: "gr.Blocks") -> None:
     """Register headless API endpoints on the Gradio Blocks application."""
+    import gradio as gr
+
     with demo:
         with gr.Column(visible=False):
             # Endpoint 1: check_quiz

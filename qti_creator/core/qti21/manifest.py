@@ -7,7 +7,7 @@ in OpenOLAT.
 
 import html
 
-from src.model import (
+from qti_creator.core.model import (
     AssociationQuestion,
     EssayQuestion,
     FillBlankQuestion,

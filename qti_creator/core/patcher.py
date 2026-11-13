@@ -11,8 +11,8 @@ import hashlib
 import re
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from src.model import HotspotQuestion, HotspotRegion
-from src.parser import parse_quizmd
+from qti_creator.core.model import HotspotQuestion, HotspotRegion
+from qti_creator.core.parser import parse_quizmd
 
 
 def compute_source_hash(source: str) -> str:

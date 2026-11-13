@@ -2,8 +2,8 @@
 
 import html
 from typing import Dict, Optional
-from src.markdown import markdown_to_qti_xhtml
-from src.model import Quiz
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.model import Quiz
 
 
 def generate_test_xml(quiz: Quiz, asset_map: Optional[Dict[str, str]] = None) -> str:

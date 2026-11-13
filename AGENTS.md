@@ -7,8 +7,8 @@ Guidelines and facts for AI coding agents working in this repository.
 ## Repository Layout
 
 ```
-src/              Core library (parser, generator, validator, version)
-qti_creator/      Gradio UI layer
+qti_creator/core/ Core library (parser, generator, validator, version)
+qti_creator/      Package root, programmatic API, and Gradio UI layer
 tests/            Automated test suite (unittest / pytest)
 scripts/          CLI helpers (bump_version.py, push_to_hf.sh, validate_qti.py)
 sample_quizzes/   Example .quizmd / .zip fixtures
@@ -18,7 +18,7 @@ sample_quizzes/   Example .quizmd / .zip fixtures
 
 ## Version Management
 
-**Single source of truth:** [`src/version.py`](src/version.py)
+**Single source of truth:** [`qti_creator/core/version.py`](qti_creator/core/version.py)
 
 ```python
 __version__ = "1.0.4"
@@ -29,7 +29,7 @@ The version string follows **Semantic Versioning** (`MAJOR.MINOR.PATCH`).
 
 ### Bumping the version
 
-Use the dedicated script — never edit `src/version.py` by hand across concurrent changes:
+Use the dedicated script — never edit `qti_creator/core/version.py` by hand across concurrent changes:
 
 ```bash
 python3 scripts/bump_version.py patch   # 1.0.3 → 1.0.4

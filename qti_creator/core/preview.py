@@ -4,10 +4,10 @@ import base64
 import html
 import json
 import re
-from src.ui_icons import icon as ui_icon
+from qti_creator.core.ui_icons import icon as ui_icon
 from typing import Any, Dict, List, Optional, Tuple
-from src.media import ResolvedHotspotImage, _detect_image_mime, _extract_image_dimensions
-from src.model import (
+from qti_creator.core.media import ResolvedHotspotImage, _detect_image_mime, _extract_image_dimensions
+from qti_creator.core.model import (
     AssociationQuestion,
     Choice,
     EssayQuestion,
@@ -26,7 +26,7 @@ from src.model import (
     SingleChoiceQuestion,
     TrueFalseQuestion,
 )
-from src.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_GAP, RE_DROPDOWN_GAP
+from qti_creator.core.markdown import contains_markdown, extract_hottexts, markdown_to_qti_xhtml, RE_GAP, RE_DROPDOWN_GAP
 
 
 

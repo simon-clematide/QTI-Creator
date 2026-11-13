@@ -7,13 +7,13 @@ Nested packaging causes OpenOLAT import failures.
 import io
 import zipfile
 from typing import Optional, Union
-from src.media import MediaPreflightResult
-from src.model import HotspotQuestion, Quiz
-from src.qti21 import generate_item_xml
-from src.qti21.manifest import generate_manifest_xml
-from src.qti21.package_config import generate_package_config_xml
-from src.qti21.test import generate_test_xml
-from src.validation import Diagnostic, QuizValidationError, Severity
+from qti_creator.core.media import MediaPreflightResult
+from qti_creator.core.model import HotspotQuestion, Quiz
+from qti_creator.core.qti21 import generate_item_xml
+from qti_creator.core.qti21.manifest import generate_manifest_xml
+from qti_creator.core.qti21.package_config import generate_package_config_xml
+from qti_creator.core.qti21.test import generate_test_xml
+from qti_creator.core.validation import Diagnostic, QuizValidationError, Severity
 
 
 def create_qti_package(

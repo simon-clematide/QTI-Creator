@@ -18,7 +18,7 @@ from qti_creator.ui.prompting import render_prompting_page
 from qti_creator.ui.shared import THEME
 from qti_creator.ui.styles import MATHJAX_HEAD, SHARED_CSS
 from qti_creator.ui.syntax import render_syntax_page
-from src.examples import SAMPLE_ALL_TYPES
+from qti_creator.core.examples import SAMPLE_ALL_TYPES
 
 
 def create_demo() -> gr.Blocks:

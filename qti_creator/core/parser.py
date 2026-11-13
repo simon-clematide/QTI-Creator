@@ -20,8 +20,8 @@ Use a staged parser:
 import re
 from typing import List, Optional, Tuple, Dict, Any
 
-from src.defaults import DEFAULTS
-from src.model import (
+from qti_creator.core.defaults import DEFAULTS
+from qti_creator.core.model import (
     AssociationItem,
     AssociationQuestion,
     AssociationTarget,
@@ -53,7 +53,7 @@ from src.model import (
     generate_id,
 )
 
-from src.markdown import (
+from qti_creator.core.markdown import (
     RE_GAP,
     RE_DROPDOWN_GAP,
     extract_hottexts,
@@ -61,7 +61,7 @@ from src.markdown import (
     is_table_separator_row,
     split_table_row,
 )
-from src.validation import Diagnostic, QuizValidationError, Severity
+from qti_creator.core.validation import Diagnostic, QuizValidationError, Severity
 
 
 

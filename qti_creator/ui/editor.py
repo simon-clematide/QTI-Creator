@@ -15,12 +15,12 @@ import gradio as gr
 from qti_creator.media_service import analyze_session_media
 from qti_creator.session import PackageState, QuizSession, resolve_session
 from qti_creator.ui.styles import MATHJAX_TYPESET_JS
-from src.difficulty import quiz_difficulty
-from src.examples import EXAMPLES, SAMPLE_ALL_TYPES
-from src.media import preflight_media
-from src.packager import create_qti_package
-from src.parser import parse_quizmd
-from src.patcher import (
+from qti_creator.core.difficulty import quiz_difficulty
+from qti_creator.core.examples import EXAMPLES, SAMPLE_ALL_TYPES
+from qti_creator.core.media import preflight_media
+from qti_creator.core.packager import create_qti_package
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.patcher import (
     add_hotspot_region,
     compute_source_hash,
     delete_hotspot_region,
@@ -28,8 +28,8 @@ from src.patcher import (
     toggle_hotspot_correctness,
     update_hotspot_author_label,
 )
-from src.preview import render_quiz_preview_html, render_expand_all_control
-from src.validation import Severity
+from qti_creator.core.preview import render_quiz_preview_html, render_expand_all_control
+from qti_creator.core.validation import Severity
 
 
 def get_preview_asset_map(session: QuizSession) -> dict[str, str]:

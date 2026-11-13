@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 import unittest
 
-from src.difficulty import DifficultyReport, quiz_difficulty, question_difficulty
-from src.model import (
+from qti_creator.core.difficulty import DifficultyReport, quiz_difficulty, question_difficulty
+from qti_creator.core.model import (
     AssociationItem,
     AssociationQuestion,
     AssociationTarget,
@@ -319,7 +319,7 @@ class TestSkippedTypes(unittest.TestCase):
         self.assertTrue(d.skipped)
 
     def test_fill_blank_skipped(self):
-        from src.model import Gap
+        from qti_creator.core.model import Gap
         q = FillBlankQuestion(prompt="Fill {{}}", title="Q", gaps=[Gap(expected_value="x")], points=1.0)
         d = question_difficulty(q, 0)
         self.assertTrue(d.skipped)

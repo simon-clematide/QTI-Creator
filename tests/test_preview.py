@@ -2,8 +2,8 @@
 
 import unittest
 import re
-from src.parser import parse_quizmd
-from src.preview import render_quiz_preview_html
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.preview import render_quiz_preview_html
 
 
 class TestPreview(unittest.TestCase):
@@ -255,8 +255,8 @@ Calculate $x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$
 
     def test_invalid_question_blocks_packaging(self):
         import io
-        from src.packager import create_qti_package
-        from src.validation import QuizValidationError
+        from qti_creator.core.packager import create_qti_package
+        from qti_creator.core.validation import QuizValidationError
 
         text = """# Quiz With Error
 ## Broken Question

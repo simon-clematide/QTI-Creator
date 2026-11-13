@@ -13,8 +13,8 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.packager import create_qti_package
-from src.parser import parse_quizmd
+from qti_creator.core.packager import create_qti_package
+from qti_creator.core.parser import parse_quizmd
 
 OUTPUT_DIR = Path("sample_quizzes")
 

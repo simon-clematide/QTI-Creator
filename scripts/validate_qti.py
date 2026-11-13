@@ -12,7 +12,7 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.jqti_validator import is_java_available, is_javac_available, validate_with_jqti
+from qti_creator.core.jqti_validator import is_java_available, is_javac_available, validate_with_jqti
 
 
 def main():

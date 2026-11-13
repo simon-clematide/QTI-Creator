@@ -13,7 +13,7 @@ import gradio as gr
 
 from qti_creator.media_service import analyze_session_media, safe_extract_media_zip
 from qti_creator.session import MediaFile, QuizSession, resolve_session
-from src.examples import SAMPLE_ALL_TYPES
+from qti_creator.core.examples import SAMPLE_ALL_TYPES
 from qti_creator.ui.help_content import MEDIA_GUIDE
 
 

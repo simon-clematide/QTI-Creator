@@ -6,17 +6,17 @@ import urllib.request
 import zipfile
 from unittest.mock import MagicMock, patch
 
-from src.markdown import markdown_to_qti_xhtml
-from src.media import (
+from qti_creator.core.markdown import markdown_to_qti_xhtml
+from qti_creator.core.media import (
     MediaReference,
     extract_media_references,
     extract_quiz_media_references,
     preflight_media,
 )
-from src.model import Choice, Question, Quiz, SingleChoiceQuestion
-from src.packager import create_qti_package, create_qti_package_bytes
-from src.parser import parse_quizmd
-from src.validation import Severity
+from qti_creator.core.model import Choice, Question, Quiz, SingleChoiceQuestion
+from qti_creator.core.packager import create_qti_package, create_qti_package_bytes
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.validation import Severity
 
 # Minimal valid 1x1 PNG binary bytes
 TINY_PNG = (

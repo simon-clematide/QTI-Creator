@@ -1,8 +1,8 @@
 """Tests for the QuizMD parser."""
 
 import unittest
-from src.parser import parse_quizmd
-from src.model import (
+from qti_creator.core.parser import parse_quizmd
+from qti_creator.core.model import (
     SingleChoiceQuestion,
     MultipleChoiceQuestion,
     TrueFalseQuestion,
@@ -295,7 +295,7 @@ What is the result of `calc(5)`?
 
 
     def test_code_block_with_newlines(self):
-        from src.markdown import markdown_to_qti_xhtml
+        from qti_creator.core.markdown import markdown_to_qti_xhtml
         prompt = """```python
 
 def greet():
@@ -310,7 +310,7 @@ def greet():
 
 
     def test_latex_math_preservation_and_protection(self):
-        from src.markdown import markdown_to_qti_xhtml
+        from qti_creator.core.markdown import markdown_to_qti_xhtml
         
         # Display math block ($$ and \[)
         disp_text = "$$\\frac{a}{b}$$"
@@ -556,9 +556,9 @@ Explain why the following three principles matter:
         self.assertIn("1. Transparency", q.prompt)
 
     def test_all_registered_examples_parse_and_package(self):
-        from src.examples import EXAMPLES
-        from src.packager import create_qti_package_bytes
-        from src.validation import Severity
+        from qti_creator.core.examples import EXAMPLES
+        from qti_creator.core.packager import create_qti_package_bytes
+        from qti_creator.core.validation import Severity
 
         for name, text in EXAMPLES.items():
             with self.subTest(example=name):
@@ -647,7 +647,7 @@ What is water?
 
 
     def test_markdown_table_rendering(self):
-        from src.markdown import markdown_to_qti_xhtml
+        from qti_creator.core.markdown import markdown_to_qti_xhtml
         md = """Consider the following table:
 
 | Function | Complexity | Description |
@@ -741,7 +741,7 @@ The {** cat **} { sat } on the {** mat **}.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        from src.model import HottextQuestion
+        from qti_creator.core.model import HottextQuestion
         self.assertIsInstance(q, HottextQuestion)
         self.assertEqual(len(q.items), 3)
         self.assertEqual(q.items[0].text, "cat")
@@ -758,7 +758,7 @@ In Python, we use {+ `import math` } or {- `using math;` } to load libraries.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        from src.model import HottextQuestion
+        from qti_creator.core.model import HottextQuestion
         self.assertIsInstance(q, HottextQuestion)
         self.assertEqual(len(q.items), 2)
         self.assertEqual(q.items[0].text, "`import math`")
@@ -773,7 +773,7 @@ Here is `{variable}` in Python.
 """
         quiz, diags = parse_quizmd(text)
         q = quiz.questions[0]
-        from src.model import EssayQuestion
+        from qti_creator.core.model import EssayQuestion
         self.assertIsInstance(q, EssayQuestion)
 
     def test_hottext_conflict_with_gaps_error(self):
@@ -805,7 +805,7 @@ The {** cat **} sat.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         self.assertEqual(len(quiz.questions), 1)
-        from src.model import AssociationQuestion
+        from qti_creator.core.model import AssociationQuestion
         q = quiz.questions[0]
         self.assertIsInstance(q, AssociationQuestion)
         self.assertEqual(q.interaction, "match")
@@ -834,7 +834,7 @@ The {** cat **} sat.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        from src.model import AssociationQuestion
+        from qti_creator.core.model import AssociationQuestion
         self.assertIsInstance(q, AssociationQuestion)
         self.assertEqual(q.interaction, "match")
         self.assertTrue(q.multiple)
@@ -856,7 +856,7 @@ The {** cat **} sat.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        from src.model import AssociationQuestion
+        from qti_creator.core.model import AssociationQuestion
         self.assertIsInstance(q, AssociationQuestion)
         self.assertEqual(q.interaction, "drag")
         self.assertFalse(q.multiple)
@@ -871,7 +871,7 @@ The {** cat **} sat.
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
         q = quiz.questions[0]
-        from src.model import AssociationQuestion
+        from qti_creator.core.model import AssociationQuestion
         self.assertIsInstance(q, AssociationQuestion)
         self.assertEqual(q.interaction, "drag")
 
@@ -916,7 +916,7 @@ Explain what this property table describes.
 """
         quiz, diags = parse_quizmd(text)
         self.assertEqual(len(diags), 0, [str(d) for d in diags])
-        from src.model import EssayQuestion
+        from qti_creator.core.model import EssayQuestion
         self.assertIsInstance(quiz.questions[0], EssayQuestion)
 
 

@@ -18,6 +18,9 @@ ui = [
     "gradio>=4.44.0",
 ]
 
+[project.scripts]
+qti-creator = "qti_creator.cli:main"
+
 [tool.setuptools.dynamic]
 version = {attr = "qti_creator.core.version.__version__"}
 
